@@ -815,6 +815,30 @@ def main() -> None:
             for line in exp_lines:
                 st.caption(line)
 
+            # ── 主力分析 ──────────────────────────────────────────────
+            inst_state = result.get("institutional_state")
+            inst_text  = result.get("institutional_text")
+            if inst_state and inst_state != "UNKNOWN":
+                st.markdown("#### 🏦 主力分析")
+                color_map = {
+                    "ACCUMULATION": "#28a745",
+                    "SHAKEOUT":     "#ffc107",
+                    "DISTRIBUTION": "#dc3545",
+                    "EXTENDED":     "#fd7e14",
+                    "NEUTRAL":      "#6c757d"
+                }
+                color = color_map.get(inst_state, "#6c757d")
+                i1, i2, i3 = st.columns(3)
+                i1.metric("外資成本", result.get("foreign_cost") or "N/A")
+                i2.metric("持倉估計(張)", f'{result.get("foreign_position"):,}' if result.get("foreign_position") else "N/A")
+                i3.metric("主力獲利%", f'{result.get("foreign_profit_pct"):.1f}%' if result.get("foreign_profit_pct") is not None else "N/A")
+                st.markdown(f"""
+<div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
+  <b style="color:{color};font-size:16px;">主力狀態：{inst_state}</b><br>
+  <span style="color:#ccc;">{inst_text}</span>
+</div>
+""", unsafe_allow_html=True)
+
             # ── AI Prompt ──────────────────────────────────────────
             with st.expander("📋 產生 AI 分析 Prompt"):
                 name    = result.get("name", live_id)
