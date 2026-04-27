@@ -16,6 +16,8 @@ def classify_B_strength(result, foreign_profit):
     B    = result.get("B_days") or 0
     flow = result.get("flow_status")
     cost = result.get("cost_level")
+    if B < 3:
+        return "NORMAL_B"
     score = 0
     if B >= 5: score += 2
     if B >= 8: score += 2
@@ -24,7 +26,7 @@ def classify_B_strength(result, foreign_profit):
     if cost == "SAFE":              score += 2
     if foreign_profit is not None and foreign_profit < 8: score += 1
     if score >= 5: return "STRONG_B"
-    if B >= 3 and (flow not in ["ACCUMULATING"] or (foreign_profit is not None and foreign_profit > 10)):
+    if flow not in ["ACCUMULATING"] or (foreign_profit is not None and foreign_profit > 10):
         return "WEAK_B"
     return "NORMAL_B"
 
