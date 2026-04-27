@@ -932,8 +932,6 @@ def main() -> None:
         with st.spinner(f"正在分析 {live_id}..."):
             try:
                 from main import load_params
-                import os
-                os.chdir("/Users/hsc/Documents/banshi_system")
                 params = load_params()
                 result = process_stock_live(live_id, params, print_snapshot=False)
             except Exception as e:
