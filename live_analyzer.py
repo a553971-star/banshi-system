@@ -66,7 +66,7 @@ def process_stock_live(
 
         co_path  = params.get("companies_path", "companies.csv")
         target   = pd.to_datetime(date)
-        start_dt = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        start_dt = "2024-01-01"  # 固定起始日，確保軌跡資料足夠
         name     = get_company_name_safe(stock_id, co_path)
 
         # ── 即時資料 ──
