@@ -421,6 +421,27 @@ def build_basic_info_view(row: pd.Series) -> dict:
 
 def render_stock_search_section(df: pd.DataFrame) -> None:
 
+    # ── 強B排行榜 ─────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("🔥 強B排行榜（主力建倉候選）")
+    try:
+        from b_ranker import get_top_strong_B
+        top_b = get_top_strong_B(df, top_n=5)
+        if top_b.empty:
+            st.info("今日無強B候選")
+        else:
+            for _, row in top_b.iterrows():
+                stock = row.get("stock_id","")
+                name  = row.get("name","")
+                score = int(row.get("B_score",0))
+                B     = row.get("B_days","")
+                flow  = row.get("flow_status","")
+                cost  = row.get("cost_level","")
+                st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
+                st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+    except Exception as e:
+        st.warning(f"強B排行榜載入失敗：{e}")
+
     st.subheader("🔍 個股查詢")
     query = st.text_input("輸入股票代號或名稱", key="detail_search")
     if not query:
