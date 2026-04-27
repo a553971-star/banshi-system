@@ -74,6 +74,17 @@ def process_stock_live(
             _g("volume_ratio"),
             params,
         )
+
+        # ── 主力成本修正 Flow ──────────────────────────────────────────
+        try:
+            _f_cost_tmp, _, _f_profit_tmp = calc_foreign_cost_pro(df_feat)
+            if _f_profit_tmp is not None and flow_status is not None:
+                if _f_profit_tmp > 12:
+                    flow_status = "DISTRIBUTION"   # 出貨風險蓋過其他
+                elif _f_profit_tmp < 4 and flow_status == "NEUTRAL":
+                    flow_status = "ACCUMULATING"   # 成本低 + 中性 → 升級
+        except Exception:
+            pass
         cost_result = classify_cost(_g("bias_ma20"), params)
 
         integrity_ok = check_data_integrity(df_feat)
