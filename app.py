@@ -937,9 +937,10 @@ def main() -> None:
             except Exception as e:
                 result = None
                 import traceback
-                st.error(f"分析失敗：{e}
+                err_msg = f"分析失敗：{e}" + "
 
-{traceback.format_exc()}")
+" + traceback.format_exc()
+                st.error(err_msg)
 
         if result is None:
             st.warning("查無資料或分析失敗，請確認代號是否正確")
