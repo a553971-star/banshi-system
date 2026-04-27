@@ -703,18 +703,30 @@ def main() -> None:
 
     if live_input:
         live_input = live_input.strip()
-        # 中文轉代號
         try:
+            import requests as _req, os as _os
+            _token = _os.getenv("FINMIND_TOKEN")
             co_df = pd.read_csv("companies.csv", dtype=str)
-            match_name = co_df[co_df["name"].str.contains(live_input, na=False)]
             match_id   = co_df[co_df["stock_id"] == live_input]
+            match_name = co_df[co_df["name"].str.contains(live_input, na=False)]
             if not match_id.empty:
                 live_id = live_input
             elif not match_name.empty:
                 live_id = match_name.iloc[0]["stock_id"]
                 st.caption(f"查詢：{match_name.iloc[0]['name']} ({live_id})")
             else:
-                live_id = live_input
+                _r = _req.get("https://api.finmindtrade.com/api/v4/data",
+                    params={"dataset": "TaiwanStockInfo", "token": _token}, timeout=15)
+                _info = pd.DataFrame(_r.json().get("data", []))
+                if not _info.empty:
+                    _m = _info[_info["stock_name"].str.contains(live_input, na=False)]
+                    if not _m.empty:
+                        live_id = _m.iloc[0]["stock_id"]
+                        st.caption(f"查詢：{_m.iloc[0]['stock_name']} ({live_id})")
+                    else:
+                        live_id = live_input
+                else:
+                    live_id = live_input
         except Exception:
             live_id = live_input
 
