@@ -15,6 +15,44 @@ import streamlit.components.v1 as components
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
+
+def explain_metrics(result):
+    c = result.get("C_days") or 0
+    b = result.get("B_days") or 0
+    a = result.get("A_days") or 0
+    adx = result.get("adx")
+    k = result.get("kd_k")
+    cost = result.get("cost_level")
+
+    lines = []
+    lines.append("C " + ("底部已形成 ✅" if c >= 5 else "尚未止跌 ⚠️"))
+    lines.append("B " + ("主力可能建倉 ✅" if b >= 2 else "無整理，結構不完整 ⚠️"))
+    if a >= 5:
+        lines.append("A 已延伸，追高風險 🔴")
+    elif a >= 1:
+        lines.append("A 剛啟動 🟡")
+    else:
+        lines.append("A 尚未發動")
+    if adx is not None:
+        lines.append("ADX " + ("有趨勢 ✅" if adx >= 25 else ("趨勢不明" if adx >= 20 else "無趨勢 ⚠️")))
+    if k is not None:
+        lines.append("KD " + ("過熱區 🔴" if k >= 80 else ("超賣區 🟢" if k <= 20 else "正常區")))
+    if cost == "HIGH_RISK":
+        lines.append("成本 位置偏高，風險大 🔴")
+    elif cost == "SAFE":
+        lines.append("成本 位置合理 ✅")
+
+    # 一句話教練
+    if c >= 5 and b >= 2 and (a or 0) <= 2:
+        coach = "👉 結構完整，值得關注"
+    elif (a or 0) >= 5 or cost == "HIGH_RISK":
+        coach = "👉 結構偏晚或成本過高，不值得出手"
+    elif b == 0:
+        coach = "👉 無B段，結構不完整，等待"
+    else:
+        coach = "👉 結構未成熟，繼續觀察"
+
+    return lines, coach
 from data_fetcher_fm import fetch_stock_data
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
@@ -770,6 +808,12 @@ def main() -> None:
                 st.info("📋 " + " ／ ".join(reason))
             elif isinstance(reason, str) and reason:
                 st.info("📋 " + reason)
+
+            exp_lines, coach = explain_metrics(result)
+            st.markdown("#### 🧠 教練解讀")
+            st.success(coach)
+            for line in exp_lines:
+                st.caption(line)
 
             fomo_flags = []
             if (result.get("B_days") or 0) == 0 and (result.get("A_days") or 0) >= 1:
