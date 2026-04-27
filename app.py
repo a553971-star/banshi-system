@@ -937,8 +937,8 @@ def main() -> None:
             except Exception as e:
                 result = None
                 import traceback
-                err_msg = "分析失敗：" + str(e) + "
-
+                err_msg = "分析失敗：" + str(e)
+                st.error(err_msg)
 " + traceback.format_exc()
 
 " + traceback.format_exc()
