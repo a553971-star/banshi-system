@@ -779,6 +779,8 @@ def main() -> None:
                 _info = pd.DataFrame(_r.json().get("data", []))
                 if not _info.empty:
                     _m = _info[_info["stock_name"].str.contains(live_input, na=False)]
+                    # 只保留4位數股票代號（過濾權證/ETF衍生商品）
+                    _m = _m[_m["stock_id"].str.match(r"^\d{4}$")]
                     if not _m.empty:
                         live_id = _m.iloc[0]["stock_id"]
                         st.caption(f"查詢：{_m.iloc[0]['stock_name']} ({live_id})")
