@@ -47,6 +47,18 @@ def get_company_name_safe(stock_id: str, co_path: str = "companies.csv") -> str:
             return str(match.iloc[0].get("name", stock_id))
     except Exception:
         pass
+    try:
+        import requests, os
+        token = os.getenv("FINMIND_TOKEN", "")
+        r = requests.get("https://api.finmindtrade.com/api/v4/data",
+            params={"dataset": "TaiwanStockInfo", "token": token}, timeout=10)
+        info = pd.DataFrame(r.json().get("data", []))
+        if not info.empty:
+            m = info[info["stock_id"] == stock_id]
+            if not m.empty:
+                return str(m.iloc[0]["stock_name"])
+    except Exception:
+        pass
     return stock_id
 
 
