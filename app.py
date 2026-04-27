@@ -382,6 +382,84 @@ def build_basic_info_view(row: pd.Series) -> dict:
 
 
 def render_stock_search_section(df: pd.DataFrame) -> None:
+    # ── 全市場即時個股分析 ────────────────────────────────────────────────
+    st.subheader("🔬 全市場即時個股分析")
+    st.caption("輸入股票代號或中文名稱，即時跑完整盤石分析")
+
+    live_input = st.text_input("股票代號或名稱", placeholder="例：2330 或 台積電", key="live_query")
+
+    if live_input:
+        live_input = live_input.strip()
+        # 中文轉代號
+        try:
+            co_df = pd.read_csv("companies.csv", dtype=str)
+            match_name = co_df[co_df["name"].str.contains(live_input, na=False)]
+            match_id   = co_df[co_df["stock_id"] == live_input]
+            if not match_id.empty:
+                live_id = live_input
+            elif not match_name.empty:
+                live_id = match_name.iloc[0]["stock_id"]
+                st.caption(f"查詢：{match_name.iloc[0]['name']} ({live_id})")
+            else:
+                live_id = live_input
+        except Exception:
+            live_id = live_input
+
+        with st.spinner(f"正在分析 {live_id}..."):
+            try:
+                from main import load_params
+                params = load_params()
+                result = process_stock_live(live_id, params, print_snapshot=False)
+            except Exception as e:
+                result = None
+                st.error(str(e))
+
+        if result is None:
+            st.warning("查無資料或分析失敗，請確認代號是否正確")
+        else:
+            decision   = result.get("decision", "N/A")
+            confidence = result.get("confidence", 0)
+            dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
+
+            def safe_round(x):
+                return round(x, 1) if x is not None else "N/A"
+
+            st.markdown(f"### {dec_color} {live_id} {result.get('name','')}　**{decision}**　信心 {confidence}")
+            st.caption(f"資料日期：{result.get('date', 'N/A')}")
+
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("C天", result.get("C_days", "N/A"))
+            c2.metric("B天", result.get("B_days", "N/A"))
+            c3.metric("A天", result.get("A_days", "N/A"))
+            c4.metric("Flow", result.get("flow_status") or "N/A")
+            c5.metric("成本位", result.get("cost_level") or "N/A")
+
+            t1, t2, t3, t4 = st.columns(4)
+            t1.metric("收盤", result.get("current_price") or "N/A")
+            t2.metric("ADX", safe_round(result.get("adx")))
+            t3.metric("KD", str(safe_round(result.get("kd_k")))+"/"+str(safe_round(result.get("kd_d"))))
+            t4.metric("ATR", safe_round(result.get("atr")))
+
+            reason = result.get("reason")
+            if isinstance(reason, list) and reason:
+                st.info("📋 " + " ／ ".join(reason))
+            elif isinstance(reason, str) and reason:
+                st.info("📋 " + reason)
+
+            fomo_flags = []
+            if (result.get("B_days") or 0) == 0 and (result.get("A_days") or 0) >= 1:
+                fomo_flags.append("無B直接A（可能追高）")
+            if (result.get("A_days") or 0) >= 3:
+                fomo_flags.append("A段已延伸")
+            if result.get("cost_level") == "HIGH_RISK":
+                fomo_flags.append("成本位過高")
+            if fomo_flags:
+                st.warning("⚠️ 這檔你很可能會想買，但要小心：")
+                for f in fomo_flags:
+                    st.caption(f"👉 {f}")
+
+    st.divider()
+
     st.subheader("🔍 個股查詢")
     query = st.text_input("輸入股票代號或名稱", key="detail_search")
     if not query:
@@ -920,67 +998,6 @@ def main() -> None:
     st.subheader("📈 勝率統計")
     analyze_winrate()
 
-    # ── 全市場即時分析 ─────────────────────────────────────────────────
-    st.divider()
-    st.subheader("🔬 全市場即時分析")
-    st.caption("輸入任意台股代號，即時從 FinMind 撈資料跑完整盤石分析")
-
-    live_id = st.text_input("股票代號", placeholder="例：2330、3035、6245", key="live_query")
-
-    if live_id:
-        live_id = live_id.strip()
-        with st.spinner(f"正在分析 {live_id}..."):
-            try:
-                from main import load_params
-                params = load_params()
-                result = process_stock_live(live_id, params, print_snapshot=False)
-            except Exception as e:
-                result = None
-                st.error(f"分析失敗：{e}")
-
-        if result is None:
-            st.warning("查無資料或分析失敗，請確認代號是否正確")
-        else:
-            decision   = result.get("decision", "N/A")
-            confidence = result.get("confidence", 0)
-            dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
-
-            def safe_round(x):
-                return round(x, 1) if x is not None else "N/A"
-
-            st.markdown(f"### {dec_color} {live_id} {result.get(chr(39)+'name'+chr(39),'')}　**{decision}**　信心 {confidence}")
-            st.caption(f"資料日期：{result.get('date', 'N/A')}")
-
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("C天", result.get("C_days", "N/A"))
-            c2.metric("B天", result.get("B_days", "N/A"))
-            c3.metric("A天", result.get("A_days", "N/A"))
-            c4.metric("Flow", result.get("flow_status") or "N/A")
-            c5.metric("成本位", result.get("cost_level") or "N/A")
-
-            t1, t2, t3, t4 = st.columns(4)
-            t1.metric("收盤", result.get("current_price") or "N/A")
-            t2.metric("ADX", safe_round(result.get("adx")))
-            t3.metric("KD", str(safe_round(result.get("kd_k")))+"/"+str(safe_round(result.get("kd_d"))))
-            t4.metric("ATR", safe_round(result.get("atr")))
-
-            reason = result.get("reason")
-            if isinstance(reason, list) and reason:
-                st.info("📋 " + " ／ ".join(reason))
-            elif isinstance(reason, str) and reason:
-                st.info("📋 " + reason)
-
-            fomo_flags = []
-            if (result.get("B_days") or 0) == 0 and (result.get("A_days") or 0) >= 1:
-                fomo_flags.append("無B直接A（可能追高）")
-            if (result.get("A_days") or 0) >= 3:
-                fomo_flags.append("A段已延伸")
-            if result.get("cost_level") == "HIGH_RISK":
-                fomo_flags.append("成本位過高")
-            if fomo_flags:
-                st.warning("⚠️ 這檔你很可能會想買，但要小心：")
-                for f in fomo_flags:
-                    st.caption(f"👉 {f}")
 
 
 if __name__ == "__main__":
