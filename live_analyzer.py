@@ -111,7 +111,7 @@ def process_stock_live(
         cost_result = classify_cost(_g("bias_ma20"), params)
 
         integrity_ok = check_data_integrity(df_feat)
-        good_co      = is_good_company(stock_id, co_path)
+        good_co      = True  # 全市場查詢不限好公司
 
         trajectory = {
             "stock_id":        stock_id,
