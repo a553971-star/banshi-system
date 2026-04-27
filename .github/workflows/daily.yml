@@ -1,0 +1,37 @@
+name: 每日磐石分析
+
+on:
+  schedule:
+    - cron: '30 7 * * 1-5'  # 台灣時間 15:30（UTC+8，所以 UTC 07:30），週一到週五
+  workflow_dispatch:  # 手動觸發
+
+jobs:
+  run-daily:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: 執行每日分析
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          python main.py
+
+      - name: Commit 結果
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add latest_decisions.csv state_log.csv daily_log.txt
+          git diff --cached --quiet || git commit -m "每日分析 $(date '+%Y-%m-%d')"
+          git push
