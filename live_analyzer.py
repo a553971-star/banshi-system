@@ -12,6 +12,27 @@ from exporter import format_decision_snapshot, format_data_snapshot
 from live_fetcher import merge_all_live
 from institutional_engine import calc_foreign_cost_pro, classify_institutional_state, interpret_institutional_state
 
+def classify_B_strength(result, foreign_profit):
+    B    = result.get("B_days") or 0
+    flow = result.get("flow_status")
+    cost = result.get("cost_level")
+    score = 0
+    if B >= 5: score += 2
+    if B >= 8: score += 2
+    if flow == "ACCUMULATING":      score += 3
+    elif flow in ["NEUTRAL", None]: score += 1
+    if cost == "SAFE":              score += 2
+    if foreign_profit is not None and foreign_profit < 8: score += 1
+    if score >= 5: return "STRONG_B"
+    if B >= 3 and (flow not in ["ACCUMULATING"] or (foreign_profit is not None and foreign_profit > 10)):
+        return "WEAK_B"
+    return "NORMAL_B"
+
+def interpret_B_strength(b_type):
+    if b_type == "STRONG_B": return "主力建倉中（高品質B）"
+    if b_type == "WEAK_B":   return "假建倉（沒有資金支撐）"
+    return "普通整理（觀察）"
+
 logger = logging.getLogger(__name__)
 _LOOKBACK_DAYS = 400
 
@@ -131,6 +152,9 @@ def process_stock_live(
             decision["foreign_profit_pct"]  = f_profit
             decision["institutional_state"] = inst_state
             decision["institutional_text"]  = inst_text
+            b_type = classify_B_strength(decision, f_profit)
+            decision["B_type"] = b_type
+            decision["B_text"] = interpret_B_strength(b_type)
         except Exception as e:
             logger.warning("institutional analysis failed: %s", e)
 
