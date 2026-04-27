@@ -936,13 +936,7 @@ def main() -> None:
                 result = process_stock_live(live_id, params, print_snapshot=False)
             except Exception as e:
                 result = None
-                import traceback
-                err_msg = "分析失敗：" + str(e)
-                st.error(err_msg)
-" + traceback.format_exc()
-
-" + traceback.format_exc()
-                st.error(err_msg)
+                st.error(f"分析失敗：{e}")
 
         if result is None:
             st.warning("查無資料或分析失敗，請確認代號是否正確")
