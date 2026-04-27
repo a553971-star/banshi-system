@@ -815,6 +815,106 @@ def main() -> None:
             for line in exp_lines:
                 st.caption(line)
 
+            # ── AI Prompt ──────────────────────────────────────────
+            with st.expander("📋 產生 AI 分析 Prompt"):
+                name    = result.get("name", live_id)
+                decision = result.get("decision", "N/A")
+                confidence = result.get("confidence", 0)
+                signal_type = result.get("signal_type") or "-"
+                C    = result.get("C_days", "N/A")
+                B    = result.get("B_days", "N/A")
+                A    = result.get("A_days", "N/A")
+                flow = result.get("flow_status") or "N/A"
+                cost = result.get("cost_level") or "N/A"
+                adx  = safe_round(result.get("adx"))
+                atr  = safe_round(result.get("atr"))
+                vwap = safe_round(result.get("vwap"))
+                kd_k = safe_round(result.get("kd_k"))
+                kd_d = safe_round(result.get("kd_d"))
+                bb_u = safe_round(result.get("bb_upper"))
+                bb_m = safe_round(result.get("bb_middle"))
+                bb_l = safe_round(result.get("bb_lower"))
+                date = result.get("date", "N/A")
+
+                prompt = f"""你是專業短線交易員 + 產業分析師，擅長結構分析、資金流、成本位與同產業橫向比較。
+請用「結構優先、消息輔助、橫向比較」的原則，對以下股票做詳細分析。
+
+⚠️ 核心規則：
+- 絕對不推翻盤石決策
+- 結構 > 指標 > 消息 > 橫向比較（優先順序不可顛倒）
+- 消息面與比較必須使用最新公開資訊，並標註來源或日期
+
+━━━━━━━━━━━━━━━━━━
+【股票】
+{live_id} {name}
+
+【盤石決策】
+決策：{decision}｜信心：{confidence}｜型態：{signal_type}
+C天：{C}｜B天：{B}｜A天：{A}
+Flow：{flow}｜Cost：{cost}
+
+【技術指標】
+ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
+KD：{kd_k}/{kd_d}
+布林：上 {bb_u} / 中 {bb_m} / 下 {bb_l}
+
+【日期】
+{date}
+━━━━━━━━━━━━━━━━━━
+請依序詳細回答：
+
+【1️⃣ 結構階段判斷】
+- 目前處於哪個階段？（起漲 / 發動初期 / 延伸 / 末段 / 情緒段）
+- 是否為「無B直接A」類型？（是 / 否）
+
+【2️⃣ 結構 vs 消息 驅動拆解】
+（A）結構面原因（必填）
+- C/B/A 狀態的意義與可持續性
+- Flow 與 Cost 的判讀
+
+（B）外部驅動因素（消息 / 題材 / 事件）
+- 請搜尋並列出最近可能影響該股的公開消息、訂單、認證、政策等
+- 若無明確消息 → 寫「目前未觀察到重大催化劑」
+
+【3️⃣ 深入橫向比較（同產業）】
+請選擇 2~3 家最相關的同產業公司進行比較。
+比較維度（必須涵蓋以下全部）：
+- 結構強度（C/B/A 天數與完整度）
+- 資金流動能（外資/投信/融資變化）
+- 成本位安全度（相對於均線位置）
+- 技術指標相對位置（KD、RSI、ADX、布林）
+- 近期消息/題材差異
+
+請清楚指出：
+- 本股在同業中的相對位置（領先 / 中間 / 落後）
+- 本股的優勢與劣勢（相較同業）
+
+【4️⃣ 風險評估】
+- 風險等級：低 / 中 / 高
+- 最大風險來源（只講最關鍵的一點）
+
+【5️⃣ 時間框架分析】
+- 短線（1~5天）
+- 中線（1~4週）
+- 長線（1~3月）
+
+【6️⃣ 操作屬性分類】
+請三選一並說明理由：
+- 結構股（可持續）
+- 情緒股（短期波動）
+- 題材股（消息驅動）
+
+【7️⃣ 最終結論】
+👉 類型：結構股 / 情緒股 / 題材股
+👉 階段：
+👉 同業相對位置：
+👉 風險：
+👉 一句話評價：
+━━━━━━━━━━━━━━━━━━
+回答風格：專業、直接、像資深交易員在開會報告。橫向比較要具體、有數據對比，並突出關鍵差異。"""
+
+                st.code(prompt, language="")
+
             fomo_flags = []
             if (result.get("B_days") or 0) == 0 and (result.get("A_days") or 0) >= 1:
                 fomo_flags.append("無B直接A（可能追高）")
