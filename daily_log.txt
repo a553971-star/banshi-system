@@ -1,0 +1,63 @@
+======================================
+2026-04-25 06:54:04 開始執行
+[1/2] fetch_today.py
+/Users/hsc/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+2026-04-25 06:54:06.215 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:06.265 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:06.266 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2330
+2026-04-25 06:54:06.529 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2454
+2026-04-25 06:54:06.584 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2303
+2026-04-25 06:54:06.641 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2317
+2026-04-25 06:54:06.696 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2382
+2026-04-25 06:54:06.755 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 3034
+2026-04-25 06:54:06.810 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2603
+2026-04-25 06:54:06.866 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2615
+2026-04-25 06:54:06.924 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 6213
+2026-04-25 06:54:06.982 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 3035
+2026-04-25 06:54:07.042 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2449
+2026-04-25 06:54:07.101 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 8299
+2026-04-25 06:54:07.162 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 3264
+2026-04-25 06:54:07.219 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2408
+2026-04-25 06:54:07.277 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockPrice, data_id: 2412
+2026-04-25 06:54:07.523 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:07.577 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:07.578 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2330
+2026-04-25 06:54:08.367 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2454
+2026-04-25 06:54:08.792 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2303
+2026-04-25 06:54:09.202 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2317
+2026-04-25 06:54:09.816 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2382
+2026-04-25 06:54:09.894 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 3034
+2026-04-25 06:54:10.328 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2603
+2026-04-25 06:54:10.406 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2615
+2026-04-25 06:54:10.841 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 6213
+2026-04-25 06:54:11.353 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 3035
+2026-04-25 06:54:11.762 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2449
+2026-04-25 06:54:12.274 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 8299
+2026-04-25 06:54:12.346 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 3264
+2026-04-25 06:54:12.419 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2408
+2026-04-25 06:54:12.494 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockInstitutionalInvestorsBuySell, data_id: 2412
+2026-04-25 06:54:12.755 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:12.805 | INFO     | FinMind.data.finmind_api:login_by_token:84 - Login success
+2026-04-25 06:54:12.805 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2330
+2026-04-25 06:54:13.177 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2454
+2026-04-25 06:54:13.448 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2303
+2026-04-25 06:54:13.722 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2317
+2026-04-25 06:54:14.003 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2382
+2026-04-25 06:54:14.064 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 3034
+2026-04-25 06:54:14.124 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2603
+2026-04-25 06:54:14.397 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2615
+2026-04-25 06:54:14.832 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 6213
+2026-04-25 06:54:15.141 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 3035
+2026-04-25 06:54:15.551 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2449
+2026-04-25 06:54:15.959 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 8299
+2026-04-25 06:54:16.018 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 3264
+2026-04-25 06:54:16.075 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2408
+2026-04-25 06:54:16.135 | INFO     | FinMind.data.finmind_api:get_data:153 - download TaiwanStockMarginPurchaseShortSale, data_id: 2412
+merge 結果為空，沒有資料寫入
+fetch_today: 2026-04-25 寫入 0 筆
+[2/2] main.py
+2026-04-25 06:54:17 INFO __main__ — run_daily complete: 15 stocks processed for 2026-04-25
+Running daily pipeline: 2026-04-25 | 15 stocks
+
+2026-04-25 06:54:17 完成
