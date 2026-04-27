@@ -10,6 +10,7 @@ from good_company import is_good_company
 from decision_inspector import check_data_integrity, format_panstone_signal
 from exporter import format_decision_snapshot, format_data_snapshot
 from live_fetcher import merge_all_live
+from institutional_engine import calc_foreign_cost_pro, classify_institutional_state, interpret_institutional_state
 
 logger = logging.getLogger(__name__)
 _LOOKBACK_DAYS = 400
@@ -109,6 +110,18 @@ def process_stock_live(
 
         for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower"):
             decision[col] = _g(col)
+
+        try:
+            f_cost, f_pos, f_profit = calc_foreign_cost_pro(df_feat)
+            inst_state = classify_institutional_state(decision, f_cost, f_profit)
+            inst_text  = interpret_institutional_state(inst_state, f_profit)
+            decision["foreign_cost"]        = f_cost
+            decision["foreign_position"]    = f_pos
+            decision["foreign_profit_pct"]  = f_profit
+            decision["institutional_state"] = inst_state
+            decision["institutional_text"]  = inst_text
+        except Exception as e:
+            logger.warning("institutional analysis failed: %s", e)
 
         if print_snapshot:
             print(format_decision_snapshot(decision))
