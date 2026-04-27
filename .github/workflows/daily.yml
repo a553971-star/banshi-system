@@ -2,8 +2,8 @@ name: 每日磐石分析
 
 on:
   schedule:
-    - cron: '30 0 * * 1-5'  # 台灣時間 08:30
-    - cron: '30 7 * * 1-5'  # 台灣時間 15:30
+    - cron: '30 0 * * 1-5'
+    - cron: '30 7 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -23,45 +23,15 @@ jobs:
         run: pip install pandas requests
 
       - name: 建立資料庫 schema
+        run: cd $GITHUB_WORKSPACE && python3 setup_db.py
+
+      - name: 抓取今日資料
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
-        run: |
-          cd $GITHUB_WORKSPACE
-          python3 -c "
-import sqlite3, os
-db = sqlite3.connect('banshi.db')
-with open('schema.sql') as f:
-    db.executescript(f.read())
-db.commit()
-db.close()
-print('schema 建立完成')
-"
-
-      - name: 抓取今日資料（全股票池）
-        env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
-        run: |
-          cd $GITHUB_WORKSPACE
-          python3 -c "
-import pandas as pd, os
-from finmind_fetcher import fetch_and_store
-from datetime import date
-
-token = os.environ.get('FINMIND_TOKEN', '')
-today = date.today().isoformat()
-companies = pd.read_csv('companies.csv', dtype=str)
-stock_ids = companies['stock_id'].tolist()
-print(f'共 {len(stock_ids)} 檔，開始抓取...')
-n = fetch_and_store(stock_ids, today, today, token=token, db_path='banshi.db')
-print(f'寫入 {n} 筆')
-"
+        run: cd $GITHUB_WORKSPACE && python3 fetch_today.py
 
       - name: 執行磐石分析
-        env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
-        run: |
-          cd $GITHUB_WORKSPACE
-          python3 main.py
+        run: cd $GITHUB_WORKSPACE && python3 main.py
 
       - name: Commit 結果
         run: |
