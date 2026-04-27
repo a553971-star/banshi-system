@@ -839,6 +839,16 @@ def main() -> None:
 </div>
 """, unsafe_allow_html=True)
 
+            # ── 結構品質（強B/弱B）─────────────────────────────────
+            b_type = result.get("B_type")
+            b_text = result.get("B_text")
+            if b_type:
+                b_icon = {"STRONG_B": "🟢", "WEAK_B": "🔴", "NORMAL_B": "🟡"}.get(b_type, "⚪")
+                st.markdown("#### 🧱 結構品質")
+                st.markdown(f"**{b_icon} {b_type}**")
+                if b_text:
+                    st.info(b_text)
+
             # ── AI Prompt ──────────────────────────────────────────
             with st.expander("📋 產生 AI 分析 Prompt"):
                 name    = result.get("name", live_id)
