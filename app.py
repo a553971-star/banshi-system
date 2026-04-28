@@ -514,9 +514,6 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
 決策：{decision}｜信心：{confidence}｜型態：{signal_type}
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
-結構品質：" + str(result.get("B_type","N/A")) + "（" + str(result.get("B_text","")) + ")
-主力成本：" + str(result.get("foreign_cost","N/A")) + "｜主力獲利：" + str(result.get("foreign_profit_pct","N/A")) + "%
-主力狀態：" + str(result.get("institutional_state","N/A")) + "（" + str(result.get("institutional_text","")) + ")
 結構品質：{result.get("B_type","N/A")}（{result.get("B_text","")})
 主力成本：{result.get("foreign_cost","N/A")}｜持倉：{result.get("foreign_position","N/A")}張｜主力獲利：{result.get("foreign_profit_pct","N/A")}%
 主力狀態：{result.get("institutional_state","N/A")}（{result.get("institutional_text","")})
