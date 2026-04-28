@@ -926,6 +926,9 @@ def main() -> None:
 決策：{decision}｜信心：{confidence}｜型態：{signal_type}
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
+結構品質：{_b_type}（{_b_text})
+主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
+主力狀態：{_i_state}（{_i_text})
 
 【技術指標】
 ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
