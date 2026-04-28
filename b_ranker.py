@@ -2,7 +2,7 @@ import pandas as pd
 
 def score_strong_B(row):
     score = 0
-    B    = row.get("B_days") or 0
+    B    = int(row.get("B_days") or 0)
     flow = row.get("flow_status")
     cost = row.get("cost_level")
     A    = row.get("A_days") or 0
