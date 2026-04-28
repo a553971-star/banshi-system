@@ -903,6 +903,13 @@ def main() -> None:
                 bb_l = safe_round(result.get("bb_lower"))
                 date = result.get("date", "N/A")
 
+                _b_type = result.get("B_type", "N/A") or "N/A"
+                _b_text = result.get("B_text", "") or ""
+                _f_cost = str(result.get("foreign_cost", "N/A"))
+                _f_pos  = str(result.get("foreign_position", "N/A"))
+                _f_prof = str(result.get("foreign_profit_pct", "N/A"))
+                _i_state = result.get("institutional_state", "N/A") or "N/A"
+                _i_text  = result.get("institutional_text", "") or ""
                 prompt = f"""你是專業短線交易員 + 產業分析師，擅長結構分析、資金流、成本位與同產業橫向比較。
 請用「結構優先、消息輔助、橫向比較」的原則，對以下股票做詳細分析。
 
