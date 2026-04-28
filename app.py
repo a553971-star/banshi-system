@@ -498,6 +498,13 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
             bb_m        = safe_float(row.get("bb_middle"))
             bb_l        = safe_float(row.get("bb_lower"))
             date        = safe_str(row.get("date"))
+            _b_type = result.get("B_type", "N/A") or "N/A"
+            _b_text = result.get("B_text", "") or ""
+            _f_cost = str(result.get("foreign_cost", "N/A"))
+            _f_pos  = str(result.get("foreign_position", "N/A"))
+            _f_prof = str(result.get("foreign_profit_pct", "N/A"))
+            _i_state = result.get("institutional_state", "N/A") or "N/A"
+            _i_text  = result.get("institutional_text", "") or ""
             prompt = f"""你是專業短線交易員 + 市場分析師，擅長結構分析、資金流、成本位與事件驅動判讀。
 請用「結構優先、消息輔助、橫向比較」的原則分析以下股票。
 
@@ -514,9 +521,9 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
 決策：{decision}｜信心：{confidence}｜型態：{signal_type}
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
-結構品質：{result.get("B_type","N/A")}（{result.get("B_text","")})
-主力成本：{result.get("foreign_cost","N/A")}｜持倉：{result.get("foreign_position","N/A")}張｜主力獲利：{result.get("foreign_profit_pct","N/A")}%
-主力狀態：{result.get("institutional_state","N/A")}（{result.get("institutional_text","")})
+結構品質：{_b_type}（{_b_text})
+主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
+主力狀態：{_i_state}（{_i_text})
 
 【技術指標】
 ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
