@@ -3,7 +3,8 @@ name: 每日磐石分析
 on:
   schedule:
     - cron: '30 0 * * 1-5'
-    - cron: '00 10 * * 1-5'
+    - cron: '30 10 * * 1-5'
+    - cron: '00 13 * * 1-5'
   workflow_dispatch:
 
 jobs:

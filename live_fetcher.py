@@ -1,3 +1,4 @@
+import time
 import requests
 import pandas as pd
 import os
@@ -6,13 +7,19 @@ TOKEN = os.getenv("FINMIND_TOKEN")
 
 
 def _fm(dataset, stock_id, start):
-    r = requests.get(
-        "https://api.finmindtrade.com/api/v4/data",
-        params={"dataset": dataset, "data_id": stock_id, "start_date": start, "token": TOKEN},
-        timeout=15,
-    )
-    d = r.json()
-    return pd.DataFrame(d["data"]) if d.get("status") == 200 and d.get("data") else pd.DataFrame()
+    for attempt in range(3):
+        try:
+            r = requests.get(
+                "https://api.finmindtrade.com/api/v4/data",
+                params={"dataset": dataset, "data_id": stock_id, "start_date": start, "token": TOKEN},
+                timeout=15,
+            )
+            d = r.json()
+            return pd.DataFrame(d["data"]) if d.get("status") == 200 and d.get("data") else pd.DataFrame()
+        except Exception:
+            if attempt < 2:
+                time.sleep(5)
+    return pd.DataFrame()
 
 
 def merge_all_live(stock_id: str, start: str, end: str, db_path: str = None) -> pd.DataFrame:
