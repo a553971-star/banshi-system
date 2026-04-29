@@ -1113,6 +1113,26 @@ KD：{kd_k}/{kd_d}
     else:
         st.caption("今日無關鍵變化")
 
+    # ── 強B排行榜 ─────────────────────────────────────────────────────────
+    st.subheader("🔥 強B排行榜（主力建倉候選）")
+    try:
+        from b_ranker import get_top_strong_B
+        top_b = get_top_strong_B(df, top_n=5)
+        if top_b.empty:
+            st.info("今日無強B候選")
+        else:
+            for _, row in top_b.iterrows():
+                stock = row.get("stock_id", "")
+                name  = row.get("name", "")
+                score = int(row.get("B_score", 0))
+                B     = row.get("B_days", "")
+                flow  = row.get("flow_status", "")
+                cost  = row.get("cost_level", "")
+                st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
+                st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+    except Exception as e:
+        st.warning(f"強B排行榜載入失敗：{e}")
+
     # ── ⭐ 重點觀察 ───────────────────────────────────────────────────────
     pinned_ids = st.session_state["pinned"]
     frames = [src for src in [action_df, watchlist_df, candidate_df] if not src.empty]
