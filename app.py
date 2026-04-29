@@ -1398,6 +1398,64 @@ KD：{kd_k}/{kd_d}
     except Exception as e:
         st.warning(f"戰情室載入失敗：{e}")
 
+    # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
+    st.subheader("⚡ 情緒雷達 Momentum Radar")
+    st.caption("情緒雷達抓的是『沒建倉就突然噴』的股票。只能小倉試單，一轉弱就走，絕對不能當主倉。盤石吃主菜，情緒雷達吃甜點。")
+    try:
+        mdf = df.copy()
+        mdf = mdf.fillna(0)
+        for _mc in ["B_days", "A_days", "C_days"]:
+            mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce").fillna(0).astype(int)
+        for _mc in ["close", "vwap"]:
+            if _mc in mdf.columns:
+                mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce")
+
+        use_vwap = ("close" in mdf.columns) and ("vwap" in mdf.columns)
+        cond = (
+            (mdf["B_days"] <= 2) &
+            (mdf["A_days"] >= 2) &
+            (mdf["C_days"] >= 2) &
+            (mdf["flow_status"] != "DISTRIBUTION")
+        )
+        if use_vwap:
+            cond = cond & (mdf["close"] > mdf["vwap"])
+        momentum_df = mdf.loc[cond].copy()
+
+        momentum_df["score"] = momentum_df["A_days"] * 2 + momentum_df["C_days"] * 3
+
+        def get_momentum_level(score):
+            if score >= 13: return "🚀 過熱"
+            elif score >= 9: return "🔥 強爆"
+            elif score >= 6: return "⚠️ 初爆"
+            else: return ""
+
+        def _fmt_abc(row):
+            def _ci(c):
+                if c == 0: return "⚫"
+                elif c == 1: return "⚪"
+                elif c == 2: return "🟡"
+                elif 3 <= c <= 4: return "🔵"
+                else: return "🔴"
+            def _ai(a):
+                if a == 0: return "⚪"
+                elif 1 <= a <= 2: return "🟢"
+                else: return "🟢🟢"
+            return f"{row['B_days']} / {row['A_days']}{_ai(row['A_days'])} / {row['C_days']}{_ci(row['C_days'])}"
+
+        momentum_df = momentum_df.sort_values(by="score", ascending=False).reset_index(drop=True)
+        momentum_df["rank"] = momentum_df.index + 1
+        display_mdf = momentum_df.copy()
+        display_mdf["B/A/C"] = display_mdf.apply(_fmt_abc, axis=1)
+        display_mdf["強度"] = display_mdf["score"].apply(get_momentum_level)
+        display_mdf = display_mdf[["rank", "stock_id", "name", "B/A/C", "flow_status", "score", "強度"]]
+
+        if momentum_df.empty:
+            st.write("（今日無爆發訊號 No momentum spike today）")
+        else:
+            st.dataframe(display_mdf, use_container_width=True)
+    except Exception as e:
+        st.warning(f"情緒雷達載入失敗：{e}")
+
     # ── ⭐ 重點觀察 ───────────────────────────────────────────────────────
     pinned_ids = st.session_state["pinned"]
     frames = [src for src in [action_df, watchlist_df, candidate_df] if not src.empty]
