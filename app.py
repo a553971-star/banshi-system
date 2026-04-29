@@ -1309,6 +1309,102 @@ KD：{kd_k}/{kd_d}
     except Exception as e:
         st.warning(f"強B排行榜載入失敗：{e}")
 
+    # ── 戰情室 War Room ──────────────────────────────────────────────────
+    st.subheader("⚔️ 戰情室 War Room")
+
+    def get_c_icon(c):
+        if c == 0: return "⚫"
+        elif c == 1: return "⚪"
+        elif c == 2: return "🟡"
+        elif 3 <= c <= 4: return "🔵"
+        else: return "🔴"
+
+    def get_a_icon(a):
+        if a == 0: return "⚪"
+        elif 1 <= a <= 2: return "🟢"
+        else: return "🟢🟢"
+
+    def get_status_tag(a, c):
+        if a >= 2 and c >= 3: return "🔥 發動中 Launching"
+        elif a >= 1: return "⚠️ 剛轉強 Turning"
+        elif c == 0: return "⏳ 等待 Waiting"
+        else: return ""
+
+    try:
+        war_df = df.copy()
+        for _col in ["B_days", "A_days", "C_days"]:
+            war_df[_col] = pd.to_numeric(war_df[_col], errors="coerce").fillna(0).astype(int)
+
+        def _classify_war(row):
+            B      = int(row["B_days"])
+            A      = int(row["A_days"])
+            C      = int(row["C_days"])
+            b_type = str(row.get("B_type", "") or "")
+            flow   = str(row.get("flow_status", "") or "")
+            if B >= 8 and A >= 2 and C >= 3:
+                return "ATTACK"
+            if b_type == "STRONG_B" and B >= 10 and A >= 1 and C >= 2 and flow in ["ACCUMULATING", "NEUTRAL"]:
+                return "LAUNCH"
+            if b_type == "STRONG_B" and B >= 10:
+                return "PREPARE"
+            return None
+
+        war_df["war_class"] = war_df.apply(_classify_war, axis=1)
+        attack_df  = war_df[war_df["war_class"] == "ATTACK"].copy()
+        launch_df  = war_df[war_df["war_class"] == "LAUNCH"].copy()
+        prepare_df = war_df[war_df["war_class"] == "PREPARE"].copy()
+
+        attack_df["_score"]  = attack_df["C_days"] * 3 + attack_df["A_days"] * 2 + attack_df["B_days"]
+        launch_df["_score"]  = launch_df["C_days"] * 3 + launch_df["A_days"] * 2 + launch_df["B_days"]
+        prepare_df["_score"] = prepare_df["B_days"] * 3 + prepare_df["A_days"] * 2 + prepare_df["C_days"]
+
+        attack_df  = attack_df.sort_values("_score", ascending=False)
+        launch_df  = launch_df.sort_values("_score", ascending=False)
+        prepare_df = prepare_df.sort_values("_score", ascending=False)
+
+        def _render_war_section(section_df, emoji, title_en, title_zh, expander_md):
+            st.markdown(f"#### {emoji} {title_en}　{title_zh}")
+            with st.expander(f"📖 什麼是 {title_en}？"):
+                st.markdown(expander_md)
+            if section_df.empty:
+                st.caption("（無符合條件 No qualified stocks）")
+                return
+            for rank, (_, r) in enumerate(section_df.iterrows(), 1):
+                sid  = str(r.get("stock_id", ""))
+                name = str(r.get("name", ""))
+                B    = int(r["B_days"])
+                A    = int(r["A_days"])
+                C    = int(r["C_days"])
+                flow = str(r.get("flow_status", "-") or "-")
+                tag  = get_status_tag(A, C)
+                st.markdown(
+                    f"**#{rank} {sid} {name}**　"
+                    f"B={B}｜{get_a_icon(A)}A={A}｜{get_c_icon(C)}C={C}｜Flow={flow}　{tag}"
+                )
+
+        _render_war_section(
+            launch_df, "🟠", "LAUNCH", "即將發動",
+            "**條件：** B_type == STRONG_B 且 B_days ≥ 10，A_days ≥ 1，C_days ≥ 2，"
+            "Flow 為 ACCUMULATING 或 NEUTRAL\n\n"
+            "主力建倉充分、結構強健，已有初步突破訊號，隨時可能加速。\n\n"
+            "**排序公式：** C×3 + A×2 + B×1",
+        )
+        _render_war_section(
+            attack_df, "🔴", "ATTACK", "正在發動",
+            "**條件：** B_days ≥ 8，A_days ≥ 2，C_days ≥ 3\n\n"
+            "底部穩固（C≥3）、主力有建倉（B≥8）、突破已走超過2天。三段齊備，是最完整的發動結構。\n\n"
+            "**排序公式：** C×3 + A×2 + B×1",
+        )
+        _render_war_section(
+            prepare_df, "🔵", "PREPARE", "建倉完成",
+            "**條件：** B_type == STRONG_B 且 B_days ≥ 10，且不符合 ATTACK 或 LAUNCH\n\n"
+            "主力已大量建倉（強B+長B），尚未形成突破訊號，屬於蓄力等待發動階段。\n\n"
+            "**排序公式：** B×3 + A×2 + C×1",
+        )
+
+    except Exception as e:
+        st.warning(f"戰情室載入失敗：{e}")
+
     # ── ⭐ 重點觀察 ───────────────────────────────────────────────────────
     pinned_ids = st.session_state["pinned"]
     frames = [src for src in [action_df, watchlist_df, candidate_df] if not src.empty]
