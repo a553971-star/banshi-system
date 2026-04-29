@@ -1010,7 +1010,6 @@ KD：{kd_k}/{kd_d}
     if quick_mode:
         st.caption("⚡ 快速模式：僅顯示最關鍵標的")
 
-    query = st.text_input("🔍 搜尋股票（代號或名稱）", key="global_search")
 
     show_help = st.toggle("📖 顯示說明", value=False)
     if show_help:
@@ -1207,7 +1206,6 @@ KD：{kd_k}/{kd_d}
                 save_watchlist_overrides(st.session_state["overrides"])
                 st.rerun()
 
-    render_stock_search_section(df)
 
     # ── 今日快照 ──────────────────────────────────────────────────────────
     st.divider()
