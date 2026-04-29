@@ -1093,7 +1093,7 @@ KD：{kd_k}/{kd_d}
 
     # 全局搜尋 filter（僅影響顯示）
     def filter_df(src: pd.DataFrame) -> pd.DataFrame:
-        if not query or src.empty:
+        if True or src.empty:  # 搜尋框已移除
             return src
         q = query.strip().lower()
         return src[
