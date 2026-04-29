@@ -1311,6 +1311,7 @@ KD：{kd_k}/{kd_d}
 
     # ── 戰情室 War Room ──────────────────────────────────────────────────
     st.subheader("⚔️ 戰情室 War Room")
+    st.info("⚡ 行動清單是盤石說『現在可以買』；戰情室是盤石還沒說，但主力已經在布局。兩個互補——行動清單給你確認，戰情室讓你提前看到。")
 
     def get_c_icon(c):
         if c == 0: return "⚫"
@@ -1362,10 +1363,9 @@ KD：{kd_k}/{kd_d}
         launch_df  = launch_df.sort_values("_score", ascending=False)
         prepare_df = prepare_df.sort_values("_score", ascending=False)
 
-        def _render_war_section(section_df, emoji, title_en, title_zh, expander_md):
+        def _render_war_section(section_df, emoji, title_en, title_zh, caption_text):
             st.markdown(f"#### {emoji} {title_en}　{title_zh}")
-            with st.expander(f"📖 什麼是 {title_en}？"):
-                st.markdown(expander_md)
+            st.caption(caption_text)
             if section_df.empty:
                 st.caption("（無符合條件 No qualified stocks）")
                 return
@@ -1384,22 +1384,15 @@ KD：{kd_k}/{kd_d}
 
         _render_war_section(
             launch_df, "🟠", "LAUNCH", "即將發動",
-            "**條件：** B_type == STRONG_B 且 B_days ≥ 10，A_days ≥ 1，C_days ≥ 2，"
-            "Flow 為 ACCUMULATING 或 NEUTRAL\n\n"
-            "主力建倉充分、結構強健，已有初步突破訊號，隨時可能加速。\n\n"
-            "**排序公式：** C×3 + A×2 + B×1",
+            "主力建倉完成，股票開始脫離底部。不是現在買，而是提前盯住——等它真正發動再出手。",
         )
         _render_war_section(
             attack_df, "🔴", "ATTACK", "正在發動",
-            "**條件：** B_days ≥ 8，A_days ≥ 2，C_days ≥ 3\n\n"
-            "底部穩固（C≥3）、主力有建倉（B≥8）、突破已走超過2天。三段齊備，是最完整的發動結構。\n\n"
-            "**排序公式：** C×3 + A×2 + B×1",
+            "已經開始發動，結構完整。盤石考慮進場的候選，等決策系統確認再動作。",
         )
         _render_war_section(
             prepare_df, "🔵", "PREPARE", "建倉完成",
-            "**條件：** B_type == STRONG_B 且 B_days ≥ 10，且不符合 ATTACK 或 LAUNCH\n\n"
-            "主力已大量建倉（強B+長B），尚未形成突破訊號，屬於蓄力等待發動階段。\n\n"
-            "**排序公式：** B×3 + A×2 + C×1",
+            "主力在偷偷買，還沒有要拉的跡象。先放進視野，等出現 A 訊號再說。",
         )
 
     except Exception as e:
