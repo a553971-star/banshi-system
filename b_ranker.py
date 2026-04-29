@@ -8,8 +8,14 @@ def score_strong_B(row):
         B = 0
     flow = row.get("flow_status")
     cost = row.get("cost_level")
-    A    = row.get("A_days") or 0
-    conf = row.get("confidence") or 0
+    try:
+        A = int(float(row.get("A_days") or 0))
+    except Exception:
+        A = 0
+    try:
+        conf = int(float(row.get("confidence") or 0))
+    except Exception:
+        conf = 0
     if B >= 8:   score += 30
     elif B >= 5: score += 20
     elif B >= 3: score += 10
