@@ -375,6 +375,46 @@ def safe_str(x):
     return "-" if s.lower() == "nan" or s.strip() == "" else s
 
 
+# ── 情緒雷達 helpers ───────────────────────────────────────────────────────────
+
+def get_c_arrow(today_c, prev):
+    if prev is None: return ""
+    if today_c > prev["C_days"]: return "↑"
+    elif today_c == prev["C_days"]: return "→"
+    else: return "↓"
+
+def get_warning(row, prev):
+    if prev is None: return ""
+    if row["C_days"] == prev["C_days"] and row["A_days"] >= 2:
+        return "🟡 動能停滯"
+    if row["flow_status"] == "NEUTRAL" and prev["flow_status"] in ["ACCUMULATING", "INFLOW"]:
+        return "🟡 資金轉弱"
+    if row["C_days"] < prev["C_days"]:
+        return "🟠 動能下降"
+    if row["C_days"] == 0 and prev["C_days"] >= 2:
+        return "🔴 發動失敗"
+    return ""
+
+def get_action_signal(warning, level):
+    if warning == "🔴 發動失敗": return "賣掉"
+    elif warning == "🟠 動能下降": return "賣一半"
+    elif warning in ["🟡 動能停滯", "🟡 資金轉弱"]: return "先不要買"
+    elif level == "🚀 過熱": return "不要買／慢慢賣"
+    elif level == "🔥 強爆": return "可以抱"
+    elif level == "⚠️ 初爆": return "小買"
+    return "等"
+
+def get_coach_message(warning, level):
+    if warning == "🔴 發動失敗": return "🔴 快逃！現在要賣掉，不要等！"
+    elif warning == "🟠 動能下降": return "🟠 開始變弱了，先賣一半，剩下觀察！"
+    elif warning == "🟡 動能停滯": return "🟡 有點怪怪的，先不要買，看看再說"
+    elif warning == "🟡 資金轉弱": return "🟡 大人開始不買了，先等等不要動"
+    elif level == "🚀 過熱": return "🔴 太熱了！不要追，手上有的可以慢慢賣"
+    elif level == "🔥 強爆": return "🟢 很強，可以抱著，但要準備隨時賣"
+    elif level == "⚠️ 初爆": return "🟡 剛開始，可以小小試試看，不要買太多"
+    return "⚪ 先觀察，不要亂動"
+
+
 # ── 搜尋層 ────────────────────────────────────────────────────────────────────
 
 def search_stocks(df: pd.DataFrame, query: str) -> pd.DataFrame:
@@ -1251,6 +1291,28 @@ KD：{kd_k}/{kd_d}
     state_log = load_state_log()
     state_changes = get_latest_state_changes(state_log)
 
+    # 昨日對照表（供情緒雷達使用）
+    prev_map = {}
+    try:
+        if not state_log.empty:
+            _sl = state_log.copy()
+            if "stock_id" in _sl.columns:
+                _sl["stock_id"] = _sl["stock_id"].astype(str)
+            if "date" in _sl.columns:
+                _sl["date"] = pd.to_datetime(_sl["date"], errors="coerce")
+            _today = pd.Timestamp(datetime.date.today())
+            _valid = _sl[_sl["date"] < _today]
+            for _sid, _grp in _valid.groupby("stock_id"):
+                _grp = _grp.sort_values("date")
+                _latest = _grp.iloc[-1]
+                prev_map[_sid] = {
+                    "C_days":     int(_latest.get("C_days", 0) or 0),
+                    "A_days":     int(_latest.get("A_days", 0) or 0),
+                    "flow_status": str(_latest.get("flow_status", "") or ""),
+                }
+    except Exception:
+        prev_map = {}
+
     overrides = st.session_state["overrides"]
     action_df, watchlist_df, candidate_df = classify_rows(df, overrides)
 
@@ -1400,7 +1462,13 @@ KD：{kd_k}/{kd_d}
 
     # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
     st.subheader("⚡ 情緒雷達 Momentum Radar")
-    st.caption("情緒雷達抓的是『沒建倉就突然噴』的股票。只能小倉試單，一轉弱就走，絕對不能當主倉。盤石吃主菜，情緒雷達吃甜點。")
+    st.info(
+        "【這是什麼】抓「沒有B卻突然噴」的股票。盤石負責穩定賺，情緒雷達負責抓爆發機會。\n"
+        "【強度等級】🚀 過熱：不追高，慢慢賣　🔥 強爆：可持倉，準備走　⚠️ 初爆：小倉試單\n"
+        "【轉弱警報】🟡 先不要買　🟠 減碼　🔴 立刻出場\n"
+        "【鐵則】❌ 不能當主倉　❌ 不能凹單　✅ 一轉弱就走"
+    )
+    st.caption("記住：🔴賣掉、🟠賣一半、🟡等等、🟢抱住")
     try:
         mdf = df.copy()
         mdf = mdf.fillna(0)
@@ -1444,15 +1512,32 @@ KD：{kd_k}/{kd_d}
 
         momentum_df = momentum_df.sort_values(by="score", ascending=False).reset_index(drop=True)
         momentum_df["rank"] = momentum_df.index + 1
-        display_mdf = momentum_df.copy()
-        display_mdf["B/A/C"] = display_mdf.apply(_fmt_abc, axis=1)
-        display_mdf["強度"] = display_mdf["score"].apply(get_momentum_level)
-        display_mdf = display_mdf[["rank", "stock_id", "name", "B/A/C", "flow_status", "score", "強度"]]
+
+        display_df = momentum_df.copy()
+        display_df = display_df.fillna(0)
+        if "stock_id" in display_df.columns:
+            display_df["stock_id"] = display_df["stock_id"].astype(str)
+        display_df["B/A/C"] = display_df.apply(_fmt_abc, axis=1)
+        display_df["C變化"] = display_df.apply(
+            lambda r: f"{r['C_days']}{get_c_icon(int(r['C_days']))} {get_c_arrow(int(r['C_days']), prev_map.get(str(r['stock_id'])))}",
+            axis=1,
+        )
+        display_df["轉弱訊號"] = display_df.apply(
+            lambda r: get_warning(r, prev_map.get(str(r["stock_id"]))), axis=1
+        )
+        display_df["強度"] = display_df["score"].apply(get_momentum_level)
+        display_df["⚡動作"] = display_df.apply(
+            lambda r: get_action_signal(r["轉弱訊號"], r["強度"]), axis=1
+        )
+        display_df["🧠教練"] = display_df.apply(
+            lambda r: get_coach_message(r["轉弱訊號"], r["強度"]), axis=1
+        )
+        display_df = display_df[["rank", "stock_id", "name", "B/A/C", "C變化", "flow_status", "強度", "⚡動作", "🧠教練"]]
 
         if momentum_df.empty:
             st.write("（今日無爆發訊號 No momentum spike today）")
         else:
-            st.dataframe(display_mdf, use_container_width=True)
+            st.dataframe(display_df, use_container_width=True)
     except Exception as e:
         st.warning(f"情緒雷達載入失敗：{e}")
 
