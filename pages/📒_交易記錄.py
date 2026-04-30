@@ -112,11 +112,95 @@ st.subheader("📊 歷史交易紀錄")
 if os.path.exists(TRADES_PATH):
     try:
         df = pd.read_csv(TRADES_PATH)
+        df["stock_id"] = df["stock_id"].astype(str)
+        df["shares"] = pd.to_numeric(df["shares"], errors="coerce").fillna(0)
+        df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0)
         df = df.sort_values(by=["date", "time"], ascending=False)
+        df["row_id"] = (
+            df["date"].astype(str) + "_" +
+            df["time"].astype(str) + "_" +
+            df["stock_id"].astype(str)
+        )
         filter_stock = st.text_input("🔍 篩選股票代號", key="trade_filter")
         if filter_stock:
-            df = df[df["stock_id"].astype(str).str.contains(filter_stock, case=False, na=False)]
-        st.dataframe(df, use_container_width=True, hide_index=True)
+            df = df[df["stock_id"].str.contains(filter_stock, case=False, na=False)]
+        st.dataframe(df.drop(columns=["row_id"]), use_container_width=True, hide_index=True)
+
+        if not df.empty:
+            st.divider()
+            st.subheader("✏️ 編輯 / 刪除交易")
+
+            options = df.apply(
+                lambda r: f"{r['date']} {r['stock_id']} {r.get('name', '')} {r['action']} {r['shares']}張 @ {r['price']}",
+                axis=1,
+            ).tolist()
+
+            selected_label = st.selectbox("選擇要編輯的交易", options)
+            selected_idx = options.index(selected_label)
+            selected_row = df.iloc[selected_idx]
+
+            with st.form("edit_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    e_stock_id = st.text_input("股票代號", value=str(selected_row["stock_id"]))
+                    e_name = st.text_input("股票名稱", value=str(selected_row.get("name", "")))
+                    e_action = st.selectbox("買賣方向", ["買入", "賣出"],
+                        index=0 if selected_row["action"] == "買入" else 1)
+                    e_shares = st.number_input("張數", value=float(selected_row["shares"]),
+                        min_value=0.001, step=0.001, format="%.3f")
+                with col2:
+                    e_price = st.number_input("價格", value=float(selected_row["price"]),
+                        min_value=0.01, step=0.01, format="%.2f")
+                    _type_opts = ["盤石", "情緒", "測試", "其他"]
+                    _cur_type = str(selected_row.get("trade_type", "其他"))
+                    e_trade_type = st.selectbox("交易類型", _type_opts,
+                        index=_type_opts.index(_cur_type) if _cur_type in _type_opts else 3)
+                    e_note = st.text_input("備註", value=str(selected_row.get("note", "") or ""))
+                    delete_confirm = st.checkbox("確認刪除（勾選後才能刪除）")
+
+                colA, colB = st.columns(2)
+                save_btn = colA.form_submit_button("💾 儲存修改", type="primary")
+                delete_btn = colB.form_submit_button("🗑️ 刪除這筆")
+
+            if save_btn:
+                full_df = pd.read_csv(TRADES_PATH)
+                full_df["stock_id"] = full_df["stock_id"].astype(str)
+                full_df["shares"] = pd.to_numeric(full_df["shares"], errors="coerce").fillna(0)
+                full_df["price"] = pd.to_numeric(full_df["price"], errors="coerce").fillna(0)
+                full_df["row_id"] = (
+                    full_df["date"].astype(str) + "_" +
+                    full_df["time"].astype(str) + "_" +
+                    full_df["stock_id"].astype(str)
+                )
+                mask = full_df["row_id"] == selected_row["row_id"]
+                full_df.loc[mask, "stock_id"]   = e_stock_id
+                full_df.loc[mask, "name"]        = e_name
+                full_df.loc[mask, "action"]      = e_action
+                full_df.loc[mask, "shares"]      = e_shares
+                full_df.loc[mask, "price"]       = e_price
+                full_df.loc[mask, "amount"]      = round(e_shares * e_price * 1000)
+                full_df.loc[mask, "trade_type"]  = e_trade_type
+                full_df.loc[mask, "note"]        = e_note
+                full_df.drop(columns=["row_id"]).to_csv(TRADES_PATH, index=False, encoding="utf-8-sig")
+                st.success("✅ 修改成功")
+                st.rerun()
+
+            if delete_btn:
+                if not delete_confirm:
+                    st.warning("⚠️ 請先勾選「確認刪除」")
+                else:
+                    full_df = pd.read_csv(TRADES_PATH)
+                    full_df["stock_id"] = full_df["stock_id"].astype(str)
+                    full_df["row_id"] = (
+                        full_df["date"].astype(str) + "_" +
+                        full_df["time"].astype(str) + "_" +
+                        full_df["stock_id"].astype(str)
+                    )
+                    full_df = full_df[full_df["row_id"] != selected_row["row_id"]]
+                    full_df.drop(columns=["row_id"]).to_csv(TRADES_PATH, index=False, encoding="utf-8-sig")
+                    st.success("🗑️ 已刪除")
+                    st.rerun()
+
     except Exception as e:
         st.error(f"讀取失敗：{e}")
 else:
