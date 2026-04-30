@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-BASE_PATH = os.path.expanduser("~/Documents/banshi_system")
+BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRADES_PATH = os.path.join(BASE_PATH, "trades.csv")
 COMPANY_PATH = os.path.join(BASE_PATH, "companies.csv")
 DECISION_PATH = os.path.join(BASE_PATH, "latest_decisions.csv")

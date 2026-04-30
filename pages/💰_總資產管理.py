@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-BASE_PATH = os.path.expanduser("~/Documents/banshi_system")
+BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRADES_PATH = os.path.join(BASE_PATH, "trades.csv")
 CASH_PATH = os.path.join(BASE_PATH, "cash_log.csv")
 

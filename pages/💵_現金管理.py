@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-BASE_PATH = os.path.expanduser("~/Documents/banshi_system")
+BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CASH_PATH = os.path.join(BASE_PATH, "cash_log.csv")
 
 st.set_page_config(page_title="現金管理", layout="wide")
