@@ -150,7 +150,7 @@ if os.path.exists(TRADES_PATH):
                         min_value=0.001, step=0.001, format="%.3f")
                 with col2:
                     e_price = st.number_input("價格", value=float(selected_row["price"]),
-                        min_value=0.01, step=0.01, format="%.2f")
+                        min_value=0.0, step=0.01, format="%.4f")
                     _type_opts = ["盤石", "情緒", "測試", "其他"]
                     _cur_type = str(selected_row.get("trade_type", "其他"))
                     e_trade_type = st.selectbox("交易類型", _type_opts,
