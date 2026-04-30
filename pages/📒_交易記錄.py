@@ -58,7 +58,7 @@ with st.form("trade_form", clear_on_submit=True):
         action = st.selectbox("買賣方向", ["買入", "賣出"])
         shares = st.number_input("張數（零股用小數）", min_value=0.001, step=0.001, value=1.0, format="%.3f")
     with col2:
-        price = st.number_input("成交價格", min_value=0.01, step=0.01, value=0.0, format="%.2f")
+        price = st.number_input("成交價格", min_value=0.0, step=0.01, value=0.0, format="%.2f")
         now = datetime.now()
         trade_date = st.date_input("交易日期", value=now.date())
         trade_time = st.time_input("交易時間", value=now.time())
