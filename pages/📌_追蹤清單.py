@@ -186,31 +186,46 @@ with col_title:
     st.subheader(f"📋 追蹤中（{len(wl)} 支）")
 with col_refresh:
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-    refresh_all = st.button("🔄 全部重新分析", use_container_width=True)
+    if st.button("🔄 全部重新分析", use_container_width=True):
+        for sid in wl:
+            st.session_state.pop(f"wl_result_{sid}", None)
+        st.rerun()
 
-# session_state 儲存分析結果，避免每次 rerun 重跑
 if "wl_results" not in st.session_state:
     st.session_state["wl_results"] = {}
 
-if refresh_all:
-    st.session_state["wl_results"] = {}
-
 for stock_id in wl:
-    if stock_id not in st.session_state["wl_results"]:
-        with st.spinner(f"分析 {stock_id} 中..."):
-            st.session_state["wl_results"][stock_id] = run_analysis(stock_id)
+    show_key   = f"wl_show_{stock_id}"
+    result_key = f"wl_result_{stock_id}"
 
-    result = st.session_state["wl_results"].get(stock_id)
-    if result is None:
-        col_err, col_btn = st.columns([9, 1])
-        with col_err:
-            st.warning(f"⚠️ {stock_id} 無法取得資料")
-        with col_btn:
-            st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
-            if st.button("🗑️ 移除", key=f"err_remove_{stock_id}"):
-                wl2 = load_watchlist()
-                wl2 = [s for s in wl2 if s != stock_id]
-                save_watchlist(wl2)
-                st.rerun()
-    else:
-        render_result_card(stock_id, result, key_prefix="wl")
+    col1, col2, col3 = st.columns([6, 2, 1])
+    with col1:
+        cached = st.session_state["wl_results"].get(stock_id)
+        name = cached.get("name", "") if cached else ""
+        st.markdown(f"**{stock_id}** {name}")
+    with col2:
+        live_label = "🔬 收起" if st.session_state.get(show_key, False) else "🔬 即時分析"
+        if st.button(live_label, key=f"wl_live_btn_{stock_id}", use_container_width=True):
+            st.session_state[show_key] = not st.session_state.get(show_key, False)
+            if not st.session_state[show_key]:
+                st.session_state["wl_results"].pop(stock_id, None)
+            st.rerun()
+    with col3:
+        if st.button("🗑️", key=f"wl_remove_{stock_id}", help="移除追蹤"):
+            wl2 = load_watchlist()
+            wl2 = [s for s in wl2 if s != stock_id]
+            save_watchlist(wl2)
+            st.session_state["wl_results"].pop(stock_id, None)
+            st.session_state.pop(show_key, None)
+            st.rerun()
+
+    if st.session_state.get(show_key, False):
+        if stock_id not in st.session_state["wl_results"]:
+            with st.spinner(f"分析 {stock_id} 中..."):
+                st.session_state["wl_results"][stock_id] = run_analysis(stock_id)
+
+        result = st.session_state["wl_results"].get(stock_id)
+        if result:
+            render_result_card(stock_id, result, key_prefix="wl")
+        else:
+            st.warning(f"⚠️ {stock_id} 無法取得資料，請確認代號是否正確")
