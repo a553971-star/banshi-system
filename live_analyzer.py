@@ -154,7 +154,8 @@ def process_stock_live(
             current_price=_g("close"),
         )
 
-        for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower"):
+        for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
+                    "B_window_20", "B_quality"):
             decision[col] = _g(col)
 
         try:
