@@ -1036,6 +1036,43 @@ KD：{kd_k}/{kd_d}
         st.code(prompt, language="")
 
 
+# ── TRUE_B 選股池 helpers ─────────────────────────────────────────────────────
+
+def calc_b_phase_from_row(row):
+    try:
+        b_quality = int(float(row.get("B_quality") or 0))
+    except Exception:
+        b_quality = 0
+    try:
+        a_days = int(float(row.get("A_days") or 0))
+    except Exception:
+        a_days = 0
+    if a_days >= 5:
+        return "LATE"
+    elif b_quality >= 70 and 1 <= a_days <= 2:
+        return "LAUNCH"
+    elif b_quality >= 70 and a_days == 0:
+        return "MATURE"
+    elif b_quality >= 40:
+        return "BUILD"
+    else:
+        return "PREPARE"
+
+
+def calc_b_validity_from_row(row):
+    try:
+        b_quality = int(float(row.get("B_quality") or 0))
+    except Exception:
+        b_quality = 0
+    flow = str(row.get("flow_status") or "")
+    if b_quality >= 60 and flow != "DISTRIBUTION":
+        return "TRUE_B"
+    elif b_quality < 50 and flow == "DISTRIBUTION":
+        return "FAKE_B"
+    else:
+        return "UNCERTAIN"
+
+
 # ── 主程式 ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -1564,6 +1601,77 @@ KD：{kd_k}/{kd_d}
 
     except Exception as e:
         st.warning(f"戰情室載入失敗：{e}")
+
+    # ── TRUE_B 選股池 ──────────────────────────────────────────────────────────
+    st.subheader("🎯 TRUE_B 選股池")
+    st.caption("已通過：C≥3 + B_quality≥60 + 無外資出貨 + 處於MATURE或LAUNCH階段")
+
+    try:
+        tb_df = df.copy()
+
+        if "B_quality" not in tb_df.columns:
+            st.warning("⚠️ B_quality 欄位不存在，請重新執行每日分析（python3 main.py）以取得新版欄位")
+        else:
+            for col in ["C_days", "B_days", "A_days", "B_quality", "B_window_20", "volume_ratio"]:
+                if col in tb_df.columns:
+                    tb_df[col] = pd.to_numeric(tb_df[col], errors="coerce").fillna(0)
+
+            tb_df["_b_phase"]    = tb_df.apply(calc_b_phase_from_row, axis=1)
+            tb_df["_b_validity"] = tb_df.apply(calc_b_validity_from_row, axis=1)
+
+            pool = tb_df[
+                (tb_df["C_days"] >= 3) &
+                (tb_df["B_quality"] >= 60) &
+                (tb_df["_b_validity"] == "TRUE_B") &
+                (tb_df["_b_phase"].isin(["MATURE", "LAUNCH"]))
+            ].copy()
+
+            def _tb_score(row):
+                s = row.get("B_quality", 0) * 0.4
+                s += row.get("B_window_20", 0) * 1.5
+                s += row.get("volume_ratio", 0) * 10
+                if str(row.get("flow_status", "")) == "ACCUMULATING":
+                    s += 10
+                return round(s, 1)
+
+            pool["_score"] = pool.apply(_tb_score, axis=1)
+            pool = pool.sort_values("_score", ascending=False)
+
+            launch_pool = pool[pool["_b_phase"] == "LAUNCH"]
+            mature_pool = pool[pool["_b_phase"] == "MATURE"]
+
+            st.markdown("#### 🔴 LAUNCH 發動池（可考慮進場）")
+            st.caption("剛突破有量，B結構完整——盤石最佳進場時機，需配合決策確認")
+            if launch_pool.empty:
+                st.caption("（今日無符合條件）")
+            else:
+                for _, row in launch_pool.iterrows():
+                    sid   = str(row.get("stock_id", ""))
+                    name  = str(row.get("name", ""))
+                    bq    = int(row.get("B_quality", 0))
+                    bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
+                    flow  = str(row.get("flow_status", "-") or "-")
+                    score = row.get("_score", 0)
+                    st.markdown(f"**🔴 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+
+            st.divider()
+
+            st.markdown("#### 🟠 MATURE 觀察池（等待發動）")
+            st.caption("主力已在裡面還沒動——放進追蹤清單，等LAUNCH訊號出現再出手")
+            if mature_pool.empty:
+                st.caption("（今日無符合條件）")
+            else:
+                for _, row in mature_pool.iterrows():
+                    sid   = str(row.get("stock_id", ""))
+                    name  = str(row.get("name", ""))
+                    bq    = int(row.get("B_quality", 0))
+                    bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
+                    flow  = str(row.get("flow_status", "-") or "-")
+                    score = row.get("_score", 0)
+                    st.markdown(f"**🟠 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+
+    except Exception as e:
+        st.warning(f"TRUE_B 選股池載入失敗：{e}")
 
     # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
     st.subheader("⚡ 情緒雷達 Momentum Radar")
