@@ -181,6 +181,20 @@ if not wl:
     st.info("追蹤清單是空的，在上方輸入股票代號加入吧！")
     st.stop()
 
+# 建立代號→名稱對照表
+name_map = {}
+try:
+    co_df = pd.read_csv(os.path.join(BASE_PATH, "companies.csv"), dtype=str)
+    name_map.update(dict(zip(co_df["stock_id"], co_df["name"])))
+except Exception:
+    pass
+try:
+    dec_df = pd.read_csv(os.path.join(BASE_PATH, "latest_decisions.csv"), dtype=str)
+    name_map.update({k: v for k, v in zip(dec_df["stock_id"], dec_df["name"])
+                     if v and v != "nan"})
+except Exception:
+    pass
+
 col_title, col_refresh = st.columns([7, 1])
 with col_title:
     st.subheader(f"📋 追蹤中（{len(wl)} 支）")
@@ -201,7 +215,7 @@ for stock_id in wl:
     col1, col2, col3 = st.columns([6, 2, 1])
     with col1:
         cached = st.session_state["wl_results"].get(stock_id)
-        name = cached.get("name", "") if cached else ""
+        name = (cached.get("name", "") if cached else "") or name_map.get(stock_id, "")
         st.markdown(f"**{stock_id}** {name}")
     with col2:
         live_label = "🔬 收起" if st.session_state.get(show_key, False) else "🔬 即時分析"
