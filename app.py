@@ -900,6 +900,21 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         if b_text:
             st.info(b_text)
 
+    b_phase = result.get("B_phase")
+    if b_phase:
+        phase_map = {
+            "LAUNCH": ("🔴", "LAUNCH 發動初期", "盤石最佳進場點，剛突破，有量"),
+            "MATURE": ("🟠", "MATURE 成熟建倉", "主力已在裡面，等待發動，最值得盯"),
+            "BUILD":  ("🔵", "BUILD 穩定建倉",  "主力開始進場，結構成形中"),
+            "PREPARE":("🟡", "PREPARE 建倉中",  "有人在看，但還沒形成優勢"),
+            "LATE":   ("⚫", "LATE 太晚",       "已漲一段，不要追"),
+        }
+        icon, label, desc = phase_map.get(b_phase, ("⚪", f"UNKNOWN ({b_phase})", ""))
+        st.markdown("#### 📍 主力階段")
+        st.markdown(f"**{icon} {label}**")
+        if desc:
+            st.caption(desc)
+
     with st.expander("📋 產生 AI 分析 Prompt"):
         name        = result.get("name", stock_id)
         signal_type = result.get("signal_type") or "-"
@@ -1138,6 +1153,21 @@ def main() -> None:
                 st.markdown(f"**{b_icon} {b_type}**")
                 if b_text:
                     st.info(b_text)
+
+            b_phase = result.get("B_phase")
+            if b_phase:
+                phase_map = {
+                    "LAUNCH": ("🔴", "LAUNCH 發動初期", "盤石最佳進場點，剛突破，有量"),
+                    "MATURE": ("🟠", "MATURE 成熟建倉", "主力已在裡面，等待發動，最值得盯"),
+                    "BUILD":  ("🔵", "BUILD 穩定建倉",  "主力開始進場，結構成形中"),
+                    "PREPARE":("🟡", "PREPARE 建倉中",  "有人在看，但還沒形成優勢"),
+                    "LATE":   ("⚫", "LATE 太晚",       "已漲一段，不要追"),
+                }
+                icon, label, desc = phase_map.get(b_phase, ("⚪", f"UNKNOWN ({b_phase})", ""))
+                st.markdown("#### 📍 主力階段")
+                st.markdown(f"**{icon} {label}**")
+                if desc:
+                    st.caption(desc)
 
             # ── AI Prompt ──────────────────────────────────────────
             with st.expander("📋 產生 AI 分析 Prompt"):
