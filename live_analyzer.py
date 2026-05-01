@@ -10,7 +10,7 @@ from good_company import is_good_company
 from decision_inspector import check_data_integrity, format_panstone_signal
 from exporter import format_decision_snapshot, format_data_snapshot
 from live_fetcher import merge_all_live
-from institutional_engine import calc_foreign_cost_pro, classify_institutional_state, interpret_institutional_state
+from institutional_engine import calc_foreign_cost_pro, classify_institutional_state, interpret_institutional_state, calc_b_validity
 
 def classify_B_strength(result, foreign_profit):
     B    = result.get("B_days") or 0
@@ -170,6 +170,12 @@ def process_stock_live(
             b_type = classify_B_strength(decision, f_profit)
             decision["B_type"] = b_type
             decision["B_text"] = interpret_B_strength(b_type)
+            b_quality_val = decision.get("B_quality") or 0
+            try:
+                b_quality_val = int(b_quality_val)
+            except Exception:
+                b_quality_val = 0
+            decision["B_validity"] = calc_b_validity(df_feat, b_quality_val)
         except Exception as e:
             logger.warning("institutional analysis failed: %s", e)
 
