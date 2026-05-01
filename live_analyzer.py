@@ -173,6 +173,29 @@ def process_stock_live(
         except Exception as e:
             logger.warning("institutional analysis failed: %s", e)
 
+        # B_phase 分類（順序非常重要：LATE → LAUNCH → MATURE → BUILD → PREPARE）
+        b_quality = decision.get("B_quality")
+        a_days_val = decision.get("A_days")
+        try:
+            b_quality = int(b_quality) if b_quality is not None else 0
+            a_days_val = int(a_days_val) if a_days_val is not None else 0
+        except Exception:
+            b_quality = 0
+            a_days_val = 0
+
+        if a_days_val >= 5:
+            b_phase = "LATE"
+        elif b_quality >= 70 and 1 <= a_days_val <= 2:
+            b_phase = "LAUNCH"
+        elif b_quality >= 70 and a_days_val == 0:
+            b_phase = "MATURE"
+        elif b_quality >= 40:
+            b_phase = "BUILD"
+        else:
+            b_phase = "PREPARE"
+
+        decision["B_phase"] = b_phase
+
         if print_snapshot:
             print(format_decision_snapshot(decision))
 
