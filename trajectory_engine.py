@@ -182,9 +182,16 @@ def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
             b_window_20 = sum(b_cond_history)
             b_window_out[i] = b_window_20
 
-            # B_quality：b_days 作為 gating，整理明顯才給高分
+            # B_quality：b_days 邊際效益遞減，避免長整理股票爆表
+            if b_days <= 20:
+                effective_b = b_days
+            elif b_days <= 40:
+                effective_b = 20 + (b_days - 20) * 0.5
+            else:
+                effective_b = 30  # 上限，40天以上不再加分
+
             if b_days >= 2:
-                bq = b_days * 2 + b_window_20
+                bq = int(effective_b * 2 + b_window_20)
             else:
                 bq = int(b_window_20 * 0.5)
             b_quality_out[i] = bq
