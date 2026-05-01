@@ -16,20 +16,24 @@ import streamlit.components.v1 as components
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
 
-def _to_num(val):
+def _to_num(val, default=0.0):
+    """安全轉 float，NaN / None / 非數字 → default"""
     try:
         v = float(val)
-        return None if v != v else v  # NaN check
+        return default if (v != v) else v  # NaN → default
     except (TypeError, ValueError):
-        return None
+        return default
 
 def explain_metrics(result):
-    c = _to_num(result.get("C_days")) or 0
-    b = _to_num(result.get("B_days")) or 0
-    a = _to_num(result.get("A_days")) or 0
-    adx = _to_num(result.get("adx"))
-    k   = _to_num(result.get("kd_k"))
-    cost = result.get("cost_level")
+    try:
+        c    = _to_num(result.get("C_days"))
+        b    = _to_num(result.get("B_days"))
+        a    = _to_num(result.get("A_days"))
+        adx  = _to_num(result.get("adx"),   default=None)
+        k    = _to_num(result.get("kd_k"),  default=None)
+        cost = result.get("cost_level")
+    except Exception:
+        return [], "👉 資料不足，無法判讀"
 
     lines = []
     lines.append("C " + ("底部已形成 ✅" if c >= 5 else "尚未止跌 ⚠️"))
