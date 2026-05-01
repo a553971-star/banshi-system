@@ -29,6 +29,7 @@ from trajectory_engine import compute_trajectory, get_latest_trajectory
 from flow_engine import classify_flow, classify_cost
 from decision_inspector import check_data_integrity, format_panstone_signal
 from good_company import is_good_company, get_company_name, load_company_list
+from institutional_engine import calc_b_validity
 from exporter import (
     format_data_snapshot,
     format_decision_snapshot,
@@ -222,6 +223,45 @@ def _process_stock(
         # ── Attach observational indicators (no decision impact) ─────────
         for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower"):
             decision[col] = _g(col)
+
+        # ── B_quality / B_window_20 / B_validity / B_phase ───────────────
+        try:
+            b_quality = int(float(_g("B_quality") or 0))
+        except Exception:
+            b_quality = 0
+
+        try:
+            b_window_20 = int(float(_g("B_window_20") or 0))
+        except Exception:
+            b_window_20 = 0
+
+        try:
+            a_days = int(float(_g("A_days") or 0))
+        except Exception:
+            a_days = 0
+
+        try:
+            b_validity = calc_b_validity(df_feat, b_quality)
+            if not isinstance(b_validity, str):
+                b_validity = "UNCERTAIN"
+        except Exception:
+            b_validity = "UNCERTAIN"
+
+        if a_days >= 5:
+            b_phase = "LATE"
+        elif b_quality >= 70 and 1 <= a_days <= 2:
+            b_phase = "LAUNCH"
+        elif b_quality >= 70 and a_days == 0:
+            b_phase = "MATURE"
+        elif b_quality >= 40:
+            b_phase = "BUILD"
+        else:
+            b_phase = "PREPARE"
+
+        decision["B_quality"]   = b_quality
+        decision["B_window_20"] = b_window_20
+        decision["B_validity"]  = b_validity
+        decision["B_phase"]     = b_phase
 
         # ── Print decision snapshot ───────────────────────────────────────
         if print_snapshot:
