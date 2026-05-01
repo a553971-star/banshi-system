@@ -71,6 +71,19 @@ _STATE_LOG_PATH = os.path.join(_DIR, "state_log.csv")
 _OVERRIDES_PATH = os.path.join(_DIR, "watchlist_overrides.json")
 PIN_PATH = os.path.join(_DIR, "pinned.json")
 TRADES_PATH = os.path.join(_DIR, "trades_log.csv")
+_CUSTOM_WL_PATH = os.path.join(_DIR, "watchlist_custom.json")
+
+
+def add_to_custom_watchlist(stock_id: str) -> None:
+    try:
+        with open(_CUSTOM_WL_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = []
+    if stock_id not in data:
+        data.append(stock_id)
+        with open(_CUSTOM_WL_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
 
 
 # ── 資料載入 ──────────────────────────────────────────────────────────────────
@@ -1449,10 +1462,16 @@ KD：{kd_k}/{kd_d}
                 C    = int(r["C_days"])
                 flow = str(r.get("flow_status", "-") or "-")
                 tag  = get_status_tag(A, C)
-                st.markdown(
-                    f"**#{rank} {sid} {name}**　"
-                    f"B={B}｜{get_a_icon(A)}A={A}｜{get_c_icon(C)}C={C}｜Flow={flow}　{tag}"
-                )
+                wcol1, wcol2 = st.columns([9, 1])
+                with wcol1:
+                    st.markdown(
+                        f"**#{rank} {sid} {name}**　"
+                        f"B={B}｜{get_a_icon(A)}A={A}｜{get_c_icon(C)}C={C}｜Flow={flow}　{tag}"
+                    )
+                with wcol2:
+                    if st.button("📌", key=f"track_war_{title_en}_{sid}", help="加入自訂追蹤清單"):
+                        add_to_custom_watchlist(sid)
+                        st.toast(f"已加入追蹤：{sid}")
 
         _render_war_section(
             launch_df, "🟠", "LAUNCH", "即將發動",
@@ -1588,6 +1607,14 @@ KD：{kd_k}/{kd_d}
     if action_df.empty:
         st.info("今日沒有符合條件的進場機會")
     st.dataframe(style_decision_table(build_display_table(filtered_action_df)), use_container_width=True)
+    if not filtered_action_df.empty:
+        action_ids = [str(r.get("stock_id", "")) for _, r in filtered_action_df.iterrows() if r.get("stock_id")]
+        track_cols = st.columns(min(len(action_ids), 8))
+        for i, sid in enumerate(action_ids):
+            with track_cols[i % 8]:
+                if st.button(f"📌 {sid}", key=f"track_action_{sid}", help="加入自訂追蹤清單"):
+                    add_to_custom_watchlist(sid)
+                    st.toast(f"已加入追蹤：{sid}")
 
     # ── 觀察名單 ──────────────────────────────────────────────────────────
     st.subheader("觀察名單（Watchlist）")
@@ -1596,7 +1623,7 @@ KD：{kd_k}/{kd_d}
         d = build_display_row(row)
         is_pinned = stock_id in st.session_state["pinned"]
         wl_live_key = f"wl_live_show_{stock_id}"
-        col1, col2, col3, col4 = st.columns([5, 1, 2, 2])
+        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             components.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
@@ -1619,6 +1646,10 @@ KD：{kd_k}/{kd_d}
                     st.session_state.pop(f"wl_live_result_{stock_id}", None)
                 st.rerun()
         with col4:
+            if st.button("📌", key=f"track_wl_{stock_id}", help="加入自訂追蹤清單"):
+                add_to_custom_watchlist(stock_id)
+                st.toast(f"已加入追蹤：{stock_id}")
+        with col5:
             if st.button("✕ 移除", key=f"remove_{stock_id}"):
                 if stock_id in st.session_state["overrides"]:
                     st.session_state["overrides"].pop(stock_id)
@@ -1649,7 +1680,7 @@ KD：{kd_k}/{kd_d}
         d = build_display_row(row)
         is_pinned = stock_id in st.session_state["pinned"]
         cd_live_key = f"cd_live_show_{stock_id}"
-        col1, col2, col3, col4 = st.columns([5, 1, 2, 2])
+        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             components.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
@@ -1672,6 +1703,10 @@ KD：{kd_k}/{kd_d}
                     st.session_state.pop(f"cd_live_result_{stock_id}", None)
                 st.rerun()
         with col4:
+            if st.button("📌", key=f"track_cd_{stock_id}", help="加入自訂追蹤清單"):
+                add_to_custom_watchlist(stock_id)
+                st.toast(f"已加入追蹤：{stock_id}")
+        with col5:
             if st.button("+ 加入觀察", key=f"add_{stock_id}"):
                 st.session_state["overrides"][stock_id] = True
                 save_watchlist_overrides(st.session_state["overrides"])
