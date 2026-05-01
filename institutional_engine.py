@@ -60,3 +60,40 @@ def interpret_institutional_state(state, profit_pct):
         else:
             return f"主力被套 {profit_pct:.1f}% → 潛在支撐但弱"
     return "主力行為不明確"
+
+
+def calc_b_validity(df, b_quality, window=20):
+    """判斷 B 段是真建倉還是假整理"""
+    if df is None or len(df) < 5:
+        return "UNCERTAIN"
+
+    recent = df.tail(window).copy()
+
+    # 外資連續賣出天數
+    foreign_sell_consecutive = 0
+    if "foreign_net" in recent.columns:
+        for net in reversed(pd.to_numeric(recent["foreign_net"], errors="coerce").fillna(0).tolist()):
+            if net < 0:
+                foreign_sell_consecutive += 1
+            else:
+                break
+
+    # 價格相對 MA60 位置
+    price_bias = "OK"
+    if "close" in df.columns and "ma60" in df.columns:
+        last = df.iloc[-1]
+        try:
+            close = float(last["close"])
+            ma60  = float(last["ma60"])
+            if close < ma60 * 0.97:
+                price_bias = "WEAK"
+        except (TypeError, ValueError):
+            pass
+
+    # 真假判斷
+    if b_quality >= 60 and foreign_sell_consecutive < 3 and price_bias != "WEAK":
+        return "TRUE_B"
+    elif b_quality < 50 and foreign_sell_consecutive >= 5:
+        return "FAKE_B"
+    else:
+        return "UNCERTAIN"

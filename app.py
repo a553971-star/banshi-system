@@ -915,6 +915,19 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         if desc:
             st.caption(desc)
 
+    b_validity = result.get("B_validity")
+    if b_validity:
+        validity_map = {
+            "TRUE_B":    ("✅", "TRUE_B 真建倉",    "有人在做，結構可信"),
+            "FAKE_B":    ("❌", "FAKE_B 假整理",    "只是盤整，外資在賣，不要碰"),
+            "UNCERTAIN": ("❓", "UNCERTAIN 待確認", "訊號不明確，繼續觀察"),
+        }
+        icon, label, desc = validity_map.get(b_validity, ("⚪", b_validity, ""))
+        st.markdown("#### 🔍 建倉真偽")
+        st.markdown(f"**{icon} {label}**")
+        if desc:
+            st.caption(desc)
+
     with st.expander("📋 產生 AI 分析 Prompt"):
         name        = result.get("name", stock_id)
         signal_type = result.get("signal_type") or "-"
@@ -1165,6 +1178,19 @@ def main() -> None:
                 }
                 icon, label, desc = phase_map.get(b_phase, ("⚪", f"UNKNOWN ({b_phase})", ""))
                 st.markdown("#### 📍 主力階段")
+                st.markdown(f"**{icon} {label}**")
+                if desc:
+                    st.caption(desc)
+
+            b_validity = result.get("B_validity")
+            if b_validity:
+                validity_map = {
+                    "TRUE_B":    ("✅", "TRUE_B 真建倉",    "有人在做，結構可信"),
+                    "FAKE_B":    ("❌", "FAKE_B 假整理",    "只是盤整，外資在賣，不要碰"),
+                    "UNCERTAIN": ("❓", "UNCERTAIN 待確認", "訊號不明確，繼續觀察"),
+                }
+                icon, label, desc = validity_map.get(b_validity, ("⚪", b_validity, ""))
+                st.markdown("#### 🔍 建倉真偽")
                 st.markdown(f"**{icon} {label}**")
                 if desc:
                     st.caption(desc)
