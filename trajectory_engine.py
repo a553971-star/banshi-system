@@ -90,9 +90,12 @@ def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     is_nl_v  = df["is_new_low"].tolist() if "is_new_low"   in df.columns else [None] * n
 
     # ── Output arrays ────────────────────────────────────────────────────
-    c_out = [None] * n
-    b_out = [None] * n
-    a_out = [None] * n
+    c_out        = [None] * n
+    b_out        = [None] * n
+    a_out        = [None] * n
+    b_window_out = [None] * n
+    b_quality_out= [None] * n
+    b_cond_history = []
 
     # ── State variables (local — no global state) ────────────────────────
     c_state   = "none"    # "none" | "active" | "complete"
@@ -122,6 +125,7 @@ def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
             c_frozen  = None
             b_days    = 0
             b_eligible = False
+            b_cond_history = []   # 清空歷史，避免跨段污染
             a_state   = "watching"
             a_days    = 0
             a_low_cnt = 0
@@ -167,11 +171,27 @@ def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
                 if b_days >= 3:
                     b_eligible = True
             else:
-                b_days = 0   # any break resets (never None once C complete)
+                b_days = max(0, b_days - 1)   # 衰減不歸零
 
             b_out[i] = b_days
+
+            # B_window_20：只在 C 完成後才記錄，避免 Pre-C 污染
+            b_cond_history.append(1 if b_cond else 0)
+            if len(b_cond_history) > 20:
+                b_cond_history.pop(0)
+            b_window_20 = sum(b_cond_history)
+            b_window_out[i] = b_window_20
+
+            # B_quality：b_days 作為 gating，整理明顯才給高分
+            if b_days >= 2:
+                bq = b_days * 2 + b_window_20
+            else:
+                bq = int(b_window_20 * 0.5)
+            b_quality_out[i] = bq
         else:
-            b_out[i] = None   # C not complete
+            b_out[i]      = None
+            b_window_out[i] = None
+            b_quality_out[i] = None
 
         # ── STEP 4: A segment (only when b_eligible) ─────────────────────
         if not b_eligible:
@@ -225,9 +245,11 @@ def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
 
     # ── Assemble result ──────────────────────────────────────────────────
     result = df.copy()
-    result["C_days"] = pd.Series(c_out, index=df.index, dtype=object)
-    result["B_days"] = pd.Series(b_out, index=df.index, dtype=object)
-    result["A_days"] = pd.Series(a_out, index=df.index, dtype=object)
+    result["C_days"]     = pd.Series(c_out,         index=df.index, dtype=object)
+    result["B_days"]     = pd.Series(b_out,         index=df.index, dtype=object)
+    result["A_days"]     = pd.Series(a_out,         index=df.index, dtype=object)
+    result["B_window_20"]= pd.Series(b_window_out,  index=df.index, dtype=object)
+    result["B_quality"]  = pd.Series(b_quality_out, index=df.index, dtype=object)
     return result
 
 
