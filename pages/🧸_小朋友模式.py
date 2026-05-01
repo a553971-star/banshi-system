@@ -91,7 +91,10 @@ if live_input:
         c2.metric("🏗️ 有人在買", f"{b} 天")
         c3.metric("🚀 已經起飛", f"{a} 天")
 
-        _, coach = explain_metrics(result)
+        try:
+            _, coach = explain_metrics(result)
+        except Exception:
+            coach = "繼續觀察喔～"
         st.success(f"🧸 小幫手說：{coach}")
     else:
         st.warning("找不到這支股票，試試看輸入代號數字？")
@@ -159,7 +162,10 @@ def render_kid_card(row):
              f"有人在買 👍（{b}天）" if b >= 2 else
              f"還沒人買 😐（{b}天）")
 
-    _, coach = explain_metrics(row.to_dict())
+    try:
+        _, coach = explain_metrics(row.to_dict())
+    except Exception:
+        coach = "繼續觀察喔～"
 
     st.markdown(f"""
 <div class="kid-card" style="background:{bg}; border-left:10px solid {border}; padding:18px 20px;">
