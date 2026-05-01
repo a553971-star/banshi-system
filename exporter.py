@@ -227,6 +227,7 @@ _LATEST_COLS = [
     "date", "stock_id", "name", "decision", "confidence",
     "C_days", "B_days", "A_days", "flow_status", "cost_level", "signal_type",
     "adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
+    "B_quality", "B_window_20", "B_validity", "B_phase",
 ]
 
 
@@ -248,27 +249,7 @@ def export_latest_decisions(
             writer.writeheader()
             for d in decisions:
                 try:
-                    row = {
-                        "date":        d.get("date", ""),
-                        "stock_id":    d.get("stock_id", ""),
-                        "name":        d.get("name", ""),
-                        "decision":    d.get("decision", ""),
-                        "confidence":  d.get("confidence", 0),
-                        "C_days":      d.get("C_days", ""),
-                        "B_days":      d.get("B_days", ""),
-                        "A_days":      d.get("A_days", ""),
-                        "flow_status": d.get("flow_status", ""),
-                        "cost_level":  d.get("cost_level", ""),
-                        "signal_type": d.get("signal_type", ""),
-                        "adx":        d.get("adx", ""),
-                        "atr":        d.get("atr", ""),
-                        "vwap":       d.get("vwap", ""),
-                        "kd_k":       d.get("kd_k", ""),
-                        "kd_d":       d.get("kd_d", ""),
-                        "bb_upper":   d.get("bb_upper", ""),
-                        "bb_middle":  d.get("bb_middle", ""),
-                        "bb_lower":   d.get("bb_lower", ""),
-                    }
+                    row = {col: d.get(col, "") for col in _LATEST_COLS}
                     writer.writerow(row)
                 except Exception as exc:
                     logger.error("export_latest_decisions: skipping row: %s", exc)
