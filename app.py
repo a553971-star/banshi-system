@@ -16,12 +16,19 @@ import streamlit.components.v1 as components
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
 
+def _to_num(val):
+    try:
+        v = float(val)
+        return None if v != v else v  # NaN check
+    except (TypeError, ValueError):
+        return None
+
 def explain_metrics(result):
-    c = result.get("C_days") or 0
-    b = result.get("B_days") or 0
-    a = result.get("A_days") or 0
-    adx = result.get("adx")
-    k = result.get("kd_k")
+    c = _to_num(result.get("C_days")) or 0
+    b = _to_num(result.get("B_days")) or 0
+    a = _to_num(result.get("A_days")) or 0
+    adx = _to_num(result.get("adx"))
+    k   = _to_num(result.get("kd_k"))
     cost = result.get("cost_level")
 
     lines = []
