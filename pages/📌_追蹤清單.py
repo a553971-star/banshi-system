@@ -109,9 +109,7 @@ def render_result_card(stock_id, result, key_prefix):
     except Exception:
         coach = "資料不足，繼續觀察"
 
-    col_card, col_btn = st.columns([9, 1])
-    with col_card:
-        st.markdown(f"""
+    st.markdown(f"""
 <div style="background:{bg}; border-left:8px solid {border}; border-radius:12px;
             padding:16px 20px; margin-bottom:10px;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -134,14 +132,6 @@ def render_result_card(stock_id, result, key_prefix):
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-    with col_btn:
-        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-        if st.button("🗑️ 移除", key=f"{key_prefix}_remove_{stock_id}"):
-            wl = load_watchlist()
-            wl = [s for s in wl if s != stock_id]
-            save_watchlist(wl)
-            st.rerun()
 
 
 # ── 加入追蹤 ──────────────────────────────────────────────────────────────────
