@@ -588,6 +588,8 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
 結構品質：{_b_type}（{_b_text})
+B_window_20：{result.get("B_window_20", "N/A")}（近20日符合B條件天數）
+B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強）
 主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
 主力狀態：{_i_state}（{_i_text})
 
@@ -939,6 +941,8 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
 結構品質：{_b_type}（{_b_text})
+B_window_20：{result.get("B_window_20", "N/A")}（近20日符合B條件天數）
+B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強）
 主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
 主力狀態：{_i_state}（{_i_text})
 
@@ -1180,6 +1184,8 @@ def main() -> None:
 C天：{C}｜B天：{B}｜A天：{A}
 Flow：{flow}｜Cost：{cost}
 結構品質：{_b_type}（{_b_text})
+B_window_20：{result.get("B_window_20", "N/A")}（近20日符合B條件天數）
+B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強）
 主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
 主力狀態：{_i_state}（{_i_text})
 
