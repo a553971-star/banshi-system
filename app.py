@@ -841,6 +841,13 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     c4.metric("Flow", result.get("flow_status") or "N/A")
     c5.metric("成本位", result.get("cost_level") or "N/A")
 
+    bw = result.get("B_window_20")
+    bq = result.get("B_quality")
+    if bw is not None or bq is not None:
+        bw1, bw2 = st.columns(2)
+        bw1.metric("B_window_20（近20日建倉密度）", bw if bw is not None else "N/A")
+        bw2.metric("B_quality（建倉強度）", bq if bq is not None else "N/A")
+
     t1, t2, t3, t4 = st.columns(4)
     t1.metric("收盤", result.get("current_price") or "N/A")
     t2.metric("ADX", _safe_round(result.get("adx")))
@@ -1068,6 +1075,13 @@ def main() -> None:
             c3.metric("A天", result.get("A_days", "N/A"))
             c4.metric("Flow", result.get("flow_status") or "N/A")
             c5.metric("成本位", result.get("cost_level") or "N/A")
+
+            bw = result.get("B_window_20")
+            bq = result.get("B_quality")
+            if bw is not None or bq is not None:
+                bw1, bw2 = st.columns(2)
+                bw1.metric("B_window_20（近20日建倉密度）", bw if bw is not None else "N/A")
+                bw2.metric("B_quality（建倉強度）", bq if bq is not None else "N/A")
 
             t1, t2, t3, t4 = st.columns(4)
             t1.metric("收盤", result.get("current_price") or "N/A")
