@@ -257,7 +257,8 @@ def export_latest_decisions(
         logger.error("export_latest_decisions failed (%s): %s", path, exc)
 
 
-_STATE_LOG_COLS = ["date", "stock_id", "prev_state", "new_state", "score", "decision"]
+_STATE_LOG_COLS = ["date", "stock_id", "prev_state", "new_state", "score", "decision",
+                   "B_phase", "B_validity"]
 
 
 def append_state_log(
@@ -267,7 +268,7 @@ def append_state_log(
 ) -> None:
     """Append one row to the state log CSV.
 
-    Columns: date, stock_id, prev_state, new_state, score, decision.
+    Columns: date, stock_id, prev_state, new_state, score, decision, B_phase, B_validity.
     Creates the file with header if it doesn't exist. Never raises.
     """
     try:
@@ -283,6 +284,8 @@ def append_state_log(
                 "new_state":  decision_dict.get("state", ""),
                 "score":      decision_dict.get("confidence", 0),
                 "decision":   decision_dict.get("decision", ""),
+                "B_phase":    decision_dict.get("B_phase", ""),
+                "B_validity": decision_dict.get("B_validity", ""),
             })
     except Exception as exc:
         logger.error("append_state_log failed (%s): %s", path, exc)
