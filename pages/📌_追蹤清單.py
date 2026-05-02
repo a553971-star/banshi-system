@@ -133,6 +133,23 @@ def render_result_card(stock_id, result, key_prefix):
 </div>
 """, unsafe_allow_html=True)
 
+    b_phase    = result.get("B_phase") if result else None
+    b_validity = result.get("B_validity") if result else None
+    if b_phase or b_validity:
+        validity_icon = {"TRUE_B": "✅", "FAKE_B": "❌", "UNCERTAIN": "❓"}.get(b_validity, "")
+        phase_map = {
+            "LAUNCH": ("🔴", "LAUNCH 發動初期", "盤石最佳進場點"),
+            "MATURE": ("🟠", "MATURE 成熟建倉", "主力已在，等待發動"),
+            "BUILD":  ("🔵", "BUILD 穩定建倉",  "主力開始進場"),
+            "PREPARE":("🟡", "PREPARE 建倉中",  "有人在看，未成形"),
+            "LATE":   ("⚫", "LATE 太晚",       "已漲一段，不要追"),
+        }
+        p_icon, p_label, p_desc = phase_map.get(b_phase, ("⚪", b_phase or "", ""))
+        st.markdown(f"**{validity_icon} {b_validity}**　**{p_icon} {p_label}**")
+        if p_desc:
+            st.caption(p_desc)
+        st.caption(f"B_quality: {result.get('B_quality', 'N/A')}　B_window: {result.get('B_window_20', 'N/A')}")
+
 
 # ── 加入追蹤 ──────────────────────────────────────────────────────────────────
 
@@ -185,6 +202,21 @@ try:
 except Exception:
     pass
 
+# B 資料對照表（從 latest_decisions.csv 離線讀取）
+b_map = {}
+try:
+    dec_df2 = pd.read_csv(os.path.join(BASE_PATH, "latest_decisions.csv"), dtype=str)
+    for _, row in dec_df2.iterrows():
+        sid = str(row.get("stock_id", ""))
+        b_map[sid] = {
+            "B_quality":   row.get("B_quality", ""),
+            "B_window_20": row.get("B_window_20", ""),
+            "B_validity":  row.get("B_validity", ""),
+            "B_phase":     row.get("B_phase", ""),
+        }
+except Exception:
+    b_map = {}
+
 col_title, col_refresh = st.columns([7, 1])
 with col_title:
     st.subheader(f"📋 追蹤中（{len(wl)} 支）")
@@ -207,6 +239,17 @@ for stock_id in wl:
         cached = st.session_state["wl_results"].get(stock_id)
         name = (cached.get("name", "") if cached else "") or name_map.get(stock_id, "")
         st.markdown(f"**{stock_id}** {name}")
+        b_info     = b_map.get(stock_id, {})
+        b_validity = b_info.get("B_validity", "")
+        b_phase    = b_info.get("B_phase", "")
+        b_quality  = b_info.get("B_quality", "")
+        b_window   = b_info.get("B_window_20", "")
+        validity_icon = {"TRUE_B": "✅", "FAKE_B": "❌", "UNCERTAIN": "❓"}.get(b_validity, "")
+        phase_icon    = {"LAUNCH": "🔴", "MATURE": "🟠", "BUILD": "🔵",
+                         "PREPARE": "🟡", "LATE": "⚫"}.get(b_phase, "")
+        if b_validity:
+            st.markdown(f"**{validity_icon} {b_validity}**　{phase_icon} {b_phase}")
+            st.caption(f"B_quality: {b_quality}　B_window: {b_window}")
     with col2:
         live_label = "🔬 收起" if st.session_state.get(show_key, False) else "🔬 即時分析"
         if st.button(live_label, key=f"wl_live_btn_{stock_id}", use_container_width=True):
