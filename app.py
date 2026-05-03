@@ -1065,9 +1065,9 @@ def calc_b_validity_from_row(row):
     except Exception:
         b_quality = 0
     flow = str(row.get("flow_status") or "")
-    if b_quality >= 60 and flow != "DISTRIBUTION":
+    if b_quality >= 75 and flow != "DISTRIBUTION":
         return "TRUE_B"
-    elif b_quality < 50 and flow == "DISTRIBUTION":
+    elif b_quality < 60 and flow == "DISTRIBUTION":
         return "FAKE_B"
     else:
         return "UNCERTAIN"
@@ -1621,7 +1621,7 @@ KD：{kd_k}/{kd_d}
 
             pool = tb_df[
                 (tb_df["C_days"] >= 3) &
-                (tb_df["B_quality"] >= 60) &
+                (tb_df["B_quality"] >= 75) &
                 (tb_df["_b_validity"] == "TRUE_B") &
                 (tb_df["_b_phase"].isin(["MATURE", "LAUNCH"]))
             ].copy()
