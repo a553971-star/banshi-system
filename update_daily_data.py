@@ -43,8 +43,9 @@ def setup_tables(cursor):
 
 
 def main():
-    date = sys.argv[1] if len(sys.argv) > 1 else _date.today().isoformat()
-    print(f"更新日期：{date}")
+    end_date = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (datetime.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+    print(f"📅 更新範圍：{start_date} ~ {end_date}")
 
     universe_df = pd.read_csv(UNIVERSE_PATH, dtype=str)
     universe = universe_df["stock_id"].tolist()
@@ -57,7 +58,7 @@ def main():
 
     # 1. 股價
     try:
-        df_price_raw = api.taiwan_stock_daily(start_date=date, end_date=date)
+        df_price_raw = api.taiwan_stock_daily(start_date=start_date, end_date=end_date)
         if not df_price_raw.empty:
             df_price = df_price_raw[df_price_raw["stock_id"].isin(universe)].copy()
             df_price = df_price.rename(columns={"max": "high", "min": "low", "Trading_Volume": "volume"})
@@ -73,7 +74,7 @@ def main():
     # 2. 法人（全市場）
     df_inst = pd.DataFrame()
     try:
-        df_inst_raw = api.taiwan_stock_institutional_investors(start_date=date, end_date=date)
+        df_inst_raw = api.taiwan_stock_institutional_investors(start_date=start_date, end_date=end_date)
         if not df_inst_raw.empty:
             df_inst_raw["buy"]  = pd.to_numeric(df_inst_raw["buy"],  errors="coerce").fillna(0)
             df_inst_raw["sell"] = pd.to_numeric(df_inst_raw["sell"], errors="coerce").fillna(0)
@@ -111,7 +112,7 @@ def main():
     # 3. 融資
     df_margin = pd.DataFrame()
     try:
-        df_margin_raw = api.taiwan_stock_margin_purchase_short_sale(start_date=date, end_date=date)
+        df_margin_raw = api.taiwan_stock_margin_purchase_short_sale(start_date=start_date, end_date=end_date)
         if not df_margin_raw.empty:
             df_margin = df_margin_raw[df_margin_raw["stock_id"].isin(universe)].copy()
             df_margin = df_margin.rename(columns={
