@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_PARAMS = "params.json"
 _DEFAULT_DB     = "banshi.db"
-_LOOKBACK_DAYS  = 400
+_LOOKBACK_DAYS  = 150
 
 
 def load_params(path: str = _DEFAULT_PARAMS) -> dict:
