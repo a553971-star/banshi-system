@@ -10,8 +10,9 @@ from datetime import datetime, timedelta, date as _date
 
 import pandas as pd
 
-DB_PATH       = os.path.expanduser("~/Documents/banshi_system/banshi.db")
-UNIVERSE_PATH = os.path.expanduser("~/Documents/banshi_system/universe.csv")
+BASE_PATH     = os.path.dirname(os.path.abspath(__file__))
+DB_PATH       = os.path.join(BASE_PATH, "banshi.db")
+UNIVERSE_PATH = os.path.join(BASE_PATH, "universe.csv")
 TOKEN         = os.getenv("FINMIND_TOKEN", "")
 
 

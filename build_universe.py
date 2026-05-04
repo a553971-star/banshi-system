@@ -7,8 +7,8 @@ import os
 import sqlite3
 import pandas as pd
 
-DB_PATH = os.path.expanduser("~/Documents/banshi_system/banshi.db")
-OUT_PATH = os.path.expanduser("~/Documents/banshi_system/universe.csv")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
+OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.csv")
 
 def main():
     conn = sqlite3.connect(DB_PATH)

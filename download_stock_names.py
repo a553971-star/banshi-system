@@ -7,7 +7,7 @@ import sqlite3
 import requests
 import pandas as pd
 
-DB_PATH = os.path.expanduser("~/Documents/banshi_system/banshi.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
 TOKEN = os.getenv("FINMIND_TOKEN")
 
 def main():
