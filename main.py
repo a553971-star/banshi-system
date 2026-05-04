@@ -48,7 +48,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PARAMS = "params.json"
-_DEFAULT_DB     = "banshi.db"
+_DEFAULT_DB     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
 _LOOKBACK_DAYS  = 150
 
 
