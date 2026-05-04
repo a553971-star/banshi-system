@@ -41,6 +41,9 @@ def main():
     df = df[~df["industry"].apply(is_finance)]
     print(f"  排除金融股：{before - len(df)} 支")
 
+    # 排除 ETF 和非一般股票，只保留 1000~9999
+    df = df[df["stock_id"].str.match(r"^[1-9]\d{3}$")]
+
     universe = df[["stock_id"]].copy()
     universe.to_csv(OUT_PATH, index=False)
     print(f"Universe 建立完成：{len(universe)} 支")

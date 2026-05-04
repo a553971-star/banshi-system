@@ -43,8 +43,9 @@ def setup_tables(cursor):
 
 
 def main():
-    end_date = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = (datetime.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+    import pandas as pd
+    end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
+    start_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(60)).strftime("%Y-%m-%d")
     print(f"📅 更新範圍：{start_date} ~ {end_date}")
 
     universe_df = pd.read_csv(UNIVERSE_PATH, dtype=str)
