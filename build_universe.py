@@ -1,80 +1,51 @@
 """
-build_universe.py — 從本機資料建立交易universe
-篩選條件：收盤價>20、近20日均量>1000張
+build_universe.py — 建立交易 universe
+從 FinMind TaiwanStockInfo 抓全市場股票，排除金融產業
 輸出：universe.csv
 """
 import os
-import sqlite3
+import requests
 import pandas as pd
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
-OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.csv")
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+OUT_PATH  = os.path.join(BASE_PATH, "universe.csv")
+TOKEN     = os.getenv("FINMIND_TOKEN")
+
 
 def main():
-    conn = sqlite3.connect(DB_PATH)
-
-    # 取每支股票最近20個交易日的資料
-    query = """
-        SELECT stock_id, date, close, volume
-        FROM price_history
-        WHERE date >= '2026-03-01'
-        ORDER BY stock_id, date
-    """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
-
-    if df.empty:
-        print("沒有資料")
+    r = requests.get(
+        "https://api.finmindtrade.com/api/v4/data",
+        params={"dataset": "TaiwanStockInfo", "token": TOKEN},
+        timeout=30
+    )
+    data = r.json()
+    if data.get("status") != 200:
+        print(f"抓取失敗：{data.get('status')}")
         return
 
-    # 計算每支股票的最新收盤價和近20日均量
-    df["volume_1000"] = df["volume"] / 1000  # 轉換成張
-
-    stats = df.groupby("stock_id").agg(
-        latest_close=("close", "last"),
-        avg_volume_20d=("volume_1000", "mean"),
-        data_days=("date", "count")
-    ).reset_index()
-
-    # 篩選條件
-    universe = stats[
-        (stats["latest_close"] > 20) &
-        (stats["avg_volume_20d"] > 1000) &
-        (stats["data_days"] >= 10)  # 至少要有10天資料
-    ].copy()
+    df = pd.DataFrame(data["data"])
+    df = df[["stock_id", "stock_name", "industry_category"]].drop_duplicates("stock_id")
+    df.columns = ["stock_id", "name", "industry"]
 
     # 只保留4位數代號
-    universe = universe[universe["stock_id"].str.match(r"^\d{4}$")]
+    df = df[df["stock_id"].str.match(r"^\d{4}$")]
 
-    # 從 banshi.db 讀取產業分類
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        names_df = pd.read_sql_query("SELECT stock_id, industry FROM stock_names", conn)
-        conn.close()
-        universe = universe.merge(names_df, on="stock_id", how="left")
+    # 排除金融產業
+    finance_keywords = ["金融", "銀行", "保險", "證券", "票券", "投信", "期貨"]
+    def is_finance(industry):
+        if not isinstance(industry, str):
+            return False
+        return any(kw in industry for kw in finance_keywords)
 
-        finance_keywords = ["金融", "銀行", "保險", "證券", "票券", "投信", "期貨"]
-        def is_finance(industry):
-            if not isinstance(industry, str):
-                return False
-            return any(kw in industry for kw in finance_keywords)
+    before = len(df)
+    df = df[~df["industry"].apply(is_finance)]
+    print(f"  排除金融股：{before - len(df)} 支")
 
-        before = len(universe)
-        universe = universe[~universe["industry"].apply(is_finance)]
-        print(f"  排除金融股：{before - len(universe)} 支")
-    except Exception as e:
-        print(f"產業篩選失敗：{e}")
+    universe = df[["stock_id"]].copy()
+    universe.to_csv(OUT_PATH, index=False)
+    print(f"Universe 建立完成：{len(universe)} 支")
+    print(f"儲存至：{OUT_PATH}")
 
-    universe = universe.sort_values("stock_id")
-
-    # 儲存
-    universe[["stock_id"]].to_csv(OUT_PATH, index=False)
-
-    print(f"Universe 建立完成")
-    print(f"  原始股票數：{len(stats)}")
-    print(f"  篩選後：{len(universe)} 支")
-    print(f"  儲存至：{OUT_PATH}")
-    print(f"\n前20支：{universe['stock_id'].head(20).tolist()}")
 
 if __name__ == "__main__":
     main()

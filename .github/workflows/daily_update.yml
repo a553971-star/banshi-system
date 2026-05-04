@@ -30,6 +30,8 @@ jobs:
           python3 download_stock_names.py
 
       - name: Build universe
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
         run: |
           cd $GITHUB_WORKSPACE
           python3 build_universe.py
