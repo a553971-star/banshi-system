@@ -25,6 +25,7 @@ from typing import Optional
 import pandas as pd
 
 from data_fetcher import merge_all, merge_all_local, get_stock_name
+from live_fetcher import merge_all_live
 from feature_engine import build_features
 from trajectory_engine import compute_trajectory, get_latest_trajectory
 from flow_engine import classify_flow, classify_cost
@@ -158,6 +159,8 @@ def _process_stock(
         df_raw = merge_all_local(stock_id, start_dt, date, db_path)
         if df_raw.empty:
             df_raw = merge_all(stock_id, start_dt, date, db_path)  # fallback
+        if df_raw.empty:
+            df_raw = merge_all_live(stock_id, start_dt, date)  # FinMind API fallback
         if df_raw.empty:
             logger.warning("%s: no data available for %s", stock_id, date)
             return None
