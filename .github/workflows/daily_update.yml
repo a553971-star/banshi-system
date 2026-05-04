@@ -1,0 +1,57 @@
+name: Daily Banshi Update
+
+on:
+  schedule:
+    - cron: "30 10 * * 1-5"  # 台灣時間 18:30（UTC+8），週一到週五
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests FinMind
+
+      - name: Download stock names
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 download_stock_names.py
+
+      - name: Build universe
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 build_universe.py
+
+      - name: Update daily data
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 update_daily_data.py
+
+      - name: Run banshi analysis
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 main.py
+
+      - name: Commit results
+        run: |
+          git config user.name "banshi-bot"
+          git config user.email "banshi-bot@github.com"
+          git add latest_decisions.csv universe.csv banshi.db
+          git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
+          git push

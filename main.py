@@ -16,6 +16,7 @@ Usage:
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -23,7 +24,7 @@ from typing import Optional
 
 import pandas as pd
 
-from data_fetcher import merge_all
+from data_fetcher import merge_all, merge_all_local, get_stock_name
 from feature_engine import build_features
 from trajectory_engine import compute_trajectory, get_latest_trajectory
 from flow_engine import classify_flow, classify_cost
@@ -151,10 +152,12 @@ def _process_stock(
 
         target    = pd.to_datetime(date)
         start_dt  = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
-        name      = get_company_name(stock_id, co_path) or stock_id
+        name      = get_company_name(stock_id, co_path) or get_stock_name(stock_id, db_path) or stock_id
 
         # ── Data → Features → Trajectory ────────────────────────────────
-        df_raw  = merge_all(stock_id, start_dt, date, db_path)
+        df_raw = merge_all_local(stock_id, start_dt, date, db_path)
+        if df_raw.empty:
+            df_raw = merge_all(stock_id, start_dt, date, db_path)  # fallback
         if df_raw.empty:
             logger.warning("%s: no data available for %s", stock_id, date)
             return None
@@ -330,6 +333,14 @@ def main() -> None:
     else:
         companies = load_company_list(params.get("companies_path", "companies.csv"))
         stock_ids = list(companies.keys())
+
+        # 如果有 universe.csv，改用 universe
+        universe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.csv")
+        if os.path.exists(universe_path):
+            import pandas as _upd
+            _u = _upd.read_csv(universe_path, dtype=str)
+            stock_ids = _u["stock_id"].tolist()
+            print(f"使用 universe.csv：{len(stock_ids)} 支股票")
 
     if not stock_ids:
         print("No stocks to process. Add entries to companies.csv.")

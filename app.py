@@ -71,19 +71,21 @@ _STATE_LOG_PATH = os.path.join(_DIR, "state_log.csv")
 _OVERRIDES_PATH = os.path.join(_DIR, "watchlist_overrides.json")
 PIN_PATH = os.path.join(_DIR, "pinned.json")
 TRADES_PATH = os.path.join(_DIR, "trades_log.csv")
-_CUSTOM_WL_PATH = os.path.join(_DIR, "watchlist_custom.json")
 
 
 def add_to_custom_watchlist(stock_id: str) -> None:
     try:
-        with open(_CUSTOM_WL_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        from datetime import date
+        import sqlite3
+        db_path = os.path.join(_DIR, "banshi.db")
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS watchlist (stock_id TEXT PRIMARY KEY, added_date TEXT)")
+        cursor.execute("INSERT OR IGNORE INTO watchlist VALUES (?, ?)", (stock_id, date.today().isoformat()))
+        conn.commit()
+        conn.close()
     except Exception:
-        data = []
-    if stock_id not in data:
-        data.append(stock_id)
-        with open(_CUSTOM_WL_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
+        pass
 
 
 # ── 資料載入 ──────────────────────────────────────────────────────────────────
@@ -1416,6 +1418,19 @@ KD：{kd_k}/{kd_d}
         st.caption("尚無資料（latest_decisions.csv 不存在或為空）")
         return
 
+    # 補充股票名稱（從 companies.csv 和 banshi.db 的 price_history）
+    if "name" in df.columns:
+        try:
+            co_df = pd.read_csv(os.path.join(_DIR, "companies.csv"), dtype=str)
+            co_map = dict(zip(co_df["stock_id"], co_df["name"]))
+            df["name"] = df.apply(
+                lambda r: co_map.get(str(r["stock_id"]), r["name"])
+                if not str(r.get("name", "")).strip() or str(r.get("name", "")) == str(r["stock_id"])
+                else r["name"], axis=1
+            )
+        except Exception:
+            pass
+
     latest_date = df["date"].max() if "date" in df.columns else "—"
     st.caption(f"資料日期：{latest_date}")
 
@@ -1774,12 +1789,12 @@ KD：{kd_k}/{kd_d}
         top1 = action_df.iloc[0]
         d = build_display_row(top1)
         top_html = (
-            '<div style="background:#111;padding:12px;border-radius:10px;'
-            'border:1px solid #444;margin-bottom:10px;">'
-            f'<div style="font-size:16px;font-weight:bold;">{d["股票"]} ｜ '
+            '<div style="background:#f0f7ff;padding:12px;border-radius:10px;'
+            'border:2px solid #28a745;margin-bottom:10px;">'
+            f'<div style="font-size:16px;font-weight:bold;color:#111;">{d["股票"]} ｜ '
             f'{format_decision_label(d["決策"])} ｜ {format_signal_type(str(top1.get("signal_type","")))} </div>'
-            f'<div style="margin-top:6px;">{d["軌跡"]} ｜ {d["資金流"]} ｜ {d["成本位"]}</div>'
-            f'<div style="margin-top:8px;">信心：{d["信心"]}<br>{render_confidence_bar(d["信心"])}</div>'
+            f'<div style="margin-top:6px;color:#333;">{d["軌跡"]} ｜ {d["資金流"]} ｜ {d["成本位"]}</div>'
+            f'<div style="margin-top:8px;color:#333;">信心：{d["信心"]}<br>{render_confidence_bar(d["信心"])}</div>'
             '</div>'
         )
         components.html(top_html, height=120)

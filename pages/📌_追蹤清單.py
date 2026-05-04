@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import os
 import sys
+import sqlite3
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_PATH)
@@ -10,8 +11,8 @@ sys.path.insert(0, BASE_PATH)
 from app import explain_metrics
 from live_analyzer import process_stock_live
 
-WATCHLIST_PATH = os.path.join(BASE_PATH, "watchlist_custom.json")
-COMPANY_PATH   = os.path.join(BASE_PATH, "companies.csv")
+DB_PATH      = os.path.join(BASE_PATH, "banshi.db")
+COMPANY_PATH = os.path.join(BASE_PATH, "companies.csv")
 
 st.set_page_config(page_title="📌 追蹤清單", layout="wide")
 st.title("📌 自訂追蹤清單")
@@ -21,19 +22,45 @@ st.caption("加入想追蹤的股票，一鍵取得即時盤石分析")
 # ── 工具函式 ──────────────────────────────────────────────────────────────────
 
 def load_watchlist():
-    if os.path.exists(WATCHLIST_PATH):
-        try:
-            with open(WATCHLIST_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
-    return []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS watchlist (
+                stock_id TEXT PRIMARY KEY,
+                added_date TEXT
+            )
+        """)
+        conn.commit()
+        rows = cursor.execute("SELECT stock_id FROM watchlist ORDER BY added_date").fetchall()
+        conn.close()
+        return [r[0] for r in rows]
+    except Exception:
+        return []
 
 
-def save_watchlist(wl):
-    with open(WATCHLIST_PATH, "w", encoding="utf-8") as f:
-        json.dump(wl, f, ensure_ascii=False, indent=2)
+def add_to_watchlist(stock_id: str):
+    try:
+        from datetime import date
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS watchlist (stock_id TEXT PRIMARY KEY, added_date TEXT)")
+        cursor.execute("INSERT OR IGNORE INTO watchlist VALUES (?, ?)", (stock_id, date.today().isoformat()))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def remove_from_watchlist(stock_id: str):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM watchlist WHERE stock_id=?", (stock_id,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 
 def resolve_stock_id(query: str) -> str | None:
@@ -173,8 +200,7 @@ if submitted:
             if sid in wl:
                 st.info(f"{sid} 已在追蹤清單中")
             else:
-                wl.append(sid)
-                save_watchlist(wl)
+                add_to_watchlist(sid)
                 st.success(f"✅ 已加入：{sid}")
                 st.rerun()
 
@@ -259,9 +285,7 @@ for stock_id in wl:
             st.rerun()
     with col3:
         if st.button("🗑️", key=f"wl_remove_{stock_id}", help="移除追蹤"):
-            wl2 = load_watchlist()
-            wl2 = [s for s in wl2 if s != stock_id]
-            save_watchlist(wl2)
+            remove_from_watchlist(stock_id)
             st.session_state["wl_results"].pop(stock_id, None)
             st.session_state.pop(show_key, None)
             st.rerun()

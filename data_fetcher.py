@@ -147,3 +147,71 @@ def merge_all(
                      margin_balance, short_balance.
     """
     return _query(db_path, stock_id, start, end, _ALL_DATA_COLS)
+
+
+def get_stock_name(stock_id: str, db_path: str = _DEFAULT_DB) -> str:
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM stock_names WHERE stock_id=?", (stock_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else stock_id
+    except Exception:
+        return stock_id
+
+
+def merge_all_local(
+    stock_id: str,
+    start: str,
+    end: str,
+    db_path: str = _DEFAULT_DB,
+) -> pd.DataFrame:
+    """
+    從本機 price_history + institutional_history + margin_history 合併資料。
+    取代 FinMind API，完全離線運作。
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+
+        price = pd.read_sql_query("""
+            SELECT stock_id, date, open, high, low, close, volume
+            FROM price_history
+            WHERE stock_id=? AND date>=? AND date<=?
+            ORDER BY date
+        """, conn, params=(stock_id, start, end))
+
+        if price.empty:
+            conn.close()
+            return pd.DataFrame()
+
+        inst = pd.read_sql_query("""
+            SELECT date, foreign_buy, foreign_sell, foreign_net,
+                   investment_buy, investment_sell, investment_net, dealer_net
+            FROM institutional_history
+            WHERE stock_id=? AND date>=? AND date<=?
+            ORDER BY date
+        """, conn, params=(stock_id, start, end))
+
+        margin = pd.read_sql_query("""
+            SELECT date, margin_balance, short_balance
+            FROM margin_history
+            WHERE stock_id=? AND date>=? AND date<=?
+            ORDER BY date
+        """, conn, params=(stock_id, start, end))
+
+        conn.close()
+
+        df = price.copy()
+        if not inst.empty:
+            df = df.merge(inst, on="date", how="left")
+        if not margin.empty:
+            df = df.merge(margin, on="date", how="left")
+
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date").reset_index(drop=True)
+        return df
+
+    except Exception as e:
+        logger.error("merge_all_local(%s) failed: %s", stock_id, e)
+        return pd.DataFrame()
