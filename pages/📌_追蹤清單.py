@@ -3,7 +3,6 @@ import pandas as pd
 import json
 import os
 import sys
-import sqlite3
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_PATH)
@@ -11,7 +10,7 @@ sys.path.insert(0, BASE_PATH)
 from app import explain_metrics
 from live_analyzer import process_stock_live
 
-DB_PATH      = os.path.join(BASE_PATH, "banshi.db")
+PIN_PATH     = os.path.join(BASE_PATH, "pinned.json")
 COMPANY_PATH = os.path.join(BASE_PATH, "companies.csv")
 
 st.set_page_config(page_title="📌 追蹤清單", layout="wide")
@@ -21,46 +20,28 @@ st.caption("加入想追蹤的股票，一鍵取得即時盤石分析")
 
 # ── 工具函式 ──────────────────────────────────────────────────────────────────
 
-def load_watchlist():
+def load_watchlist() -> list:
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS watchlist (
-                stock_id TEXT PRIMARY KEY,
-                added_date TEXT
-            )
-        """)
-        conn.commit()
-        rows = cursor.execute("SELECT stock_id FROM watchlist ORDER BY added_date").fetchall()
-        conn.close()
-        return [r[0] for r in rows]
+        with open(PIN_PATH, "r") as f:
+            data = json.load(f)
+            return list(data) if isinstance(data, list) else []
     except Exception:
         return []
 
 
-def add_to_watchlist(stock_id: str):
-    try:
-        from datetime import date
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("CREATE TABLE IF NOT EXISTS watchlist (stock_id TEXT PRIMARY KEY, added_date TEXT)")
-        cursor.execute("INSERT OR IGNORE INTO watchlist VALUES (?, ?)", (stock_id, date.today().isoformat()))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+def add_to_watchlist(stock_id: str) -> None:
+    wl = load_watchlist()
+    if stock_id not in wl:
+        wl.append(stock_id)
+        with open(PIN_PATH, "w") as f:
+            json.dump(wl, f)
 
 
-def remove_from_watchlist(stock_id: str):
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM watchlist WHERE stock_id=?", (stock_id,))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+def remove_from_watchlist(stock_id: str) -> None:
+    wl = load_watchlist()
+    wl = [s for s in wl if s != stock_id]
+    with open(PIN_PATH, "w") as f:
+        json.dump(wl, f)
 
 
 def resolve_stock_id(query: str) -> str | None:
@@ -228,20 +209,21 @@ try:
 except Exception:
     pass
 
-# B 資料對照表（從 latest_decisions.csv 離線讀取）
+# B 資料對照表（latest_decisions.csv + latest_decisions_universe.csv）
 b_map = {}
-try:
-    dec_df2 = pd.read_csv(os.path.join(BASE_PATH, "latest_decisions.csv"), dtype=str)
-    for _, row in dec_df2.iterrows():
-        sid = str(row.get("stock_id", ""))
-        b_map[sid] = {
-            "B_quality":   row.get("B_quality", ""),
-            "B_window_20": row.get("B_window_20", ""),
-            "B_validity":  row.get("B_validity", ""),
-            "B_phase":     row.get("B_phase", ""),
-        }
-except Exception:
-    b_map = {}
+for csv_file in ["latest_decisions.csv", "latest_decisions_universe.csv"]:
+    try:
+        dec_df2 = pd.read_csv(os.path.join(BASE_PATH, csv_file), dtype=str)
+        for _, row in dec_df2.iterrows():
+            sid = str(row.get("stock_id", ""))
+            b_map[sid] = {
+                "B_quality":   row.get("B_quality", ""),
+                "B_window_20": row.get("B_window_20", ""),
+                "B_validity":  row.get("B_validity", ""),
+                "B_phase":     row.get("B_phase", ""),
+            }
+    except Exception:
+        pass
 
 col_title, col_refresh = st.columns([7, 1])
 with col_title:
