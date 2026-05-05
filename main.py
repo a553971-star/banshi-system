@@ -17,6 +17,7 @@ import argparse
 import json
 import logging
 import os
+import sqlite3
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -273,6 +274,34 @@ def _process_stock(
         if print_snapshot:
             print(format_decision_snapshot(decision))
             print()
+
+        # ── Foreign shareholding from shareholding_history ───────────────
+        try:
+            _sh_conn = sqlite3.connect(db_path)
+            _sh_row  = _sh_conn.execute(
+                "SELECT foreign_shares FROM shareholding_history"
+                " WHERE stock_id=? AND date<=? ORDER BY date DESC LIMIT 1",
+                (stock_id, date),
+            ).fetchone()
+            _sh_conn.close()
+            if _sh_row and _sh_row[0]:
+                _f_lots = int(_sh_row[0]) // 1000
+                decision["foreign_position"] = _f_lots
+                if _f_lots > 50000:
+                    decision["foreign_level"] = "HEAVY"
+                elif _f_lots > 10000:
+                    decision["foreign_level"] = "MEDIUM"
+                elif _f_lots > 0:
+                    decision["foreign_level"] = "LIGHT"
+                else:
+                    decision["foreign_level"] = "NONE"
+            else:
+                decision["foreign_position"] = None
+                decision["foreign_level"]    = "NONE"
+        except Exception as exc:
+            logger.warning("shareholding lookup failed for %s: %s", stock_id, exc)
+            decision.setdefault("foreign_position", None)
+            decision.setdefault("foreign_level", "NONE")
 
         # ── State log ────────────────────────────────────────────────────
         prev = prev_states.get(stock_id)

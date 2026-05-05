@@ -40,6 +40,13 @@ def setup_tables(cursor):
             PRIMARY KEY (stock_id, date)
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shareholding_history (
+            stock_id TEXT, date TEXT,
+            foreign_shares INTEGER, foreign_ratio REAL,
+            PRIMARY KEY (stock_id, date)
+        )
+    """)
 
 
 def main():
@@ -126,7 +133,24 @@ def main():
         print(f"  融資抓取失敗：{e}")
     print(f"  融資：{len(df_margin)} 筆")
 
-    # 4. 寫入 SQLite（防重複）
+    # 4. 外資持股（集保）
+    df_sh = pd.DataFrame()
+    try:
+        df_sh_raw = api.taiwan_stock_shareholding(start_date=start_date, end_date=end_date)
+        if not df_sh_raw.empty:
+            df_sh_raw.columns = [c.lower() for c in df_sh_raw.columns]
+            df_sh = df_sh_raw[df_sh_raw["stock_id"].isin(universe)].copy()
+            df_sh = df_sh.rename(columns={
+                "foreigninvestmentshares":      "foreign_shares",
+                "foreigninvestmentsharesratio": "foreign_ratio",
+            })
+            df_sh = df_sh[["stock_id", "date", "foreign_shares", "foreign_ratio"]]
+            df_sh = df_sh.drop_duplicates(subset=["stock_id", "date"])
+    except Exception as e:
+        print(f"  外資持股抓取失敗：{e}")
+    print(f"  外資持股：{len(df_sh)} 筆")
+
+    # 5. 寫入 SQLite（防重複）
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     setup_tables(cursor)
@@ -142,15 +166,17 @@ def main():
     upsert_df(df_price,  "price_history")
     upsert_df(df_inst,   "institutional_history")
     upsert_df(df_margin, "margin_history")
+    upsert_df(df_sh,     "shareholding_history")
 
     # 建立 index 加速查詢
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_price  ON price_history(stock_id, date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_inst   ON institutional_history(stock_id, date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_margin ON margin_history(stock_id, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sh     ON shareholding_history(stock_id, date)")
 
     # 清理超過90天的舊資料
     cutoff = (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d")
-    for table in ["price_history", "institutional_history", "margin_history"]:
+    for table in ["price_history", "institutional_history", "margin_history", "shareholding_history"]:
         cursor.execute(f"DELETE FROM {table} WHERE date < ?", (cutoff,))
 
     conn.commit()

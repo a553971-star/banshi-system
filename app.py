@@ -930,6 +930,17 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         if desc:
             st.caption(desc)
 
+    _fp = result.get("foreign_position")
+    _fl = result.get("foreign_level")
+    st.markdown("#### 📊 外資持倉")
+    if _fp and int(_fp) > 0:
+        _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
+        st.metric("外資持股（張）", f"{int(_fp):,}")
+        if _level_icon:
+            st.caption(f"{_level_icon} {_fl}")
+    else:
+        st.caption("外資持倉：-")
+
     with st.expander("📋 產生 AI 分析 Prompt"):
         name        = result.get("name", stock_id)
         signal_type = result.get("signal_type") or "-"
@@ -1233,6 +1244,17 @@ def main() -> None:
                 st.markdown(f"**{icon} {label}**")
                 if desc:
                     st.caption(desc)
+
+            _fp = result.get("foreign_position")
+            _fl = result.get("foreign_level")
+            st.markdown("#### 📊 外資持倉")
+            if _fp and int(_fp) > 0:
+                _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
+                st.metric("外資持股（張）", f"{int(_fp):,}")
+                if _level_icon:
+                    st.caption(f"{_level_icon} {_fl}")
+            else:
+                st.caption("外資持倉：-")
 
             # ── AI Prompt ──────────────────────────────────────────
             with st.expander("📋 產生 AI 分析 Prompt"):
