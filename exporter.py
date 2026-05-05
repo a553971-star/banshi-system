@@ -257,7 +257,7 @@ def export_latest_decisions(
         logger.error("export_latest_decisions failed (%s): %s", path, exc)
 
 
-_STATE_LOG_COLS = ["date", "stock_id", "prev_state", "new_state", "score", "decision",
+_STATE_LOG_COLS = ["date", "stock_id", "name", "prev_state", "new_state", "score", "decision",
                    "B_phase", "B_validity"]
 
 
@@ -280,6 +280,7 @@ def append_state_log(
             writer.writerow({
                 "date":       decision_dict.get("date", ""),
                 "stock_id":   decision_dict.get("stock_id", ""),
+                "name":       decision_dict.get("name", ""),
                 "prev_state": prev_state or "",
                 "new_state":  decision_dict.get("state", ""),
                 "score":      decision_dict.get("confidence", 0),
