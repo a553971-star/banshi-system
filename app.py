@@ -64,6 +64,7 @@ def explain_metrics(result):
     except Exception:
         return [], "👉 資料不足，無法判讀"
 from data_fetcher_fm import fetch_stock_data
+from data_fetcher import get_stock_name
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _DECISIONS_PATH = os.path.join(_DIR, "latest_decisions.csv")
@@ -1497,8 +1498,11 @@ KD：{kd_k}/{kd_d}
     # ── 今日變化 ──────────────────────────────────────────────────────────
     st.subheader("📊 今日變化")
     if state_changes:
+        _db_path = os.path.join(_DIR, "banshi.db")
         for sid, (label, detail) in state_changes.items():
-            st.text(f"{sid}｜{label}｜{detail}")
+            name = get_stock_name(str(sid), _db_path)
+            display = f"{sid} {name}" if name != str(sid) else str(sid)
+            st.text(f"{display}｜{label}｜{detail}")
     else:
         st.caption("今日無關鍵變化")
 
