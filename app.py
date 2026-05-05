@@ -1746,10 +1746,14 @@ KD：{kd_k}/{kd_d}
         if "stock_id" in display_df.columns:
             display_df["stock_id"] = display_df["stock_id"].astype(str)
         display_df["B/A/C"] = display_df.apply(_fmt_abc, axis=1)
-        display_df["C變化"] = display_df.apply(
-            lambda r: f"{r['C_days']}{get_c_icon(int(r['C_days']))} {get_c_arrow(int(r['C_days']), prev_map.get(str(r['stock_id'])))}",
-            axis=1,
-        )
+        try:
+            display_df["C變化"] = display_df.apply(
+                lambda r: f"{r['C_days']}{get_c_icon(int(r['C_days']))} {get_c_arrow(int(r['C_days']), prev_map.get(str(r['stock_id'])))}",
+                axis=1,
+            )
+        except Exception as _c_err:
+            st.warning(f"情緒雷達 C變化 欄位計算失敗：{_c_err}")
+            display_df["C變化"] = display_df["C_days"].astype(str)
         display_df["轉弱訊號"] = display_df.apply(
             lambda r: get_warning(r, prev_map.get(str(r["stock_id"]))), axis=1
         )
