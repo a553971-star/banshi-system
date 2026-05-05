@@ -39,6 +39,8 @@ def main():
     logger.info("Universe：%d 支，分析日期：%s", len(stock_ids), args.date)
 
     params      = load_params(args.params)
+    # 全市場模式：用 universe.csv 當白名單，跳過 companies.csv 限制
+    params["companies_path"] = UNIVERSE_PATH
     prev_states = {}
     results     = []
     failed      = 0

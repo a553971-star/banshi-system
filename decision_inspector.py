@@ -57,32 +57,44 @@ def check_data_integrity(df: pd.DataFrame) -> bool:
 
     Conditions for True:
     1. len(df) >= 20
-    2. Latest row has no None in required columns:
-       [close, ma20, bias_ma20, volume_ratio,
-        return_10d, margin_change_5d, foreign_consecutive_buy]
+    2. Price columns: last row must be non-None/non-NaN
+       [close, ma20, bias_ma20, volume_ratio, return_10d]
+    3. Institutional columns: history must have at least one valid value
+       (last row allowed to be NaN due to T+1 data lag, but can't be all-missing)
+       [margin_change_5d, foreign_consecutive_buy]
 
     Pure function.
     """
     try:
         if len(df) < 20:
             return False
-        required = [
-            "close", "ma20", "bias_ma20", "volume_ratio",
-            "return_10d", "margin_change_5d", "foreign_consecutive_buy",
-        ]
+
+        def _is_null(val):
+            if val is None:
+                return True
+            try:
+                return bool(pd.isna(val))
+            except TypeError:
+                return False
+
+        # Price columns: strict — last row must be valid
+        price_cols = ["close", "ma20", "bias_ma20", "volume_ratio", "return_10d"]
         last = df.iloc[-1]
-        for col in required:
+        for col in price_cols:
             val = last.get(col) if hasattr(last, "get") else (
                 last[col] if col in df.columns else None
             )
-            if val is None:
+            if _is_null(val):
                 return False
-            # Also catch any stray NaN
-            try:
-                if pd.isna(val):
-                    return False
-            except TypeError:
-                pass
+
+        # Institutional columns: lenient — history must have values (not all NaN)
+        inst_cols = ["margin_change_5d", "foreign_consecutive_buy"]
+        for col in inst_cols:
+            if col not in df.columns:
+                return False
+            if df[col].dropna().empty:
+                return False
+
         return True
     except Exception as exc:
         logger.error("check_data_integrity failed: %s", exc)
