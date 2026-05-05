@@ -64,7 +64,6 @@ def explain_metrics(result):
     except Exception:
         return [], "👉 資料不足，無法判讀"
 from data_fetcher_fm import fetch_stock_data
-from data_fetcher import get_stock_name
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _DECISIONS_PATH = os.path.join(_DIR, "latest_decisions.csv")
@@ -1498,9 +1497,9 @@ KD：{kd_k}/{kd_d}
     # ── 今日變化 ──────────────────────────────────────────────────────────
     st.subheader("📊 今日變化")
     if state_changes:
-        _db_path = os.path.join(_DIR, "banshi.db")
         for sid, (label, detail) in state_changes.items():
-            name = get_stock_name(str(sid), _db_path)
+            name_row = df[df["stock_id"].astype(str) == str(sid)]["name"] if "name" in df.columns else pd.Series()
+            name = name_row.iloc[0] if not name_row.empty and str(name_row.iloc[0]) != str(sid) else str(sid)
             display = f"{sid} {name}" if name != str(sid) else str(sid)
             st.text(f"{display}｜{label}｜{detail}")
     else:
