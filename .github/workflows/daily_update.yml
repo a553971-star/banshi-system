@@ -50,10 +50,17 @@ jobs:
           cd $GITHUB_WORKSPACE
           python3 main.py
 
+      - name: Run universe scan
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 analyze_universe.py
+
       - name: Commit results
         run: |
           git config user.name "banshi-bot"
           git config user.email "banshi-bot@github.com"
-          git add latest_decisions.csv universe.csv state_log.csv shareholding_latest.csv
+          git add latest_decisions.csv universe.csv state_log.csv shareholding_latest.csv latest_decisions_universe.csv
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
           git push
