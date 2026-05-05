@@ -17,7 +17,6 @@ import argparse
 import json
 import logging
 import os
-import sqlite3
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -275,17 +274,13 @@ def _process_stock(
             print(format_decision_snapshot(decision))
             print()
 
-        # ── Foreign shareholding from shareholding_history ───────────────
+        # ── Foreign shareholding from shareholding_latest.csv ────────────
         try:
-            _sh_conn = sqlite3.connect(db_path)
-            _sh_row  = _sh_conn.execute(
-                "SELECT foreign_shares FROM shareholding_history"
-                " WHERE stock_id=? AND date<=? ORDER BY date DESC LIMIT 1",
-                (stock_id, date),
-            ).fetchone()
-            _sh_conn.close()
-            if _sh_row and _sh_row[0]:
-                _f_lots = int(_sh_row[0]) // 1000
+            _sh_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shareholding_latest.csv")
+            _sh_df  = pd.read_csv(_sh_csv, dtype={"stock_id": str})
+            _sh_row = _sh_df[_sh_df["stock_id"] == stock_id]
+            if not _sh_row.empty and _sh_row.iloc[0].get("foreign_shares"):
+                _f_lots = int(_sh_row.iloc[0]["foreign_shares"]) // 1000
                 decision["foreign_position"] = _f_lots
                 if _f_lots > 50000:
                     decision["foreign_level"] = "HEAVY"

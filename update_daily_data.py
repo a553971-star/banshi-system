@@ -183,6 +183,17 @@ def main():
     conn.close()
     print(f"寫入完成（保留 {cutoff} 之後的資料）")
 
+    # Export 外資持股最新一筆到 CSV（供 main.py 讀取，避免 Actions SQLite 重置問題）
+    if not df_sh.empty:
+        latest_sh = (
+            df_sh.sort_values("date")
+                 .groupby("stock_id", as_index=False)
+                 .last()
+        )
+        sh_csv_path = os.path.join(BASE_PATH, "shareholding_latest.csv")
+        latest_sh.to_csv(sh_csv_path, index=False)
+        print(f"  shareholding_latest.csv 已輸出：{len(latest_sh)} 支")
+
 
 if __name__ == "__main__":
     main()
