@@ -1848,24 +1848,34 @@ KD：{kd_k}/{kd_d}
 
     # ── 觀察名單 ──────────────────────────────────────────────────────────
     st.subheader("觀察名單（Watchlist）")
-    _wl_sort_col = st.selectbox(
-        "排序欄位",
-        options=["信心分數", "C天", "B天", "A天"],
-        index=0,
-        key="wl_sort_col",
-        label_visibility="collapsed",
-    )
-    _wl_sort_asc = st.radio(
-        "排序方向",
-        options=["降冪（高→低）", "升冪（低→高）"],
-        index=0,
-        horizontal=True,
-        key="wl_sort_dir",
-        label_visibility="collapsed",
-    )
-    _wl_col_map = {"信心分數": "confidence", "C天": "C_days", "B天": "B_days", "A天": "A_days"}
-    _wl_sort_key = _wl_col_map[_wl_sort_col]
-    _wl_ascending = _wl_sort_asc.startswith("升冪")
+
+    # 排序 session state 初始化
+    if "wl_sort_key" not in st.session_state:
+        st.session_state["wl_sort_key"] = "confidence"
+        st.session_state["wl_sort_asc"] = False
+
+    _wl_sort_defs = [
+        ("信心分數", "confidence"),
+        ("C天", "C_days"),
+        ("B天", "B_days"),
+        ("A天", "A_days"),
+    ]
+    _sb1, _sb2, _sb3, _sb4 = st.columns(4)
+    for _col, (_label, _key) in zip([_sb1, _sb2, _sb3, _sb4], _wl_sort_defs):
+        _active = st.session_state["wl_sort_key"] == _key
+        _arrow = "↑" if (_active and st.session_state["wl_sort_asc"]) else "↓"
+        _btn_label = f"{_label} {_arrow}" if _active else _label
+        with _col:
+            if st.button(_btn_label, key=f"wl_sort_btn_{_key}", use_container_width=True):
+                if st.session_state["wl_sort_key"] == _key:
+                    st.session_state["wl_sort_asc"] = not st.session_state["wl_sort_asc"]
+                else:
+                    st.session_state["wl_sort_key"] = _key
+                    st.session_state["wl_sort_asc"] = False
+                st.rerun()
+
+    _wl_sort_key = st.session_state["wl_sort_key"]
+    _wl_ascending = st.session_state["wl_sort_asc"]
     if _wl_sort_key in filtered_watchlist_df.columns:
         filtered_watchlist_df = filtered_watchlist_df.copy()
         filtered_watchlist_df[_wl_sort_key] = pd.to_numeric(filtered_watchlist_df[_wl_sort_key], errors="coerce")
