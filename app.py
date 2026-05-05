@@ -1501,7 +1501,13 @@ KD：{kd_k}/{kd_d}
             name_row = df[df["stock_id"].astype(str) == str(sid)]["name"] if "name" in df.columns else pd.Series()
             name = name_row.iloc[0] if not name_row.empty and str(name_row.iloc[0]) != str(sid) else str(sid)
             display = f"{sid} {name}" if name != str(sid) else str(sid)
-            st.text(f"{display}｜{label}｜{detail}")
+            _sc1, _sc2 = st.columns([10, 1])
+            with _sc1:
+                st.text(f"{display}｜{label}｜{detail}")
+            with _sc2:
+                if st.button("📌", key=f"track_chg_{sid}", help="加入自訂追蹤清單"):
+                    add_to_custom_watchlist(str(sid))
+                    st.toast(f"已加入追蹤：{sid}")
     else:
         st.caption("今日無關鍵變化")
 
@@ -1520,8 +1526,14 @@ KD：{kd_k}/{kd_d}
                 B     = row.get("B_days", "")
                 flow  = row.get("flow_status", "")
                 cost  = row.get("cost_level", "")
-                st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
-                st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+                _bc1, _bc2 = st.columns([10, 1])
+                with _bc1:
+                    st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
+                    st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+                with _bc2:
+                    if st.button("📌", key=f"track_topb_{stock}", help="加入自訂追蹤清單"):
+                        add_to_custom_watchlist(str(stock))
+                        st.toast(f"已加入追蹤：{stock}")
     except Exception as e:
         st.warning(f"強B排行榜載入失敗：{e}")
 
@@ -1670,7 +1682,13 @@ KD：{kd_k}/{kd_d}
                     bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
                     flow  = str(row.get("flow_status", "-") or "-")
                     score = row.get("_score", 0)
-                    st.markdown(f"**🔴 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+                    _tlc1, _tlc2 = st.columns([10, 1])
+                    with _tlc1:
+                        st.markdown(f"**🔴 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+                    with _tlc2:
+                        if st.button("📌", key=f"track_tb_launch_{sid}", help="加入自訂追蹤清單"):
+                            add_to_custom_watchlist(sid)
+                            st.toast(f"已加入追蹤：{sid}")
 
             st.divider()
 
@@ -1686,7 +1704,13 @@ KD：{kd_k}/{kd_d}
                     bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
                     flow  = str(row.get("flow_status", "-") or "-")
                     score = row.get("_score", 0)
-                    st.markdown(f"**🟠 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+                    _tmc1, _tmc2 = st.columns([10, 1])
+                    with _tmc1:
+                        st.markdown(f"**🟠 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
+                    with _tmc2:
+                        if st.button("📌", key=f"track_tb_mature_{sid}", help="加入自訂追蹤清單"):
+                            add_to_custom_watchlist(sid)
+                            st.toast(f"已加入追蹤：{sid}")
 
     except Exception as e:
         st.warning(f"TRUE_B 選股池載入失敗：{e}")
@@ -1824,6 +1848,28 @@ KD：{kd_k}/{kd_d}
 
     # ── 觀察名單 ──────────────────────────────────────────────────────────
     st.subheader("觀察名單（Watchlist）")
+    _wl_sort_col = st.selectbox(
+        "排序欄位",
+        options=["信心分數", "C天", "B天", "A天"],
+        index=0,
+        key="wl_sort_col",
+        label_visibility="collapsed",
+    )
+    _wl_sort_asc = st.radio(
+        "排序方向",
+        options=["降冪（高→低）", "升冪（低→高）"],
+        index=0,
+        horizontal=True,
+        key="wl_sort_dir",
+        label_visibility="collapsed",
+    )
+    _wl_col_map = {"信心分數": "confidence", "C天": "C_days", "B天": "B_days", "A天": "A_days"}
+    _wl_sort_key = _wl_col_map[_wl_sort_col]
+    _wl_ascending = _wl_sort_asc.startswith("升冪")
+    if _wl_sort_key in filtered_watchlist_df.columns:
+        filtered_watchlist_df = filtered_watchlist_df.copy()
+        filtered_watchlist_df[_wl_sort_key] = pd.to_numeric(filtered_watchlist_df[_wl_sort_key], errors="coerce")
+        filtered_watchlist_df = filtered_watchlist_df.sort_values(_wl_sort_key, ascending=_wl_ascending)
     for _, row in filtered_watchlist_df.iterrows():
         stock_id = str(row.get("stock_id", ""))
         d = build_display_row(row)
