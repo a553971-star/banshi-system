@@ -228,6 +228,7 @@ _LATEST_COLS = [
     "C_days", "B_days", "A_days", "flow_status", "cost_level", "signal_type",
     "adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
     "B_quality", "B_window_20", "B_validity", "B_phase",
+    "foreign_position", "foreign_level",
 ]
 
 
