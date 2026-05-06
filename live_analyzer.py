@@ -217,5 +217,8 @@ def process_stock_live(
         return decision
 
     except Exception as exc:
+        import traceback
         logger.error("process_stock_live(%s) failed: %s", stock_id, exc)
+        print(f"[process_stock_live ERROR] {stock_id}: {exc}")
+        print(traceback.format_exc())
         return None

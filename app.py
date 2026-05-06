@@ -1165,6 +1165,8 @@ def main() -> None:
                 from main import load_params
                 params = load_params()
                 result = process_stock_live(live_id, params, print_snapshot=False)
+                if result is None:
+                    st.error(f"process_stock_live({live_id}) 回傳 None，請查 Streamlit Cloud logs")
             except Exception as e:
                 result = None
                 st.error(str(e))
