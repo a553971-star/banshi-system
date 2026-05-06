@@ -11,14 +11,14 @@ UNIVERSE_PATH    = os.path.join(BASE_PATH, "universe.csv")
 SHAREHOLDING_PATH= os.path.join(BASE_PATH, "shareholding_latest.csv")
 
 THEME_COLOR = {
-    "AI_Core":       "🔴",
-    "AI_Power":      "🟠",
-    "PCB_Material":  "🟡",
-    "Memory_Storage":"🟣",
-    "Comm_Net":      "🔵",
-    "Auto_Elec":     "⚪",
-    "Biotech_Green": "🟢",
-    "Digital_Cloud": "⚫",
+    "AI_Core":       ("🔴", "AI核心"),
+    "AI_Power":      ("🟠", "AI電源重電"),
+    "PCB_Material":  ("🟡", "PCB散熱材料"),
+    "Memory_Storage":("🟣", "記憶體儲存"),
+    "Comm_Net":      ("🔵", "通信網路光通"),
+    "Auto_Elec":     ("⚪", "車用電子"),
+    "Biotech_Green": ("🟢", "生技綠能"),
+    "Digital_Cloud": ("⚫", "數位雲端"),
 }
 
 st.set_page_config(page_title="全市場掃描", layout="wide")
@@ -29,8 +29,8 @@ st.caption("來源：latest_decisions_universe.csv（每日 Actions 更新）")
 with st.expander("🎨 產業主題圖例", expanded=False):
     legend_cols = st.columns(4)
     legend_items = list(THEME_COLOR.items())
-    for i, (theme, dot) in enumerate(legend_items):
-        legend_cols[i % 4].markdown(f"{dot} **{theme}**")
+    for i, (theme, (dot, label)) in enumerate(legend_items):
+        legend_cols[i % 4].markdown(f"{dot} **{label}**")
 
 
 def load_pinned() -> set:
@@ -229,7 +229,7 @@ for _, row in filtered.iterrows():
 
     dec_icon   = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪"}.get(decision, "⚪")
     theme      = theme_map.get(sid, "")
-    theme_dot  = THEME_COLOR.get(theme, "")
+    theme_dot  = THEME_COLOR.get(theme, ("", ""))[0]
     f_ratio    = ratio_map.get(sid, "")
 
     show_key   = f"us_show_{sid}"
