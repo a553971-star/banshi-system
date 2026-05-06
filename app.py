@@ -1458,8 +1458,7 @@ KD：{kd_k}/{kd_d}
 
     if "overrides" not in st.session_state:
         st.session_state["overrides"] = load_watchlist_overrides()
-    if "pinned" not in st.session_state:
-        st.session_state["pinned"] = load_pinned()
+    st.session_state["pinned"] = load_pinned()
 
     state_log = load_state_log()
     state_changes = get_latest_state_changes(state_log)
