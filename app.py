@@ -887,7 +887,10 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         color = color_map.get(inst_state, "#6c757d")
         i1, i2, i3 = st.columns(3)
         i1.metric("外資成本", result.get("foreign_cost") or "N/A")
-        i2.metric("持倉估計(張)", f'{result.get("foreign_position"):,}' if result.get("foreign_position") else "N/A")
+        _fp_val = result.get("foreign_position")
+        _fr_val = load_foreign_ratio_map().get(str(stock_id), "")
+        _fp_disp = (f'{int(_fp_val):,}張' + (f'（{float(_fr_val):.1f}%）' if _fr_val and _fr_val != "nan" else "")) if _fp_val else "N/A"
+        i2.metric("持倉估計", _fp_disp)
         i3.metric("主力獲利%", f'{result.get("foreign_profit_pct"):.1f}%' if result.get("foreign_profit_pct") is not None else "N/A")
         st.markdown(f"""
 <div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
@@ -966,7 +969,9 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         _b_type  = result.get("B_type", "N/A") or "N/A"
         _b_text  = result.get("B_text", "") or ""
         _f_cost  = str(result.get("foreign_cost", "N/A"))
-        _f_pos   = str(result.get("foreign_position", "N/A"))
+        _f_pos_raw = result.get("foreign_position")
+        _f_ratio = load_foreign_ratio_map().get(str(stock_id), "")
+        _f_pos   = (f'{int(_f_pos_raw):,}張' + (f'（{float(_f_ratio):.1f}%）' if _f_ratio and _f_ratio != "nan" else "")) if _f_pos_raw else "N/A"
         _f_prof  = str(result.get("foreign_profit_pct", "N/A"))
         _i_state = result.get("institutional_state", "N/A") or "N/A"
         _i_text  = result.get("institutional_text", "") or ""
@@ -1203,7 +1208,10 @@ def main() -> None:
                 color = color_map.get(inst_state, "#6c757d")
                 i1, i2, i3 = st.columns(3)
                 i1.metric("外資成本", result.get("foreign_cost") or "N/A")
-                i2.metric("持倉估計(張)", f'{result.get("foreign_position"):,}' if result.get("foreign_position") else "N/A")
+                _fp_val2 = result.get("foreign_position")
+                _fr_val2 = load_foreign_ratio_map().get(str(live_id), "")
+                _fp_disp2 = (f'{int(_fp_val2):,}張' + (f'（{float(_fr_val2):.1f}%）' if _fr_val2 and _fr_val2 != "nan" else "")) if _fp_val2 else "N/A"
+                i2.metric("持倉估計", _fp_disp2)
                 i3.metric("主力獲利%", f'{result.get("foreign_profit_pct"):.1f}%' if result.get("foreign_profit_pct") is not None else "N/A")
                 st.markdown(f"""
 <div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
@@ -1287,7 +1295,9 @@ def main() -> None:
                 _b_type = result.get("B_type", "N/A") or "N/A"
                 _b_text = result.get("B_text", "") or ""
                 _f_cost = str(result.get("foreign_cost", "N/A"))
-                _f_pos  = str(result.get("foreign_position", "N/A"))
+                _f_pos_raw2 = result.get("foreign_position")
+                _f_ratio2 = load_foreign_ratio_map().get(str(live_id), "")
+                _f_pos  = (f'{int(_f_pos_raw2):,}張' + (f'（{float(_f_ratio2):.1f}%）' if _f_ratio2 and _f_ratio2 != "nan" else "")) if _f_pos_raw2 else "N/A"
                 _f_prof = str(result.get("foreign_profit_pct", "N/A"))
                 _i_state = result.get("institutional_state", "N/A") or "N/A"
                 _i_text  = result.get("institutional_text", "") or ""
