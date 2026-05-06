@@ -163,7 +163,7 @@ def process_stock_live(
             inst_state = classify_institutional_state(decision, f_cost, f_profit)
             inst_text  = interpret_institutional_state(inst_state, f_profit)
             decision["foreign_cost"]        = f_cost
-            decision["foreign_position"]    = f_pos
+            decision["foreign_position"]    = int(f_pos // 1000) if f_pos else f_pos
             decision["foreign_profit_pct"]  = f_profit
             decision["institutional_state"] = inst_state
             decision["institutional_text"]  = inst_text
