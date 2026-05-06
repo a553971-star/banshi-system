@@ -1153,9 +1153,11 @@ def main() -> None:
                                 live_id = live_input
                         else:
                             live_id = live_input
-                    except Exception:
+                    except Exception as e:
+                        st.error(f"搜尋失敗: {e}")
                         live_id = live_input
-        except Exception:
+        except Exception as e:
+            st.error(f"搜尋失敗: {e}")
             live_id = live_input
 
         with st.spinner(f"正在分析 {live_id}..."):
