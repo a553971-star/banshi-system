@@ -1,7 +1,10 @@
+import os
 import pandas as pd
 import datetime
 import logging
 from typing import Optional
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from feature_engine import build_features
 from trajectory_engine import compute_trajectory, get_latest_trajectory
@@ -77,8 +80,8 @@ def process_stock_live(
         if date is None:
             date = datetime.date.today().strftime("%Y-%m-%d")
 
-        co_path  = params.get("companies_path", "companies.csv")
-        db_path  = params.get("db_path", "banshi.db")
+        co_path  = params.get("companies_path", os.path.join(_DIR, "companies.csv"))
+        db_path  = params.get("db_path", os.path.join(_DIR, "banshi.db"))
         target   = pd.to_datetime(date)
         start_dt = "2024-01-01"  # 固定起始日，確保軌跡資料足夠
         name     = get_company_name_safe(stock_id, co_path)
