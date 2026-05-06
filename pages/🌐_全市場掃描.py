@@ -66,6 +66,38 @@ df = pd.read_csv(CSV_PATH, dtype=str)
 for col in ["C_days", "B_days", "A_days", "B_quality"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
+# ── Ranking 2.0 total_score ───────────────────────────────────────────────────
+_bq = df["B_quality"]
+_bq_min, _bq_max = _bq.min(), _bq.max()
+df["B_Quality_Norm"] = ((_bq - _bq_min) / (_bq_max - _bq_min) * 100).fillna(0) if _bq_max > _bq_min else 50.0
+
+def _fresh_a_score(a):
+    if pd.isna(a): return 0
+    a = int(a)
+    if a == 0: return 0
+    mapping = {1: 100, 2: 95, 3: 85, 4: 70, 5: 50}
+    if a <= 5: return mapping.get(a, 0)
+    if a <= 8: return 30
+    return 10
+
+df["Fresh_A_Score"] = df["A_days"].apply(_fresh_a_score)
+df["C_Recency_Score"] = ((30 - df["C_days"].fillna(30).clip(0, 30)) * 3.3).clip(0, 100)
+
+_fp_col = "foreign_profit_pct" if "foreign_profit_pct" in df.columns else None
+_fp = pd.to_numeric(df[_fp_col], errors="coerce") if _fp_col else pd.Series(pd.NA, index=df.index, dtype=float)
+df["Foreign_Profit_Score"] = (100 - (_fp - 5).abs() * 12).clip(0, 100).fillna(50)
+
+_vr = pd.to_numeric(df["volume_ratio"], errors="coerce") if "volume_ratio" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
+df["Volume_Norm"] = ((_vr.clip(0.5, 3.0) - 0.5) / 2.5 * 100).clip(0, 100).fillna(50)
+
+df["total_score"] = (
+    df["B_Quality_Norm"] * 0.40 +
+    df["Foreign_Profit_Score"] * 0.25 +
+    df["Fresh_A_Score"] * 0.20 +
+    df["Volume_Norm"] * 0.10 +
+    df["C_Recency_Score"] * 0.05
+).round(1)
+
 # 主題對照表（universe.csv 含 theme 欄位）
 theme_map = {}
 try:
@@ -104,7 +136,7 @@ st.divider()
 col_f1, col_f2, col_f3 = st.columns([2, 2, 3])
 
 with col_f1:
-    decision_options = ["全部", "BUY", "WAIT", "IGNORE"]
+    decision_options = ["WAIT+BUY", "全部", "BUY", "WAIT", "IGNORE"]
     selected_decision = st.selectbox("Decision", decision_options)
 
 with col_f2:
@@ -116,7 +148,9 @@ with col_f3:
 
 # 套用篩選
 filtered = df.copy()
-if selected_decision != "全部":
+if selected_decision == "WAIT+BUY":
+    filtered = filtered[filtered["decision"].isin(["WAIT", "BUY"])]
+elif selected_decision != "全部":
     filtered = filtered[filtered["decision"] == selected_decision]
 if selected_flow != "全部":
     filtered = filtered[filtered["flow_status"] == selected_flow]
@@ -131,12 +165,13 @@ st.caption(f"顯示 {len(filtered)} / {total} 支")
 
 # ── 排序控制 ──────────────────────────────────────────────────────────────────
 if "us_sort_key" not in st.session_state:
-    st.session_state["us_sort_key"] = "_order"
+    st.session_state["us_sort_key"] = "total_score"
 if "us_sort_asc" not in st.session_state:
-    st.session_state["us_sort_asc"] = True
+    st.session_state["us_sort_asc"] = False
 
-sort_cols = st.columns([1, 1, 1, 1, 4])
+sort_cols = st.columns([1, 1, 1, 1, 1, 4])
 sort_buttons = [
+    ("綜合評分", "total_score"),
     ("C天數", "C_days"),
     ("B天數", "B_days"),
     ("A天數", "A_days"),
@@ -164,7 +199,9 @@ sort_key = st.session_state["us_sort_key"]
 sort_asc  = st.session_state["us_sort_asc"]
 
 if sort_key == "_order":
-    filtered = filtered.sort_values(["_order", "B_quality"], ascending=[True, False])
+    filtered = filtered.sort_values(["_order", "total_score"], ascending=[True, False])
+elif sort_key == "total_score":
+    filtered = filtered.sort_values("total_score", ascending=sort_asc, na_position="last")
 else:
     filtered = filtered.sort_values([sort_key, "_order"], ascending=[sort_asc, True],
                                     na_position="last")
