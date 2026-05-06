@@ -1,4 +1,4 @@
-date,stock_id,prev_state,new_state,score,decision,B_phase,B_validity
+date,stock_id,name,prev_state,new_state,score,decision,B_phase,B_validity
 2026-04-24,6213,,INACTIVE,0,IGNORE,,
 2026-04-24,2454,,INACTIVE,0,IGNORE,,
 2026-04-24,2330,,INACTIVE,0,IGNORE,,
