@@ -1533,8 +1533,8 @@ KD：{kd_k}/{kd_d}
     filtered_candidate_df = filter_df(candidate_df)
 
     # ── 今日變化 ──────────────────────────────────────────────────────────
-    st.subheader("📊 今日變化")
-    if state_changes:
+    with st.expander(f"📊 今日變化（{len(state_changes)} 筆）", expanded=False):
+      if state_changes:
         _name_lookup = {}
         if "name" in df.columns:
             _name_lookup.update(dict(zip(df["stock_id"].astype(str), df["name"].astype(str))))
@@ -1555,7 +1555,7 @@ KD：{kd_k}/{kd_d}
                 if st.button("📌", key=f"track_chg_{sid}", help="加入自訂追蹤清單"):
                     add_to_custom_watchlist(str(sid))
                     st.toast(f"已加入追蹤：{sid}")
-    else:
+      else:
         st.caption("今日無關鍵變化")
 
     # ── 強B排行榜 ─────────────────────────────────────────────────────────
