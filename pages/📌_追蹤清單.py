@@ -197,17 +197,13 @@ if not wl:
 
 # 建立代號→名稱對照表
 name_map = {}
-try:
-    co_df = pd.read_csv(os.path.join(BASE_PATH, "companies.csv"), dtype=str)
-    name_map.update(dict(zip(co_df["stock_id"], co_df["name"])))
-except Exception:
-    pass
-try:
-    dec_df = pd.read_csv(os.path.join(BASE_PATH, "latest_decisions.csv"), dtype=str)
-    name_map.update({k: v for k, v in zip(dec_df["stock_id"], dec_df["name"])
-                     if v and v != "nan"})
-except Exception:
-    pass
+for _csv in ["companies.csv", "latest_decisions.csv", "latest_decisions_universe.csv"]:
+    try:
+        _df = pd.read_csv(os.path.join(BASE_PATH, _csv), dtype=str)
+        name_map.update({k: v for k, v in zip(_df["stock_id"], _df["name"])
+                         if v and v != "nan"})
+    except Exception:
+        pass
 
 # B 資料對照表（latest_decisions.csv + latest_decisions_universe.csv）
 b_map = {}
