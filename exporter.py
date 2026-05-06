@@ -229,6 +229,7 @@ _LATEST_COLS = [
     "adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
     "B_quality", "B_window_20", "B_validity", "B_phase",
     "foreign_position", "foreign_level",
+    "volume_ratio", "foreign_cost", "foreign_profit_pct",
 ]
 
 

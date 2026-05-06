@@ -229,6 +229,7 @@ def _process_stock(
         # ── Attach observational indicators (no decision impact) ─────────
         for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower"):
             decision[col] = _g(col)
+        decision["volume_ratio"] = _g("volume_ratio")
 
         # ── B_quality / B_window_20 / B_validity / B_phase ───────────────
         try:
@@ -273,6 +274,16 @@ def _process_stock(
         if print_snapshot:
             print(format_decision_snapshot(decision))
             print()
+
+        # ── Foreign cost / profit from institutional engine ───────────────
+        try:
+            from institutional_engine import calc_foreign_cost_pro
+            _f_cost, _f_pos_inst, _f_profit = calc_foreign_cost_pro(df_feat)
+            decision["foreign_cost"]       = _f_cost
+            decision["foreign_profit_pct"] = _f_profit
+        except Exception:
+            decision.setdefault("foreign_cost", None)
+            decision.setdefault("foreign_profit_pct", None)
 
         # ── Foreign shareholding from shareholding_latest.csv ────────────
         try:
