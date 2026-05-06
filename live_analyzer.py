@@ -10,6 +10,7 @@ from good_company import is_good_company
 from decision_inspector import check_data_integrity, format_panstone_signal
 from exporter import format_decision_snapshot, format_data_snapshot
 from live_fetcher import merge_all_live
+from data_fetcher import merge_all_local
 from institutional_engine import calc_foreign_cost_pro, classify_institutional_state, interpret_institutional_state, calc_b_validity
 
 def classify_B_strength(result, foreign_profit):
@@ -77,12 +78,15 @@ def process_stock_live(
             date = datetime.date.today().strftime("%Y-%m-%d")
 
         co_path  = params.get("companies_path", "companies.csv")
+        db_path  = params.get("db_path", "banshi.db")
         target   = pd.to_datetime(date)
         start_dt = "2024-01-01"  # 固定起始日，確保軌跡資料足夠
         name     = get_company_name_safe(stock_id, co_path)
 
-        # ── 即時資料 ──
-        df_raw = merge_all_live(stock_id, start_dt, date)
+        # ── 資料來源：本地 DB 優先，再 FinMind ──
+        df_raw = merge_all_local(stock_id, start_dt, date, db_path)
+        if df_raw.empty:
+            df_raw = merge_all_live(stock_id, start_dt, date)
         if df_raw.empty:
             logger.warning("%s: 查無資料", stock_id)
             return None
