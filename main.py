@@ -47,7 +47,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PARAMS = "params.json"
+_DEFAULT_PARAMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "params.json")
 _DEFAULT_DB     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
 _LOOKBACK_DAYS  = 150
 
@@ -95,6 +95,14 @@ def load_params(path: str = _DEFAULT_PARAMS) -> dict:
         # False-breakout guard
         "false_breakout_a_days":    2,
         "false_breakout_vol_ratio": 1.2,
+
+        # Fast-breakout signal
+        "fast_breakout_c_days_min":           10,
+        "fast_breakout_volume_ratio_min":      1.6,
+        "fast_breakout_volatility_prev_max":   5.0,
+        "fast_breakout_return_10d_max":        8.0,
+        "fast_breakout_a_days_max":            2,
+        "fast_breakout_confidence_penalty":   10,
 
         # Confidence scoring
         "conf_accum":                    20,
