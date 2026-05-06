@@ -144,26 +144,26 @@ def main():
 
     # ── 7. theme 欄位（從 industry_category 對應）────────────────
     THEME_MAP = {
-        "半導體": "Chip",
-        "電子零組件": "Component",
-        "電腦及週邊設備": "PC",
-        "光電": "Display",
-        "通信網路": "Network",
-        "其他電子": "Electronics",
-        "電子通路": "Channel",
-        "資訊服務": "Software",
-        "電機機械": "Machinery",
-        "汽車": "Auto",
-        "化學": "Chemical",
-        "鋼鐵": "Steel",
-        "生技醫療": "Biotech",
-        "食品": "Food",
-        "紡織纖維": "Textile",
-        "貿易百貨": "Retail",
-        "建材營造": "Construction",
-        "航運": "Shipping",
-        "觀光": "Tourism",
-        "油電燃氣": "Energy",
+        "半導體": "AI_Core",
+        "光電": "AI_Core",
+        "電機機械": "AI_Power",
+        "電子零組件": "PCB_Material",
+        "通信網路": "Comm_Net",
+        "電腦及週邊設備": "Digital_Cloud",
+        "資訊服務": "Digital_Cloud",
+        "電子通路": "Digital_Cloud",
+        "其他電子": "Digital_Cloud",
+        "汽車": "Auto_Elec",
+        "生技醫療": "Biotech_Green",
+        "化學": "Biotech_Green",
+        "油電燃氣": "Biotech_Green",
+        "鋼鐵": "AI_Power",
+        "食品": "Other",
+        "紡織纖維": "Other",
+        "貿易百貨": "Other",
+        "建材營造": "Other",
+        "航運": "Other",
+        "觀光": "Other",
     }
     def to_theme(ind):
         for kw, theme in THEME_MAP.items():
@@ -180,7 +180,7 @@ def main():
     print(df["industry_category"].value_counts().to_string())
 
     # ── 9. 輸出 CSV ───────────────────────────────────────────────
-    df[["stock_id"]].to_csv(OUT_PATH, index=False)
+    df[["stock_id", "theme"]].to_csv(OUT_PATH, index=False)
     print(f"\nuniverse.csv 輸出：{len(df)} 支 → {OUT_PATH}")
 
     # ── 10. 寫入 SQLite ───────────────────────────────────────────

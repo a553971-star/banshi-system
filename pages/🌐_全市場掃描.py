@@ -4,13 +4,33 @@ import os
 import pandas as pd
 import streamlit as st
 
-BASE_PATH   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CSV_PATH    = os.path.join(BASE_PATH, "latest_decisions_universe.csv")
-PIN_PATH    = os.path.join(BASE_PATH, "pinned.json")
+BASE_PATH        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CSV_PATH         = os.path.join(BASE_PATH, "latest_decisions_universe.csv")
+PIN_PATH         = os.path.join(BASE_PATH, "pinned.json")
+UNIVERSE_PATH    = os.path.join(BASE_PATH, "universe.csv")
+SHAREHOLDING_PATH= os.path.join(BASE_PATH, "shareholding_latest.csv")
+
+THEME_COLOR = {
+    "AI_Core":       "🔴",
+    "AI_Power":      "🟠",
+    "PCB_Material":  "🟡",
+    "Memory_Storage":"🟣",
+    "Comm_Net":      "🔵",
+    "Auto_Elec":     "⚪",
+    "Biotech_Green": "🟢",
+    "Digital_Cloud": "⚫",
+}
 
 st.set_page_config(page_title="全市場掃描", layout="wide")
 st.title("🌐 全市場掃描")
 st.caption("來源：latest_decisions_universe.csv（每日 Actions 更新）")
+
+# ── 主題圖例 ──────────────────────────────────────────────────────────────────
+with st.expander("🎨 產業主題圖例", expanded=False):
+    legend_cols = st.columns(4)
+    legend_items = list(THEME_COLOR.items())
+    for i, (theme, dot) in enumerate(legend_items):
+        legend_cols[i % 4].markdown(f"{dot} **{theme}**")
 
 
 def load_pinned() -> set:
@@ -45,6 +65,23 @@ if not os.path.exists(CSV_PATH):
 df = pd.read_csv(CSV_PATH, dtype=str)
 for col in ["C_days", "B_days", "A_days", "B_quality"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")
+
+# 主題對照表（universe.csv 含 theme 欄位）
+theme_map = {}
+try:
+    u_df = pd.read_csv(UNIVERSE_PATH, dtype=str)
+    if "theme" in u_df.columns:
+        theme_map = dict(zip(u_df["stock_id"], u_df["theme"]))
+except Exception:
+    pass
+
+# 外資持股比例對照表
+ratio_map = {}
+try:
+    sh_df = pd.read_csv(SHAREHOLDING_PATH, dtype=str)
+    ratio_map = {str(r["stock_id"]): r.get("foreign_ratio", "") for _, r in sh_df.iterrows()}
+except Exception:
+    pass
 
 # ── 統計區 ────────────────────────────────────────────────────────────────────
 n_buy    = (df["decision"] == "BUY").sum()
@@ -153,8 +190,10 @@ for _, row in filtered.iterrows():
     b_validity = str(row.get("B_validity", "") or "")
     b_phase    = str(row.get("B_phase", "") or "")
 
-    dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪"}.get(decision, "⚪")
-    pin_icon = "📌" if sid in pinned else "☆"
+    dec_icon   = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪"}.get(decision, "⚪")
+    theme      = theme_map.get(sid, "")
+    theme_dot  = THEME_COLOR.get(theme, "")
+    f_ratio    = ratio_map.get(sid, "")
 
     show_key   = f"us_show_{sid}"
     result_key = f"us_result_{sid}"
@@ -166,14 +205,19 @@ for _, row in filtered.iterrows():
             b_str  = f"B={int(b_days)}" if pd.notna(b_days) else "B=-"
             a_str  = f"A={int(a_days)}" if pd.notna(a_days) else "A=-"
             bq_str = f"Bq={int(b_qual)}" if pd.notna(b_qual) else "Bq=-"
-            fp_str = f"外資:{int(float(f_pos)):,}張" if pd.notna(f_pos) and str(f_pos) not in ("", "nan") else ""
+            if pd.notna(f_pos) and str(f_pos) not in ("", "nan"):
+                fp_str = f"外資:{int(float(f_pos)):,}張"
+                if f_ratio and str(f_ratio) not in ("", "nan"):
+                    fp_str += f"（{float(f_ratio):.1f}%）"
+            else:
+                fp_str = ""
 
             validity_icon = {"TRUE_B": "✅", "FAKE_B": "❌", "UNCERTAIN": "❓"}.get(b_validity, "")
             phase_icon    = {"LAUNCH": "🔴", "MATURE": "🟠", "BUILD": "🔵",
                              "PREPARE": "🟡", "LATE": "⚫"}.get(b_phase, "")
 
             line1 = (
-                f"{dec_icon} **{sid} {name}** &nbsp;｜&nbsp; {decision} &nbsp;｜&nbsp; "
+                f"{dec_icon} {theme_dot} **{sid} {name}** &nbsp;｜&nbsp; {decision} &nbsp;｜&nbsp; "
                 f"{c_str} {b_str} {a_str} {bq_str} &nbsp;｜&nbsp; {flow}"
                 + (f" &nbsp;｜&nbsp; {fp_str}" if fp_str else "")
             )
