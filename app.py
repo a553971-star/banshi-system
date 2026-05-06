@@ -1122,20 +1122,39 @@ def main() -> None:
                 live_id = match_name.iloc[0]["stock_id"]
                 st.caption(f"查詢：{match_name.iloc[0]['name']} ({live_id})")
             else:
-                _r = _req.get("https://api.finmindtrade.com/api/v4/data",
-                    params={"dataset": "TaiwanStockInfo", "token": _token}, timeout=15)
-                _info = pd.DataFrame(_r.json().get("data", []))
-                if not _info.empty:
-                    _m = _info[_info["stock_name"].str.contains(live_input, na=False)]
-                    # 只保留4位數股票代號（過濾權證/ETF衍生商品）
-                    _m = _m[_m["stock_id"].str.match(r"^\d{4}$")]
-                    if not _m.empty:
-                        live_id = _m.iloc[0]["stock_id"]
-                        st.caption(f"查詢：{_m.iloc[0]['stock_name']} ({live_id})")
-                    else:
+                # 查 universe（latest_decisions_universe.csv 含 name 欄）
+                _uni_found = False
+                try:
+                    _uni_df = pd.read_csv(
+                        os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
+                    _uid = _uni_df[_uni_df["stock_id"] == live_input]
+                    _uname = _uni_df[_uni_df["name"].str.contains(live_input, na=False)]
+                    if not _uid.empty:
                         live_id = live_input
-                else:
-                    live_id = live_input
+                        _uni_found = True
+                    elif not _uname.empty:
+                        live_id = _uname.iloc[0]["stock_id"]
+                        st.caption(f"查詢：{_uname.iloc[0]['name']} ({live_id})")
+                        _uni_found = True
+                except Exception:
+                    pass
+                if not _uni_found:
+                    try:
+                        _r = _req.get("https://api.finmindtrade.com/api/v4/data",
+                            params={"dataset": "TaiwanStockInfo", "token": _token}, timeout=15)
+                        _info = pd.DataFrame(_r.json().get("data", []))
+                        if not _info.empty:
+                            _m = _info[_info["stock_name"].str.contains(live_input, na=False)]
+                            _m = _m[_m["stock_id"].str.match(r"^\d{4}$")]
+                            if not _m.empty:
+                                live_id = _m.iloc[0]["stock_id"]
+                                st.caption(f"查詢：{_m.iloc[0]['stock_name']} ({live_id})")
+                            else:
+                                live_id = live_input
+                        else:
+                            live_id = live_input
+                    except Exception:
+                        live_id = live_input
         except Exception:
             live_id = live_input
 
