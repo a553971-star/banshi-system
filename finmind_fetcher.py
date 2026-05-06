@@ -9,10 +9,13 @@ finmind_fetcher.py — 磐石決策系統
 """
 
 import logging
+import os
 import sqlite3
 from typing import Optional
 
 import pandas as pd
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger(__name__)
 
@@ -267,8 +270,10 @@ def merge_to_schema(
 
 def write_to_db(
     df: pd.DataFrame,
-    db_path: str = "banshi.db",
+    db_path: str = None,
 ) -> int:
+    if db_path is None:
+        db_path = os.path.join(_DIR, "banshi.db")
     """INSERT OR REPLACE df 進 daily_data。
 
     executemany 批次寫入，單次 commit。
@@ -316,12 +321,14 @@ def fetch_and_store(
     start: str,
     end: str,
     token: str = "",
-    db_path: str = "banshi.db",
+    db_path: str = None,
 ) -> int:
     """完整流程：fetch × 3 → merge_to_schema → write_to_db。
 
     回傳寫入筆數。不 raise。
     """
+    if db_path is None:
+        db_path = os.path.join(_DIR, "banshi.db")
     try:
         logger.info("開始抓取 %d 檔股票 [%s → %s]", len(stock_ids), start, end)
 

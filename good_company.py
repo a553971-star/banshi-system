@@ -10,12 +10,13 @@ Rules:
 
 import csv
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PATH = "companies.csv"
+_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")
 
 
 def load_company_list(path: str = _DEFAULT_PATH) -> dict:

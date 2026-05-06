@@ -1113,7 +1113,7 @@ def main() -> None:
         try:
             import requests as _req, os as _os
             _token = _os.getenv("FINMIND_TOKEN")
-            co_df = pd.read_csv("companies.csv", dtype=str)
+            co_df = pd.read_csv(os.path.join(_DIR, "companies.csv"), dtype=str)
             match_id   = co_df[co_df["stock_id"] == live_input]
             match_name = co_df[co_df["name"].str.contains(live_input, na=False)]
             if not match_id.empty:

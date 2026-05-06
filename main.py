@@ -60,8 +60,8 @@ def load_params(path: str = _DEFAULT_PARAMS) -> dict:
     Never raises.
     """
     defaults = {
-        "companies_path":  "companies.csv",
-        "db_path":         "banshi.db",
+        "companies_path":  os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv"),
+        "db_path":         os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db"),
 
         # Trajectory thresholds
         "c_safe_threshold":    0.98,
@@ -149,7 +149,7 @@ def _process_stock(
     """
     try:
         db_path = params.get("db_path", _DEFAULT_DB)
-        co_path = params.get("companies_path", "companies.csv")
+        co_path = params.get("companies_path", os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv"))
 
         target    = pd.to_datetime(date)
         start_dt  = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
@@ -369,7 +369,7 @@ def main() -> None:
     if args.stocks:
         stock_ids = args.stocks
     else:
-        companies = load_company_list(params.get("companies_path", "companies.csv"))
+        companies = load_company_list(params.get("companies_path", os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")))
         stock_ids = list(companies.keys())
 
         co_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")

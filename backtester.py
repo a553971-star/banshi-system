@@ -17,10 +17,13 @@ Exit conditions (evaluated in strict order, stop at first match):
 
 import csv
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from data_fetcher import merge_all
 from feature_engine import build_features
@@ -61,8 +64,8 @@ def replay_decision(date: str, stock_id: str, params: dict) -> dict:
     Returns a complete decision dict. Never raises.
     """
     try:
-        db_path   = params.get("db_path", "banshi.db")
-        co_path   = params.get("companies_path", "companies.csv")
+        db_path   = params.get("db_path", os.path.join(_DIR, "banshi.db"))
+        co_path   = params.get("companies_path", os.path.join(_DIR, "companies.csv"))
 
         target    = pd.to_datetime(date)
         start     = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
@@ -233,7 +236,7 @@ def run_backtest(
     Never raises; individual stock/day errors are logged and skipped.
     """
     try:
-        db_path = params.get("db_path", "banshi.db")
+        db_path = params.get("db_path", os.path.join(_DIR, "banshi.db"))
 
         # Collect all trading dates from the data
         from data_fetcher import merge_all as _ma

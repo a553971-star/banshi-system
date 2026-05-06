@@ -10,6 +10,7 @@ Rules:
 """
 
 import logging
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -18,7 +19,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = "banshi.db"
+_DEFAULT_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
 
 _OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 _INSTITUTIONAL_COLS = [

@@ -43,7 +43,9 @@ logger = logging.getLogger(__name__)
 _LOOKBACK_DAYS = 400
 
 
-def get_company_name_safe(stock_id: str, co_path: str = "companies.csv") -> str:
+def get_company_name_safe(stock_id: str, co_path: str = None) -> str:
+    if co_path is None:
+        co_path = os.path.join(_DIR, "companies.csv")
     try:
         df = pd.read_csv(co_path, dtype=str)
         match = df[df["stock_id"] == stock_id]

@@ -17,6 +17,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 # ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -235,8 +237,10 @@ _LATEST_COLS = [
 
 def export_latest_decisions(
     decisions: list,
-    path: str = "latest_decisions.csv",
+    path: str = None,
 ) -> None:
+    if path is None:
+        path = os.path.join(_DIR, "latest_decisions.csv")
     """Write the latest decision for each stock to a CSV (one row per stock).
 
     Columns: date, stock_id, name, decision, confidence,
@@ -266,8 +270,10 @@ _STATE_LOG_COLS = ["date", "stock_id", "name", "prev_state", "new_state", "score
 def append_state_log(
     decision_dict: dict,
     prev_state: Optional[str],
-    path: str = "state_log.csv",
+    path: str = None,
 ) -> None:
+    if path is None:
+        path = os.path.join(_DIR, "state_log.csv")
     """Append one row to the state log CSV.
 
     Columns: date, stock_id, prev_state, new_state, score, decision, B_phase, B_validity.
