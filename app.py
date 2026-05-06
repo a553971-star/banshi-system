@@ -67,10 +67,21 @@ from data_fetcher_fm import fetch_stock_data
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _DECISIONS_PATH = os.path.join(_DIR, "latest_decisions.csv")
-_STATE_LOG_PATH = os.path.join(_DIR, "state_log.csv")
-_OVERRIDES_PATH = os.path.join(_DIR, "watchlist_overrides.json")
-PIN_PATH = os.path.join(_DIR, "pinned.json")
-TRADES_PATH = os.path.join(_DIR, "trades_log.csv")
+_STATE_LOG_PATH   = os.path.join(_DIR, "state_log.csv")
+_OVERRIDES_PATH   = os.path.join(_DIR, "watchlist_overrides.json")
+PIN_PATH          = os.path.join(_DIR, "pinned.json")
+TRADES_PATH       = os.path.join(_DIR, "trades_log.csv")
+_SHAREHOLDING_PATH= os.path.join(_DIR, "shareholding_latest.csv")
+
+
+@st.cache_data(ttl=3600)
+def load_foreign_ratio_map() -> dict:
+    try:
+        import pandas as _pd
+        sh = _pd.read_csv(_SHAREHOLDING_PATH, dtype=str)
+        return dict(zip(sh["stock_id"], sh["foreign_ratio"]))
+    except Exception:
+        return {}
 
 
 def add_to_custom_watchlist(stock_id: str) -> None:
@@ -927,7 +938,9 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     st.markdown("#### 📊 外資持倉")
     if _fp and int(_fp) > 0:
         _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
-        st.metric("外資持股（張）", f"{int(_fp):,}")
+        _ratio = load_foreign_ratio_map().get(str(stock_id), "")
+        _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
+        st.metric("外資持股", _fp_label)
         if _level_icon:
             st.caption(f"{_level_icon} {_fl}")
     else:
@@ -1242,7 +1255,9 @@ def main() -> None:
             st.markdown("#### 📊 外資持倉")
             if _fp and int(_fp) > 0:
                 _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
-                st.metric("外資持股（張）", f"{int(_fp):,}")
+                _ratio = load_foreign_ratio_map().get(str(live_id), "")
+                _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
+                st.metric("外資持股", _fp_label)
                 if _level_icon:
                     st.caption(f"{_level_icon} {_fl}")
             else:
