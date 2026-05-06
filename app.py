@@ -1528,6 +1528,32 @@ KD：{kd_k}/{kd_d}
     overrides = st.session_state["overrides"]
     action_df, watchlist_df, candidate_df = classify_rows(df, overrides)
 
+    # ── Ranking 2.0 total_score（白名單用）────────────────────────────────────
+    for _col in ["C_days", "B_days", "A_days", "B_quality"]:
+        df[_col] = pd.to_numeric(df[_col], errors="coerce")
+    _bq = df["B_quality"]
+    _bq_min, _bq_max = _bq.min(), _bq.max()
+    df["_bq_norm"] = ((_bq - _bq_min) / (_bq_max - _bq_min) * 100).fillna(0) if _bq_max > _bq_min else 50.0
+    def _fa(a):
+        if pd.isna(a): return 0
+        a = int(a)
+        if a == 0: return 0
+        m = {1:100,2:95,3:85,4:70,5:50}
+        if a <= 5: return m.get(a, 0)
+        if a <= 8: return 30
+        return 10
+    df["_fa_score"] = df["A_days"].apply(_fa)
+    df["_c_rec"] = ((30 - df["C_days"].fillna(30).clip(0, 30)) * 3.3).clip(0, 100)
+    _fp2 = pd.to_numeric(df["foreign_profit_pct"], errors="coerce") if "foreign_profit_pct" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
+    _fp2_score = (100 - (_fp2 - 5).abs() * 12).clip(0, 100).fillna(50)
+    _vr2 = pd.to_numeric(df["volume_ratio"], errors="coerce") if "volume_ratio" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
+    _vr2_norm = ((_vr2.clip(0.5, 3.0) - 0.5) / 2.5 * 100).clip(0, 100).fillna(50)
+    df["total_score"] = (
+        df["_bq_norm"] * 0.40 + _fp2_score * 0.25 +
+        df["_fa_score"] * 0.20 + _vr2_norm * 0.10 +
+        df["_c_rec"] * 0.05
+    ).round(1)
+
     # 排序
     action_df["confidence"] = pd.to_numeric(action_df["confidence"], errors="coerce")
     watchlist_df["confidence"] = pd.to_numeric(watchlist_df["confidence"], errors="coerce")
@@ -1901,6 +1927,28 @@ KD：{kd_k}/{kd_d}
         components.html(top_html, height=120)
     else:
         st.info("今日沒有最強標的（無 BUY 訊號）")
+
+    # ── 🏆 綜合評分 Top 20 ───────────────────────────────────────────────
+    with st.expander("🏆 綜合評分 Top 20（WAIT + BUY）", expanded=True):
+        _top_wl = (
+            df[df["decision"].isin(["WAIT", "BUY"])]
+            .sort_values("total_score", ascending=False)
+            .head(20)
+            .reset_index(drop=True)
+        )
+        if _top_wl.empty:
+            st.info("暫無 WAIT/BUY 資料")
+        else:
+            _top_wl_disp = _top_wl[["stock_id", "name", "total_score", "B_quality", "A_days", "decision"]].copy()
+            _top_wl_disp.index = _top_wl_disp.index + 1
+            _top_wl_disp.index.name = "排名"
+            _top_wl_disp.columns = ["代號", "名稱", "總分", "B品質", "A天數", "決策"]
+            _top_wl_disp["總分"] = _top_wl_disp["總分"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "N/A")
+            _top_wl_disp["B品質"] = pd.to_numeric(_top_wl_disp["B品質"], errors="coerce").apply(
+                lambda x: str(int(x)) if pd.notna(x) else "N/A")
+            _top_wl_disp["A天數"] = pd.to_numeric(_top_wl_disp["A天數"], errors="coerce").apply(
+                lambda x: str(int(x)) if pd.notna(x) else "N/A")
+            st.dataframe(_top_wl_disp, use_container_width=True)
 
     # ── 行動清單 ──────────────────────────────────────────────────────────
     st.subheader("行動清單（Action）")
