@@ -130,6 +130,28 @@ c4.metric("📊 總計",   total)
 date_val = df["date"].iloc[0] if "date" in df.columns and not df.empty else "N/A"
 st.caption(f"資料日期：{date_val}")
 
+# ── 🏆 綜合評分 Top 20 ────────────────────────────────────────────────────────
+with st.expander("🏆 綜合評分 Top 20（WAIT + BUY）", expanded=True):
+    _top = (
+        df[df["decision"].isin(["WAIT", "BUY"])]
+        .sort_values("total_score", ascending=False)
+        .head(20)
+        .reset_index(drop=True)
+    )
+    if _top.empty:
+        st.info("暫無 WAIT/BUY 資料")
+    else:
+        _top_disp = _top[["stock_id", "name", "total_score", "B_quality", "A_days", "decision"]].copy()
+        _top_disp.index = _top_disp.index + 1
+        _top_disp.index.name = "排名"
+        _top_disp.columns = ["代號", "名稱", "總分", "B品質", "A天數", "決策"]
+        _top_disp["總分"] = _top_disp["總分"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "N/A")
+        _top_disp["B品質"] = pd.to_numeric(_top_disp["B品質"], errors="coerce").apply(
+            lambda x: str(int(x)) if pd.notna(x) else "N/A")
+        _top_disp["A天數"] = pd.to_numeric(_top_disp["A天數"], errors="coerce").apply(
+            lambda x: str(int(x)) if pd.notna(x) else "N/A")
+        st.dataframe(_top_disp, use_container_width=True)
+
 st.divider()
 
 # ── 篩選器 ────────────────────────────────────────────────────────────────────
