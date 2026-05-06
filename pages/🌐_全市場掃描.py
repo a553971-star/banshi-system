@@ -37,74 +37,6 @@ def run_live_analysis(stock_id: str):
         return None
 
 
-def render_live_result_block(stock_id: str, result):
-    from app import explain_metrics
-
-    if not result:
-        st.warning(f"⚠️ {stock_id} 無法取得資料")
-        return
-
-    dec   = result.get("decision", "IGNORE")
-    conf  = int(result.get("confidence", 0))
-    name  = result.get("name", "")
-    c     = int(result.get("C_days") or 0)
-    b     = int(result.get("B_days") or 0)
-    a     = int(result.get("A_days") or 0)
-    flow  = result.get("flow_status", "-")
-    cost  = result.get("cost_level", "-")
-
-    color_map = {"BUY": ("#28a745", "#e6f4ea"), "WAIT": ("#ffc107", "#fff8e1")}
-    border, bg = color_map.get(dec, ("#6c757d", "#f8f9fa"))
-    label_map = {"BUY": "🚀 買進", "WAIT": "👀 觀察", "IGNORE": "⏳ 忽略"}
-    label = label_map.get(dec, "⏳ 忽略")
-
-    try:
-        _, coach = explain_metrics(result)
-    except Exception:
-        coach = "資料不足，繼續觀察"
-
-    st.markdown(f"""
-<div style="background:{bg}; border-left:8px solid {border}; border-radius:12px;
-            padding:16px 20px; margin:8px 0 10px 0;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:18px; font-weight:bold;">{stock_id} {name}</span>
-        <span style="font-size:22px;">{label}
-            <span style="background:{border}; color:white; font-size:14px;
-                   padding:2px 10px; border-radius:12px; margin-left:8px;">
-                信心 {conf}
-            </span>
-        </span>
-    </div>
-    <div style="font-size:13px; color:#444; margin-top:8px; line-height:1.9;">
-        🧱 C={c}天 &nbsp;|&nbsp; 🏗️ B={b}天 &nbsp;|&nbsp; 🚀 A={a}天
-        &nbsp;&nbsp;｜&nbsp;&nbsp;
-        Flow: <b>{flow}</b> &nbsp;|&nbsp; Cost: <b>{cost}</b>
-    </div>
-    <div style="margin-top:8px; padding:6px 10px; background:rgba(0,0,0,0.04);
-                border-radius:8px; font-size:13px; color:#333;">
-        💬 {coach}
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-    b_phase    = result.get("B_phase")
-    b_validity = result.get("B_validity")
-    if b_phase or b_validity:
-        validity_icon = {"TRUE_B": "✅", "FAKE_B": "❌", "UNCERTAIN": "❓"}.get(b_validity, "")
-        phase_map = {
-            "LAUNCH":  ("🔴", "LAUNCH 發動初期",  "盤石最佳進場點"),
-            "MATURE":  ("🟠", "MATURE 成熟建倉",  "主力已在，等待發動"),
-            "BUILD":   ("🔵", "BUILD 穩定建倉",   "主力開始進場"),
-            "PREPARE": ("🟡", "PREPARE 建倉中",   "有人在看，未成形"),
-            "LATE":    ("⚫", "LATE 太晚",        "已漲一段，不要追"),
-        }
-        p_icon, p_label, p_desc = phase_map.get(b_phase, ("⚪", b_phase or "", ""))
-        st.markdown(f"**{validity_icon} {b_validity}**　**{p_icon} {p_label}**")
-        if p_desc:
-            st.caption(p_desc)
-        st.caption(f"B_quality: {result.get('B_quality', 'N/A')}　B_window: {result.get('B_window_20', 'N/A')}")
-
-
 # ── 讀資料 ────────────────────────────────────────────────────────────────────
 if not os.path.exists(CSV_PATH):
     st.warning("尚無資料（latest_decisions_universe.csv 不存在，請等 Actions 跑完）")
@@ -275,4 +207,8 @@ for _, row in filtered.iterrows():
             with st.spinner(f"分析 {sid} 中..."):
                 st.session_state["us_results"][sid] = run_live_analysis(sid)
         result = st.session_state["us_results"].get(sid)
-        render_live_result_block(sid, result)
+        if result:
+            from app import render_live_result_block
+            render_live_result_block(sid, result)
+        else:
+            st.warning(f"⚠️ {sid} 無法取得資料，請確認代號是否正確")
