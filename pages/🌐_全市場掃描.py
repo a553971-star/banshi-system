@@ -160,7 +160,7 @@ for _, row in filtered.iterrows():
     result_key = f"us_result_{sid}"
 
     with st.container():
-        r1, r2, r3 = st.columns([9, 2, 1])
+        r1, r2, r3 = st.columns([7, 2, 1])
         with r1:
             c_str  = f"C={int(c_days)}" if pd.notna(c_days) else "C=-"
             b_str  = f"B={int(b_days)}" if pd.notna(b_days) else "B=-"
@@ -194,7 +194,7 @@ for _, row in filtered.iterrows():
                     st.session_state["us_results"].pop(sid, None)
                 st.rerun()
         with r3:
-            if st.button(pin_icon, key=f"us_pin_{sid}"):
+            if st.button(pin_icon, key=f"us_pin_{sid}", use_container_width=True):
                 if sid in pinned:
                     pinned.discard(sid)
                 else:

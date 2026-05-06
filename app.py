@@ -74,18 +74,10 @@ TRADES_PATH = os.path.join(_DIR, "trades_log.csv")
 
 
 def add_to_custom_watchlist(stock_id: str) -> None:
-    try:
-        from datetime import date
-        import sqlite3
-        db_path = os.path.join(_DIR, "banshi.db")
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("CREATE TABLE IF NOT EXISTS watchlist (stock_id TEXT PRIMARY KEY, added_date TEXT)")
-        cursor.execute("INSERT OR IGNORE INTO watchlist VALUES (?, ?)", (stock_id, date.today().isoformat()))
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+    pinned = load_pinned()
+    pinned.add(str(stock_id))
+    save_pinned(pinned)
+    st.session_state["pinned"] = pinned
 
 
 # ── 資料載入 ──────────────────────────────────────────────────────────────────
