@@ -160,7 +160,7 @@ for _, row in filtered.iterrows():
     result_key = f"us_result_{sid}"
 
     with st.container():
-        r1, r2, r3 = st.columns([7, 2, 1])
+        r1, r2, r3 = st.columns([6, 2, 2])
         with r1:
             c_str  = f"C={int(c_days)}" if pd.notna(c_days) else "C=-"
             b_str  = f"B={int(b_days)}" if pd.notna(b_days) else "B=-"
