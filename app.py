@@ -1535,9 +1535,18 @@ KD：{kd_k}/{kd_d}
     # ── 今日變化 ──────────────────────────────────────────────────────────
     st.subheader("📊 今日變化")
     if state_changes:
+        _name_lookup = {}
+        if "name" in df.columns:
+            _name_lookup.update(dict(zip(df["stock_id"].astype(str), df["name"].astype(str))))
+        try:
+            _uni = pd.read_csv(os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
+            if "name" in _uni.columns:
+                _name_lookup.update({k: v for k, v in zip(_uni["stock_id"].astype(str), _uni["name"].astype(str))
+                                     if v and v != "nan"})
+        except Exception:
+            pass
         for sid, (label, detail) in state_changes.items():
-            name_row = df[df["stock_id"].astype(str) == str(sid)]["name"] if "name" in df.columns else pd.Series()
-            name = name_row.iloc[0] if not name_row.empty and str(name_row.iloc[0]) != str(sid) else str(sid)
+            name = _name_lookup.get(str(sid), str(sid))
             display = f"{sid} {name}" if name != str(sid) else str(sid)
             _sc1, _sc2 = st.columns([10, 1])
             with _sc1:
