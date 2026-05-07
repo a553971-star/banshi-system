@@ -1096,6 +1096,581 @@ def calc_b_validity_from_row(row):
         return "UNCERTAIN"
 
 
+# ── 共用戰情室渲染函式 ─────────────────────────────────────────────────────────
+
+def render_war_room_body(
+    df: pd.DataFrame,
+    prev_map: dict,
+    state_changes: dict,
+    key_prefix: str = "",
+    quick_mode: bool = False,
+) -> None:
+    """Shared war room rendering body. Call from main() and AI war room page.
+
+    df must already have total_score computed.
+    key_prefix avoids Streamlit session-state key collisions between pages.
+    """
+    import streamlit.components.v1 as _comp
+    p = key_prefix
+
+    # ── Ranking 2.0 total_score ───────────────────────────────────────────
+    for _col in ["C_days", "B_days", "A_days", "B_quality"]:
+        df[_col] = pd.to_numeric(df[_col], errors="coerce")
+    _bq = df["B_quality"]
+    _bq_min, _bq_max = _bq.min(), _bq.max()
+    df["_bq_norm"] = ((_bq - _bq_min) / (_bq_max - _bq_min) * 100).fillna(0) if _bq_max > _bq_min else 50.0
+    def _fa_s(a):
+        if pd.isna(a): return 0
+        a = int(a)
+        if a == 0: return 0
+        m = {1:100,2:95,3:85,4:70,5:50}
+        if a <= 5: return m.get(a, 0)
+        if a <= 8: return 30
+        return 10
+    df["_fa_score"] = df["A_days"].apply(_fa_s)
+    df["_c_rec"] = ((30 - df["C_days"].fillna(30).clip(0, 30)) * 3.3).clip(0, 100)
+    _fp2 = pd.to_numeric(df["foreign_profit_pct"], errors="coerce") if "foreign_profit_pct" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
+    _fp2_score = (100 - (_fp2 - 5).abs() * 12).clip(0, 100).fillna(50)
+    _vr2 = pd.to_numeric(df["volume_ratio"], errors="coerce") if "volume_ratio" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
+    _vr2_norm = ((_vr2.clip(0.5, 3.0) - 0.5) / 2.5 * 100).clip(0, 100).fillna(50)
+    df["total_score"] = (
+        df["_bq_norm"] * 0.40 + _fp2_score * 0.25 +
+        df["_fa_score"] * 0.20 + _vr2_norm * 0.10 +
+        df["_c_rec"] * 0.05
+    ).round(1)
+
+    # ── classify rows ─────────────────────────────────────────────────────
+    overrides = st.session_state.get("overrides", {})
+    action_df, watchlist_df, candidate_df = classify_rows(df, overrides)
+
+    action_df["confidence"] = pd.to_numeric(action_df["confidence"], errors="coerce")
+    watchlist_df["confidence"] = pd.to_numeric(watchlist_df["confidence"], errors="coerce")
+    candidate_df["C_days"] = pd.to_numeric(candidate_df["C_days"], errors="coerce")
+    action_df = action_df.sort_values(by="confidence", ascending=False)
+    watchlist_df = watchlist_df.sort_values(by="confidence", ascending=False)
+    candidate_df = candidate_df.sort_values(by="C_days", ascending=False)
+
+    if quick_mode:
+        action_df = action_df.head(3)
+        watchlist_df = watchlist_df.head(3)
+        candidate_df = candidate_df.head(5)
+
+    filtered_action_df = action_df
+    filtered_watchlist_df = watchlist_df
+    filtered_candidate_df = candidate_df
+
+    # ── 今日變化 ──────────────────────────────────────────────────────────
+    with st.expander(f"📊 今日變化（{len(state_changes)} 筆）", expanded=False):
+        if state_changes:
+            _name_lookup = {}
+            if "name" in df.columns:
+                _name_lookup.update(dict(zip(df["stock_id"].astype(str), df["name"].astype(str))))
+            try:
+                _uni = pd.read_csv(os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
+                if "name" in _uni.columns:
+                    _name_lookup.update({k: v for k, v in zip(_uni["stock_id"].astype(str), _uni["name"].astype(str)) if v and v != "nan"})
+            except Exception:
+                pass
+            for sid, (label, detail) in state_changes.items():
+                name = _name_lookup.get(str(sid), str(sid))
+                display = f"{sid} {name}" if name != str(sid) else str(sid)
+                _sc1, _sc2 = st.columns([10, 1])
+                with _sc1:
+                    st.text(f"{display}｜{label}｜{detail}")
+                with _sc2:
+                    if st.button("📌", key=f"{p}track_chg_{sid}", help="加入自訂追蹤清單"):
+                        add_to_custom_watchlist(str(sid))
+                        st.toast(f"已加入追蹤：{sid}")
+        else:
+            st.caption("今日無關鍵變化")
+
+    # ── 強B排行榜 ─────────────────────────────────────────────────────────
+    st.subheader("🔥 強B排行榜（主力建倉候選）")
+    try:
+        from b_ranker import get_top_strong_B
+        top_b = get_top_strong_B(df, top_n=5)
+        if top_b.empty:
+            st.info("今日無強B候選")
+        else:
+            for _, row in top_b.iterrows():
+                stock = row.get("stock_id", "")
+                name  = row.get("name", "")
+                score = int(row.get("B_score", 0))
+                B     = row.get("B_days", "")
+                flow  = row.get("flow_status", "")
+                cost  = row.get("cost_level", "")
+                _bc1, _bc2 = st.columns([10, 1])
+                with _bc1:
+                    st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
+                    st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+                with _bc2:
+                    if st.button("📌", key=f"{p}track_topb_{stock}", help="加入自訂追蹤清單"):
+                        add_to_custom_watchlist(str(stock))
+                        st.toast(f"已加入追蹤：{stock}")
+    except Exception as e:
+        st.warning(f"強B排行榜載入失敗：{e}")
+
+    # ── 戰情室 War Room ──────────────────────────────────────────────────
+    st.subheader("⚔️ 戰情室 War Room")
+    st.info("⚡ 行動清單是盤石說『現在可以買』；戰情室是盤石還沒說，但主力已經在布局。兩個互補——行動清單給你確認，戰情室讓你提前看到。")
+
+    def _get_c_icon(c):
+        if c == 0: return "⚫"
+        elif c == 1: return "⚪"
+        elif c == 2: return "🟡"
+        elif 3 <= c <= 4: return "🔵"
+        else: return "🔴"
+
+    def _get_a_icon(a):
+        if a == 0: return "⚪"
+        elif 1 <= a <= 2: return "🟢"
+        else: return "🟢🟢"
+
+    def _get_status_tag(a, c):
+        if a >= 2 and c >= 3: return "🔥 發動中 Launching"
+        elif a >= 1: return "⚠️ 剛轉強 Turning"
+        elif c == 0: return "⏳ 等待 Waiting"
+        else: return ""
+
+    try:
+        war_df = df.copy()
+        for _col in ["B_days", "A_days", "C_days"]:
+            war_df[_col] = pd.to_numeric(war_df[_col], errors="coerce").fillna(0).astype(int)
+
+        def _classify_war(row):
+            B      = int(row["B_days"])
+            A      = int(row["A_days"])
+            C      = int(row["C_days"])
+            b_type = str(row.get("B_type", "") or "")
+            flow   = str(row.get("flow_status", "") or "")
+            if B >= 8 and A >= 2 and C >= 3:
+                return "ATTACK"
+            if b_type == "STRONG_B" and B >= 10 and A >= 1 and C >= 2 and flow in ["ACCUMULATING", "NEUTRAL"]:
+                return "LAUNCH"
+            if b_type == "STRONG_B" and B >= 10:
+                return "PREPARE"
+            return None
+
+        war_df["war_class"] = war_df.apply(_classify_war, axis=1)
+        _attack  = war_df[war_df["war_class"] == "ATTACK"].copy()
+        _launch  = war_df[war_df["war_class"] == "LAUNCH"].copy()
+        _prepare = war_df[war_df["war_class"] == "PREPARE"].copy()
+
+        _attack["_score"]  = _attack["C_days"] * 3 + _attack["A_days"] * 2 + _attack["B_days"]
+        _launch["_score"]  = _launch["C_days"] * 3 + _launch["A_days"] * 2 + _launch["B_days"]
+        _prepare["_score"] = _prepare["B_days"] * 3 + _prepare["A_days"] * 2 + _prepare["C_days"]
+        _attack  = _attack.sort_values("_score", ascending=False)
+        _launch  = _launch.sort_values("_score", ascending=False)
+        _prepare = _prepare.sort_values("_score", ascending=False)
+
+        def _render_war_section(section_df, emoji, title_en, title_zh, caption_text):
+            st.markdown(f"#### {emoji} {title_en}　{title_zh}")
+            st.caption(caption_text)
+            if section_df.empty:
+                st.caption("（無符合條件 No qualified stocks）")
+                return
+            for rank, (_, r) in enumerate(section_df.iterrows(), 1):
+                sid  = str(r.get("stock_id", ""))
+                name = str(r.get("name", ""))
+                B    = int(r["B_days"])
+                A    = int(r["A_days"])
+                C    = int(r["C_days"])
+                flow = str(r.get("flow_status", "-") or "-")
+                tag  = _get_status_tag(A, C)
+                wcol1, wcol2 = st.columns([9, 1])
+                with wcol1:
+                    st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}")
+                with wcol2:
+                    if st.button("📌", key=f"{p}track_war_{title_en}_{sid}", help="加入自訂追蹤清單"):
+                        add_to_custom_watchlist(sid)
+                        st.toast(f"已加入追蹤：{sid}")
+
+        _render_war_section(_launch,  "🟠", "LAUNCH",  "即將發動", "主力建倉完成，股票開始脫離底部。不是現在買，而是提前盯住——等它真正發動再出手。")
+        _render_war_section(_attack,  "🔴", "ATTACK",  "正在發動", "已經開始發動，結構完整。盤石考慮進場的候選，等決策系統確認再動作。")
+        _render_war_section(_prepare, "🔵", "PREPARE", "建倉完成", "主力在偷偷買，還沒有要拉的跡象。先放進視野，等出現 A 訊號再說。")
+
+    except Exception as e:
+        st.warning(f"戰情室載入失敗：{e}")
+
+    # ── TRUE_B 選股池 ──────────────────────────────────────────────────────────
+    st.subheader("🎯 TRUE_B 選股池")
+    st.caption("已通過：C≥3 + B_quality≥60 + 無外資出貨 + 處於MATURE或LAUNCH階段")
+    try:
+        tb_df = df.copy()
+        if "B_quality" not in tb_df.columns:
+            st.warning("⚠️ B_quality 欄位不存在，請重新執行每日分析（python3 main.py）以取得新版欄位")
+        else:
+            for col in ["C_days", "B_days", "A_days", "B_quality", "B_window_20", "volume_ratio"]:
+                if col in tb_df.columns:
+                    tb_df[col] = pd.to_numeric(tb_df[col], errors="coerce").fillna(0)
+            tb_df["_b_phase"]    = tb_df.apply(calc_b_phase_from_row, axis=1)
+            tb_df["_b_validity"] = tb_df.apply(calc_b_validity_from_row, axis=1)
+            pool = tb_df[
+                (tb_df["C_days"] >= 3) &
+                (tb_df["B_quality"] >= 75) &
+                (tb_df["_b_validity"] == "TRUE_B") &
+                (tb_df["_b_phase"].isin(["MATURE", "LAUNCH"]))
+            ].copy()
+            def _tb_score(row):
+                s = row.get("B_quality", 0) * 0.4
+                s += row.get("B_window_20", 0) * 1.5
+                s += row.get("volume_ratio", 0) * 10
+                if str(row.get("flow_status", "")) == "ACCUMULATING":
+                    s += 10
+                return round(s, 1)
+            pool["_score"] = pool.apply(_tb_score, axis=1)
+            pool = pool.sort_values("_score", ascending=False)
+            launch_pool = pool[pool["_b_phase"] == "LAUNCH"]
+            mature_pool = pool[pool["_b_phase"] == "MATURE"]
+
+            st.markdown("#### 🔴 LAUNCH 發動池（可考慮進場）")
+            st.caption("剛突破有量，B結構完整——盤石最佳進場時機，需配合決策確認")
+            if launch_pool.empty:
+                st.caption("（今日無符合條件）")
+            else:
+                for _, row in launch_pool.iterrows():
+                    sid  = str(row.get("stock_id", ""))
+                    name = str(row.get("name", ""))
+                    bq   = int(row.get("B_quality", 0))
+                    bw   = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
+                    flow = str(row.get("flow_status", "-") or "-")
+                    sc   = row.get("_score", 0)
+                    _tlc1, _tlc2 = st.columns([10, 1])
+                    with _tlc1:
+                        st.markdown(f"**🔴 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={sc}")
+                    with _tlc2:
+                        if st.button("📌", key=f"{p}track_tb_launch_{sid}", help="加入自訂追蹤清單"):
+                            add_to_custom_watchlist(sid)
+                            st.toast(f"已加入追蹤：{sid}")
+
+            st.divider()
+            st.markdown("#### 🟠 MATURE 觀察池（等待發動）")
+            st.caption("主力已在裡面還沒動——放進追蹤清單，等LAUNCH訊號出現再出手")
+            if mature_pool.empty:
+                st.caption("（今日無符合條件）")
+            else:
+                for _, row in mature_pool.iterrows():
+                    sid  = str(row.get("stock_id", ""))
+                    name = str(row.get("name", ""))
+                    bq   = int(row.get("B_quality", 0))
+                    bw   = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
+                    flow = str(row.get("flow_status", "-") or "-")
+                    sc   = row.get("_score", 0)
+                    _tmc1, _tmc2 = st.columns([10, 1])
+                    with _tmc1:
+                        st.markdown(f"**🟠 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={sc}")
+                    with _tmc2:
+                        if st.button("📌", key=f"{p}track_tb_mature_{sid}", help="加入自訂追蹤清單"):
+                            add_to_custom_watchlist(sid)
+                            st.toast(f"已加入追蹤：{sid}")
+    except Exception as e:
+        st.warning(f"TRUE_B 選股池載入失敗：{e}")
+
+    # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
+    st.subheader("⚡ 情緒雷達 Momentum Radar")
+    st.info(
+        "【這是什麼】抓「沒有B卻突然噴」的股票。盤石負責穩定賺，情緒雷達負責抓爆發機會。\n"
+        "【強度等級】🚀 過熱：不追高，慢慢賣　🔥 強爆：可持倉，準備走　⚠️ 初爆：小倉試單\n"
+        "【轉弱警報】🟡 先不要買　🟠 減碼　🔴 立刻出場\n"
+        "【鐵則】❌ 不能當主倉　❌ 不能凹單　✅ 一轉弱就走"
+    )
+    st.caption("記住：🔴賣掉、🟠賣一半、🟡等等、🟢抱住")
+    try:
+        mdf = df.copy().fillna(0)
+        for _mc in ["B_days", "A_days", "C_days"]:
+            mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce").fillna(0).astype(int)
+        for _mc in ["close", "vwap"]:
+            if _mc in mdf.columns:
+                mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce")
+        use_vwap = ("close" in mdf.columns) and ("vwap" in mdf.columns)
+        cond = (
+            (mdf["B_days"] <= 2) &
+            (mdf["A_days"] >= 2) &
+            (mdf["C_days"] >= 2) &
+            (mdf["flow_status"] != "DISTRIBUTION")
+        )
+        if use_vwap:
+            cond = cond & (mdf["close"] > mdf["vwap"])
+        momentum_df = mdf.loc[cond].copy()
+        momentum_df["score"] = momentum_df["A_days"] * 2 + momentum_df["C_days"] * 3
+
+        def _momentum_level(score):
+            if score >= 13: return "🚀 過熱"
+            elif score >= 9: return "🔥 強爆"
+            elif score >= 6: return "⚠️ 初爆"
+            else: return ""
+
+        def _fmt_abc(row):
+            def _ci(c):
+                if c == 0: return "⚫"
+                elif c == 1: return "⚪"
+                elif c == 2: return "🟡"
+                elif 3 <= c <= 4: return "🔵"
+                else: return "🔴"
+            def _ai(a):
+                if a == 0: return "⚪"
+                elif 1 <= a <= 2: return "🟢"
+                else: return "🟢🟢"
+            return f"{row['B_days']} / {row['A_days']}{_ai(row['A_days'])} / {row['C_days']}{_ci(row['C_days'])}"
+
+        momentum_df = momentum_df.sort_values(by="score", ascending=False).reset_index(drop=True)
+        momentum_df["rank"] = momentum_df.index + 1
+        disp_m = momentum_df.copy().fillna(0)
+        if "stock_id" in disp_m.columns:
+            disp_m["stock_id"] = disp_m["stock_id"].astype(str)
+        disp_m["B/A/C"] = disp_m.apply(_fmt_abc, axis=1)
+        try:
+            disp_m["C變化"] = disp_m.apply(
+                lambda r: f"{r['C_days']}{_get_c_icon(int(r['C_days']))} {get_c_arrow(int(r['C_days']), prev_map.get(str(r['stock_id'])))}",
+                axis=1,
+            )
+        except Exception:
+            disp_m["C變化"] = disp_m["C_days"].astype(str)
+        disp_m["轉弱訊號"] = disp_m.apply(lambda r: get_warning(r, prev_map.get(str(r["stock_id"]))), axis=1)
+        disp_m["強度"]    = disp_m["score"].apply(_momentum_level)
+        disp_m["⚡動作"]  = disp_m.apply(lambda r: get_action_signal(r["轉弱訊號"], r["強度"]), axis=1)
+        disp_m["🧠教練"]  = disp_m.apply(lambda r: get_coach_message(r["轉弱訊號"], r["強度"]), axis=1)
+        disp_m = disp_m[["rank", "stock_id", "name", "B/A/C", "C變化", "flow_status", "強度", "⚡動作", "🧠教練"]]
+        if momentum_df.empty:
+            st.write("（今日無爆發訊號 No momentum spike today）")
+        else:
+            st.dataframe(disp_m, use_container_width=True)
+    except Exception as e:
+        st.warning(f"情緒雷達載入失敗：{e}")
+
+    # ── ⭐ 重點觀察 ───────────────────────────────────────────────────────
+    pinned_ids = st.session_state.get("pinned", set())
+    frames = [src for src in [action_df, watchlist_df, candidate_df] if not src.empty]
+    pinned_df = pd.concat(frames) if frames else pd.DataFrame()
+    if not pinned_df.empty:
+        pinned_df = pinned_df[pinned_df["stock_id"].isin(pinned_ids)]
+    if not pinned_df.empty:
+        pinned_df["confidence"] = pd.to_numeric(pinned_df["confidence"], errors="coerce")
+        pinned_df = pinned_df.sort_values(by="confidence", ascending=False)
+        st.subheader("⭐ 重點觀察")
+        for _, row in pinned_df.iterrows():
+            d = build_display_row(row)
+            st.text(f"{d['股票']} ｜ {format_decision_label(d['決策'])} ｜ {d['軌跡']} ｜ 信心 {d['信心']}")
+
+    # ── 🔥 今日最強 ──────────────────────────────────────────────────────
+    st.subheader("🔥 今日最強")
+    if not action_df.empty:
+        top1 = action_df.iloc[0]
+        d = build_display_row(top1)
+        top_html = (
+            '<div style="background:#f0f7ff;padding:12px;border-radius:10px;'
+            'border:2px solid #28a745;margin-bottom:10px;">'
+            f'<div style="font-size:16px;font-weight:bold;color:#111;">{d["股票"]} ｜ '
+            f'{format_decision_label(d["決策"])} ｜ {format_signal_type(str(top1.get("signal_type","")))} </div>'
+            f'<div style="margin-top:6px;color:#333;">{d["軌跡"]} ｜ {d["資金流"]} ｜ {d["成本位"]}</div>'
+            f'<div style="margin-top:8px;color:#333;">信心：{d["信心"]}<br>{render_confidence_bar(d["信心"])}</div>'
+            '</div>'
+        )
+        _comp.html(top_html, height=120)
+    else:
+        st.info("今日沒有最強標的（無 BUY 訊號）")
+
+    # ── 🏆 綜合評分 Top 20 ───────────────────────────────────────────────
+    with st.expander("🏆 綜合評分 Top 20（WAIT + BUY）", expanded=True):
+        _top_wl = (
+            df[df["decision"].isin(["WAIT", "BUY"])]
+            .sort_values("total_score", ascending=False)
+            .head(20)
+            .reset_index(drop=True)
+        )
+        if _top_wl.empty:
+            st.info("暫無 WAIT/BUY 資料")
+        else:
+            _top_wl_disp = _top_wl[["stock_id", "name", "total_score", "B_quality", "A_days", "decision"]].copy()
+            _top_wl_disp.index = _top_wl_disp.index + 1
+            _top_wl_disp.index.name = "排名"
+            _top_wl_disp.columns = ["代號", "名稱", "總分", "B品質", "A天數", "決策"]
+            _top_wl_disp["總分"] = _top_wl_disp["總分"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "N/A")
+            _top_wl_disp["B品質"] = pd.to_numeric(_top_wl_disp["B品質"], errors="coerce").apply(
+                lambda x: str(int(x)) if pd.notna(x) else "N/A")
+            _top_wl_disp["A天數"] = pd.to_numeric(_top_wl_disp["A天數"], errors="coerce").apply(
+                lambda x: str(int(x)) if pd.notna(x) else "N/A")
+            st.dataframe(_top_wl_disp, use_container_width=True)
+
+    # ── 行動清單 ──────────────────────────────────────────────────────────
+    st.subheader("行動清單（Action）")
+    if action_df.empty:
+        st.info("今日沒有符合條件的進場機會")
+    st.dataframe(style_decision_table(build_display_table(filtered_action_df)), use_container_width=True)
+    if not filtered_action_df.empty:
+        action_ids = [str(r.get("stock_id", "")) for _, r in filtered_action_df.iterrows() if r.get("stock_id")]
+        track_cols = st.columns(min(len(action_ids), 8))
+        for i, sid in enumerate(action_ids):
+            with track_cols[i % 8]:
+                if st.button(f"📌 {sid}", key=f"{p}track_action_{sid}", help="加入自訂追蹤清單"):
+                    add_to_custom_watchlist(sid)
+                    st.toast(f"已加入追蹤：{sid}")
+
+    # ── 觀察名單 ──────────────────────────────────────────────────────────
+    st.subheader("觀察名單（Watchlist）")
+    _sk = f"{p}wl_sort_key"
+    _sa = f"{p}wl_sort_asc"
+    if _sk not in st.session_state:
+        st.session_state[_sk] = "confidence"
+        st.session_state[_sa] = False
+    _wl_sort_defs = [("信心分數","confidence"),("C天","C_days"),("B天","B_days"),("A天","A_days")]
+    _sb1, _sb2, _sb3, _sb4 = st.columns(4)
+    for _col, (_label, _key) in zip([_sb1, _sb2, _sb3, _sb4], _wl_sort_defs):
+        _active = st.session_state[_sk] == _key
+        _arrow = "↑" if (_active and st.session_state[_sa]) else "↓"
+        _btn_label = f"{_label} {_arrow}" if _active else _label
+        with _col:
+            if st.button(_btn_label, key=f"{p}wl_sort_btn_{_key}", use_container_width=True):
+                if st.session_state[_sk] == _key:
+                    st.session_state[_sa] = not st.session_state[_sa]
+                else:
+                    st.session_state[_sk] = _key
+                    st.session_state[_sa] = False
+                st.rerun()
+    _wl_sort_key = st.session_state[_sk]
+    _wl_ascending = st.session_state[_sa]
+    if _wl_sort_key in filtered_watchlist_df.columns:
+        filtered_watchlist_df = filtered_watchlist_df.copy()
+        filtered_watchlist_df[_wl_sort_key] = pd.to_numeric(filtered_watchlist_df[_wl_sort_key], errors="coerce")
+        filtered_watchlist_df = filtered_watchlist_df.sort_values(_wl_sort_key, ascending=_wl_ascending)
+    for _, row in filtered_watchlist_df.iterrows():
+        stock_id = str(row.get("stock_id", ""))
+        d = build_display_row(row)
+        is_pinned = stock_id in st.session_state.get("pinned", set())
+        wl_live_key = f"{p}wl_live_show_{stock_id}"
+        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
+        with col1:
+            _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
+            if stock_id in state_changes:
+                chg_label, chg_detail = state_changes[stock_id]
+                st.caption(f"{chg_label}｜{chg_detail}")
+        with col2:
+            pin_label = "★" if is_pinned else "⭐"
+            if st.button(pin_label, key=f"{p}pin_{stock_id}"):
+                pinned = st.session_state.get("pinned", set())
+                if is_pinned:
+                    pinned.discard(stock_id)
+                else:
+                    pinned.add(stock_id)
+                save_pinned(pinned)
+                st.session_state["pinned"] = pinned
+                st.rerun()
+        with col3:
+            live_label = "🔬 收起" if st.session_state.get(wl_live_key, False) else "🔬 即時分析"
+            if st.button(live_label, key=f"{p}wl_live_btn_{stock_id}"):
+                st.session_state[wl_live_key] = not st.session_state.get(wl_live_key, False)
+                if not st.session_state[wl_live_key]:
+                    st.session_state.pop(f"{p}wl_live_result_{stock_id}", None)
+                st.rerun()
+        with col4:
+            if st.button("📌", key=f"{p}track_wl_{stock_id}", help="加入自訂追蹤清單"):
+                add_to_custom_watchlist(stock_id)
+                st.toast(f"已加入追蹤：{stock_id}")
+        with col5:
+            if st.button("✕ 移除", key=f"{p}remove_{stock_id}"):
+                ov = st.session_state.get("overrides", {})
+                if stock_id in ov:
+                    ov.pop(stock_id)
+                    save_watchlist_overrides(ov)
+                    st.session_state["overrides"] = ov
+                st.rerun()
+        if st.session_state.get(wl_live_key, False):
+            wl_result_key = f"{p}wl_live_result_{stock_id}"
+            if wl_result_key not in st.session_state:
+                with st.spinner(f"分析 {stock_id} 中..."):
+                    try:
+                        from main import load_params
+                        params = load_params()
+                        st.session_state[wl_result_key] = process_stock_live(stock_id, params, print_snapshot=False)
+                    except Exception as e:
+                        st.error(str(e))
+                        st.session_state[wl_result_key] = None
+            wl_res = st.session_state.get(wl_result_key)
+            if wl_res:
+                render_live_result_block(stock_id, wl_res)
+            elif wl_res is None:
+                st.warning("分析失敗，請確認代號是否正確")
+
+    # ── 候選清單 ──────────────────────────────────────────────────────────
+    st.subheader("候選清單（Candidate）")
+    for _, row in filtered_candidate_df.iterrows():
+        stock_id = str(row.get("stock_id", ""))
+        d = build_display_row(row)
+        is_pinned = stock_id in st.session_state.get("pinned", set())
+        cd_live_key = f"{p}cd_live_show_{stock_id}"
+        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
+        with col1:
+            _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
+            if stock_id in state_changes:
+                chg_label, chg_detail = state_changes[stock_id]
+                st.caption(f"{chg_label}｜{chg_detail}")
+        with col2:
+            pin_label = "★" if is_pinned else "⭐"
+            if st.button(pin_label, key=f"{p}pin_cd_{stock_id}"):
+                pinned = st.session_state.get("pinned", set())
+                if is_pinned:
+                    pinned.discard(stock_id)
+                else:
+                    pinned.add(stock_id)
+                save_pinned(pinned)
+                st.session_state["pinned"] = pinned
+                st.rerun()
+        with col3:
+            live_label = "🔬 收起" if st.session_state.get(cd_live_key, False) else "🔬 即時分析"
+            if st.button(live_label, key=f"{p}cd_live_btn_{stock_id}"):
+                st.session_state[cd_live_key] = not st.session_state.get(cd_live_key, False)
+                if not st.session_state[cd_live_key]:
+                    st.session_state.pop(f"{p}cd_live_result_{stock_id}", None)
+                st.rerun()
+        with col4:
+            if st.button("📌", key=f"{p}track_cd_{stock_id}", help="加入自訂追蹤清單"):
+                add_to_custom_watchlist(stock_id)
+                st.toast(f"已加入追蹤：{stock_id}")
+        with col5:
+            if st.button("+ 加入觀察", key=f"{p}add_{stock_id}"):
+                ov = st.session_state.get("overrides", {})
+                ov[stock_id] = True
+                save_watchlist_overrides(ov)
+                st.session_state["overrides"] = ov
+                st.rerun()
+        if st.session_state.get(cd_live_key, False):
+            cd_result_key = f"{p}cd_live_result_{stock_id}"
+            if cd_result_key not in st.session_state:
+                with st.spinner(f"分析 {stock_id} 中..."):
+                    try:
+                        from main import load_params
+                        params = load_params()
+                        st.session_state[cd_result_key] = process_stock_live(stock_id, params, print_snapshot=False)
+                    except Exception as e:
+                        st.error(str(e))
+                        st.session_state[cd_result_key] = None
+            cd_res = st.session_state.get(cd_result_key)
+            if cd_res:
+                render_live_result_block(stock_id, cd_res)
+            elif cd_res is None:
+                st.warning("分析失敗，請確認代號是否正確")
+
+    # ── 今日快照 ──────────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("📋 今日快照")
+    def _build_snapshot(rows):
+        lines = []
+        for _, r in rows.iterrows():
+            d = build_display_row(r)
+            lines.append(f"{d['股票']} | {d['決策']} | {d['軌跡']} | 信心 {d['信心']}")
+        return "\n".join(lines) if lines else "（今日無訊號）"
+    snap_frames = [src for src in [action_df, watchlist_df] if not src.empty]
+    snapshot_rows = pd.concat(snap_frames).head(10) if snap_frames else pd.DataFrame()
+    st.code(_build_snapshot(snapshot_rows))
+
+    # ── 交易行為統計 ──────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("📊 交易行為統計")
+    analyze_mistakes()
+    st.subheader("📈 勝率統計")
+    analyze_winrate()
+
+
 # ── 主程式 ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -1525,614 +2100,7 @@ KD：{kd_k}/{kd_d}
     except Exception:
         prev_map = {}
 
-    overrides = st.session_state["overrides"]
-    action_df, watchlist_df, candidate_df = classify_rows(df, overrides)
-
-    # ── Ranking 2.0 total_score（白名單用）────────────────────────────────────
-    for _col in ["C_days", "B_days", "A_days", "B_quality"]:
-        df[_col] = pd.to_numeric(df[_col], errors="coerce")
-    _bq = df["B_quality"]
-    _bq_min, _bq_max = _bq.min(), _bq.max()
-    df["_bq_norm"] = ((_bq - _bq_min) / (_bq_max - _bq_min) * 100).fillna(0) if _bq_max > _bq_min else 50.0
-    def _fa(a):
-        if pd.isna(a): return 0
-        a = int(a)
-        if a == 0: return 0
-        m = {1:100,2:95,3:85,4:70,5:50}
-        if a <= 5: return m.get(a, 0)
-        if a <= 8: return 30
-        return 10
-    df["_fa_score"] = df["A_days"].apply(_fa)
-    df["_c_rec"] = ((30 - df["C_days"].fillna(30).clip(0, 30)) * 3.3).clip(0, 100)
-    _fp2 = pd.to_numeric(df["foreign_profit_pct"], errors="coerce") if "foreign_profit_pct" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
-    _fp2_score = (100 - (_fp2 - 5).abs() * 12).clip(0, 100).fillna(50)
-    _vr2 = pd.to_numeric(df["volume_ratio"], errors="coerce") if "volume_ratio" in df.columns else pd.Series(pd.NA, index=df.index, dtype=float)
-    _vr2_norm = ((_vr2.clip(0.5, 3.0) - 0.5) / 2.5 * 100).clip(0, 100).fillna(50)
-    df["total_score"] = (
-        df["_bq_norm"] * 0.40 + _fp2_score * 0.25 +
-        df["_fa_score"] * 0.20 + _vr2_norm * 0.10 +
-        df["_c_rec"] * 0.05
-    ).round(1)
-
-    # 排序
-    action_df["confidence"] = pd.to_numeric(action_df["confidence"], errors="coerce")
-    watchlist_df["confidence"] = pd.to_numeric(watchlist_df["confidence"], errors="coerce")
-    candidate_df["C_days"] = pd.to_numeric(candidate_df["C_days"], errors="coerce")
-    action_df = action_df.sort_values(by="confidence", ascending=False)
-    watchlist_df = watchlist_df.sort_values(by="confidence", ascending=False)
-    candidate_df = candidate_df.sort_values(by="C_days", ascending=False)
-
-    if quick_mode:
-        action_df = action_df.head(3)
-        watchlist_df = watchlist_df.head(3)
-        candidate_df = candidate_df.head(5)
-
-    # 全局搜尋 filter（僅影響顯示）
-    def filter_df(src: pd.DataFrame) -> pd.DataFrame:
-        if True or src.empty:  # 搜尋框已移除
-            return src
-        q = query.strip().lower()
-        return src[
-            src["stock_id"].astype(str).str.lower().str.contains(q, na=False)
-            | src["name"].astype(str).str.lower().str.contains(q, na=False)
-        ]
-
-    filtered_action_df = filter_df(action_df)
-    filtered_watchlist_df = filter_df(watchlist_df)
-    filtered_candidate_df = filter_df(candidate_df)
-
-    # ── 今日變化 ──────────────────────────────────────────────────────────
-    with st.expander(f"📊 今日變化（{len(state_changes)} 筆）", expanded=False):
-      if state_changes:
-        _name_lookup = {}
-        if "name" in df.columns:
-            _name_lookup.update(dict(zip(df["stock_id"].astype(str), df["name"].astype(str))))
-        try:
-            _uni = pd.read_csv(os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
-            if "name" in _uni.columns:
-                _name_lookup.update({k: v for k, v in zip(_uni["stock_id"].astype(str), _uni["name"].astype(str))
-                                     if v and v != "nan"})
-        except Exception:
-            pass
-        for sid, (label, detail) in state_changes.items():
-            name = _name_lookup.get(str(sid), str(sid))
-            display = f"{sid} {name}" if name != str(sid) else str(sid)
-            _sc1, _sc2 = st.columns([10, 1])
-            with _sc1:
-                st.text(f"{display}｜{label}｜{detail}")
-            with _sc2:
-                if st.button("📌", key=f"track_chg_{sid}", help="加入自訂追蹤清單"):
-                    add_to_custom_watchlist(str(sid))
-                    st.toast(f"已加入追蹤：{sid}")
-      else:
-        st.caption("今日無關鍵變化")
-
-    # ── 強B排行榜 ─────────────────────────────────────────────────────────
-    st.subheader("🔥 強B排行榜（主力建倉候選）")
-    try:
-        from b_ranker import get_top_strong_B
-        top_b = get_top_strong_B(df, top_n=5)
-        if top_b.empty:
-            st.info("今日無強B候選")
-        else:
-            for _, row in top_b.iterrows():
-                stock = row.get("stock_id", "")
-                name  = row.get("name", "")
-                score = int(row.get("B_score", 0))
-                B     = row.get("B_days", "")
-                flow  = row.get("flow_status", "")
-                cost  = row.get("cost_level", "")
-                _bc1, _bc2 = st.columns([10, 1])
-                with _bc1:
-                    st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
-                    st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
-                with _bc2:
-                    if st.button("📌", key=f"track_topb_{stock}", help="加入自訂追蹤清單"):
-                        add_to_custom_watchlist(str(stock))
-                        st.toast(f"已加入追蹤：{stock}")
-    except Exception as e:
-        st.warning(f"強B排行榜載入失敗：{e}")
-
-    # ── 戰情室 War Room ──────────────────────────────────────────────────
-    st.subheader("⚔️ 戰情室 War Room")
-    st.info("⚡ 行動清單是盤石說『現在可以買』；戰情室是盤石還沒說，但主力已經在布局。兩個互補——行動清單給你確認，戰情室讓你提前看到。")
-
-    def get_c_icon(c):
-        if c == 0: return "⚫"
-        elif c == 1: return "⚪"
-        elif c == 2: return "🟡"
-        elif 3 <= c <= 4: return "🔵"
-        else: return "🔴"
-
-    def get_a_icon(a):
-        if a == 0: return "⚪"
-        elif 1 <= a <= 2: return "🟢"
-        else: return "🟢🟢"
-
-    def get_status_tag(a, c):
-        if a >= 2 and c >= 3: return "🔥 發動中 Launching"
-        elif a >= 1: return "⚠️ 剛轉強 Turning"
-        elif c == 0: return "⏳ 等待 Waiting"
-        else: return ""
-
-    try:
-        war_df = df.copy()
-        for _col in ["B_days", "A_days", "C_days"]:
-            war_df[_col] = pd.to_numeric(war_df[_col], errors="coerce").fillna(0).astype(int)
-
-        def _classify_war(row):
-            B      = int(row["B_days"])
-            A      = int(row["A_days"])
-            C      = int(row["C_days"])
-            b_type = str(row.get("B_type", "") or "")
-            flow   = str(row.get("flow_status", "") or "")
-            if B >= 8 and A >= 2 and C >= 3:
-                return "ATTACK"
-            if b_type == "STRONG_B" and B >= 10 and A >= 1 and C >= 2 and flow in ["ACCUMULATING", "NEUTRAL"]:
-                return "LAUNCH"
-            if b_type == "STRONG_B" and B >= 10:
-                return "PREPARE"
-            return None
-
-        war_df["war_class"] = war_df.apply(_classify_war, axis=1)
-        attack_df  = war_df[war_df["war_class"] == "ATTACK"].copy()
-        launch_df  = war_df[war_df["war_class"] == "LAUNCH"].copy()
-        prepare_df = war_df[war_df["war_class"] == "PREPARE"].copy()
-
-        attack_df["_score"]  = attack_df["C_days"] * 3 + attack_df["A_days"] * 2 + attack_df["B_days"]
-        launch_df["_score"]  = launch_df["C_days"] * 3 + launch_df["A_days"] * 2 + launch_df["B_days"]
-        prepare_df["_score"] = prepare_df["B_days"] * 3 + prepare_df["A_days"] * 2 + prepare_df["C_days"]
-
-        attack_df  = attack_df.sort_values("_score", ascending=False)
-        launch_df  = launch_df.sort_values("_score", ascending=False)
-        prepare_df = prepare_df.sort_values("_score", ascending=False)
-
-        def _render_war_section(section_df, emoji, title_en, title_zh, caption_text):
-            st.markdown(f"#### {emoji} {title_en}　{title_zh}")
-            st.caption(caption_text)
-            if section_df.empty:
-                st.caption("（無符合條件 No qualified stocks）")
-                return
-            for rank, (_, r) in enumerate(section_df.iterrows(), 1):
-                sid  = str(r.get("stock_id", ""))
-                name = str(r.get("name", ""))
-                B    = int(r["B_days"])
-                A    = int(r["A_days"])
-                C    = int(r["C_days"])
-                flow = str(r.get("flow_status", "-") or "-")
-                tag  = get_status_tag(A, C)
-                wcol1, wcol2 = st.columns([9, 1])
-                with wcol1:
-                    st.markdown(
-                        f"**#{rank} {sid} {name}**　"
-                        f"B={B}｜{get_a_icon(A)}A={A}｜{get_c_icon(C)}C={C}｜Flow={flow}　{tag}"
-                    )
-                with wcol2:
-                    if st.button("📌", key=f"track_war_{title_en}_{sid}", help="加入自訂追蹤清單"):
-                        add_to_custom_watchlist(sid)
-                        st.toast(f"已加入追蹤：{sid}")
-
-        _render_war_section(
-            launch_df, "🟠", "LAUNCH", "即將發動",
-            "主力建倉完成，股票開始脫離底部。不是現在買，而是提前盯住——等它真正發動再出手。",
-        )
-        _render_war_section(
-            attack_df, "🔴", "ATTACK", "正在發動",
-            "已經開始發動，結構完整。盤石考慮進場的候選，等決策系統確認再動作。",
-        )
-        _render_war_section(
-            prepare_df, "🔵", "PREPARE", "建倉完成",
-            "主力在偷偷買，還沒有要拉的跡象。先放進視野，等出現 A 訊號再說。",
-        )
-
-    except Exception as e:
-        st.warning(f"戰情室載入失敗：{e}")
-
-    # ── TRUE_B 選股池 ──────────────────────────────────────────────────────────
-    st.subheader("🎯 TRUE_B 選股池")
-    st.caption("已通過：C≥3 + B_quality≥60 + 無外資出貨 + 處於MATURE或LAUNCH階段")
-
-    try:
-        tb_df = df.copy()
-
-        if "B_quality" not in tb_df.columns:
-            st.warning("⚠️ B_quality 欄位不存在，請重新執行每日分析（python3 main.py）以取得新版欄位")
-        else:
-            for col in ["C_days", "B_days", "A_days", "B_quality", "B_window_20", "volume_ratio"]:
-                if col in tb_df.columns:
-                    tb_df[col] = pd.to_numeric(tb_df[col], errors="coerce").fillna(0)
-
-            tb_df["_b_phase"]    = tb_df.apply(calc_b_phase_from_row, axis=1)
-            tb_df["_b_validity"] = tb_df.apply(calc_b_validity_from_row, axis=1)
-
-            pool = tb_df[
-                (tb_df["C_days"] >= 3) &
-                (tb_df["B_quality"] >= 75) &
-                (tb_df["_b_validity"] == "TRUE_B") &
-                (tb_df["_b_phase"].isin(["MATURE", "LAUNCH"]))
-            ].copy()
-
-            def _tb_score(row):
-                s = row.get("B_quality", 0) * 0.4
-                s += row.get("B_window_20", 0) * 1.5
-                s += row.get("volume_ratio", 0) * 10
-                if str(row.get("flow_status", "")) == "ACCUMULATING":
-                    s += 10
-                return round(s, 1)
-
-            pool["_score"] = pool.apply(_tb_score, axis=1)
-            pool = pool.sort_values("_score", ascending=False)
-
-            launch_pool = pool[pool["_b_phase"] == "LAUNCH"]
-            mature_pool = pool[pool["_b_phase"] == "MATURE"]
-
-            st.markdown("#### 🔴 LAUNCH 發動池（可考慮進場）")
-            st.caption("剛突破有量，B結構完整——盤石最佳進場時機，需配合決策確認")
-            if launch_pool.empty:
-                st.caption("（今日無符合條件）")
-            else:
-                for _, row in launch_pool.iterrows():
-                    sid   = str(row.get("stock_id", ""))
-                    name  = str(row.get("name", ""))
-                    bq    = int(row.get("B_quality", 0))
-                    bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
-                    flow  = str(row.get("flow_status", "-") or "-")
-                    score = row.get("_score", 0)
-                    _tlc1, _tlc2 = st.columns([10, 1])
-                    with _tlc1:
-                        st.markdown(f"**🔴 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
-                    with _tlc2:
-                        if st.button("📌", key=f"track_tb_launch_{sid}", help="加入自訂追蹤清單"):
-                            add_to_custom_watchlist(sid)
-                            st.toast(f"已加入追蹤：{sid}")
-
-            st.divider()
-
-            st.markdown("#### 🟠 MATURE 觀察池（等待發動）")
-            st.caption("主力已在裡面還沒動——放進追蹤清單，等LAUNCH訊號出現再出手")
-            if mature_pool.empty:
-                st.caption("（今日無符合條件）")
-            else:
-                for _, row in mature_pool.iterrows():
-                    sid   = str(row.get("stock_id", ""))
-                    name  = str(row.get("name", ""))
-                    bq    = int(row.get("B_quality", 0))
-                    bw    = int(row.get("B_window_20", 0)) if "B_window_20" in row.index else "-"
-                    flow  = str(row.get("flow_status", "-") or "-")
-                    score = row.get("_score", 0)
-                    _tmc1, _tmc2 = st.columns([10, 1])
-                    with _tmc1:
-                        st.markdown(f"**🟠 {sid} {name}**　B_quality={bq}｜B_window={bw}｜Flow={flow}｜分數={score}")
-                    with _tmc2:
-                        if st.button("📌", key=f"track_tb_mature_{sid}", help="加入自訂追蹤清單"):
-                            add_to_custom_watchlist(sid)
-                            st.toast(f"已加入追蹤：{sid}")
-
-    except Exception as e:
-        st.warning(f"TRUE_B 選股池載入失敗：{e}")
-
-    # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
-    st.subheader("⚡ 情緒雷達 Momentum Radar")
-    st.info(
-        "【這是什麼】抓「沒有B卻突然噴」的股票。盤石負責穩定賺，情緒雷達負責抓爆發機會。\n"
-        "【強度等級】🚀 過熱：不追高，慢慢賣　🔥 強爆：可持倉，準備走　⚠️ 初爆：小倉試單\n"
-        "【轉弱警報】🟡 先不要買　🟠 減碼　🔴 立刻出場\n"
-        "【鐵則】❌ 不能當主倉　❌ 不能凹單　✅ 一轉弱就走"
-    )
-    st.caption("記住：🔴賣掉、🟠賣一半、🟡等等、🟢抱住")
-    try:
-        mdf = df.copy()
-        mdf = mdf.fillna(0)
-        for _mc in ["B_days", "A_days", "C_days"]:
-            mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce").fillna(0).astype(int)
-        for _mc in ["close", "vwap"]:
-            if _mc in mdf.columns:
-                mdf[_mc] = pd.to_numeric(mdf[_mc], errors="coerce")
-
-        use_vwap = ("close" in mdf.columns) and ("vwap" in mdf.columns)
-        cond = (
-            (mdf["B_days"] <= 2) &
-            (mdf["A_days"] >= 2) &
-            (mdf["C_days"] >= 2) &
-            (mdf["flow_status"] != "DISTRIBUTION")
-        )
-        if use_vwap:
-            cond = cond & (mdf["close"] > mdf["vwap"])
-        momentum_df = mdf.loc[cond].copy()
-
-        momentum_df["score"] = momentum_df["A_days"] * 2 + momentum_df["C_days"] * 3
-
-        def get_momentum_level(score):
-            if score >= 13: return "🚀 過熱"
-            elif score >= 9: return "🔥 強爆"
-            elif score >= 6: return "⚠️ 初爆"
-            else: return ""
-
-        def _fmt_abc(row):
-            def _ci(c):
-                if c == 0: return "⚫"
-                elif c == 1: return "⚪"
-                elif c == 2: return "🟡"
-                elif 3 <= c <= 4: return "🔵"
-                else: return "🔴"
-            def _ai(a):
-                if a == 0: return "⚪"
-                elif 1 <= a <= 2: return "🟢"
-                else: return "🟢🟢"
-            return f"{row['B_days']} / {row['A_days']}{_ai(row['A_days'])} / {row['C_days']}{_ci(row['C_days'])}"
-
-        momentum_df = momentum_df.sort_values(by="score", ascending=False).reset_index(drop=True)
-        momentum_df["rank"] = momentum_df.index + 1
-
-        display_df = momentum_df.copy()
-        display_df = display_df.fillna(0)
-        if "stock_id" in display_df.columns:
-            display_df["stock_id"] = display_df["stock_id"].astype(str)
-        display_df["B/A/C"] = display_df.apply(_fmt_abc, axis=1)
-        try:
-            display_df["C變化"] = display_df.apply(
-                lambda r: f"{r['C_days']}{get_c_icon(int(r['C_days']))} {get_c_arrow(int(r['C_days']), prev_map.get(str(r['stock_id'])))}",
-                axis=1,
-            )
-        except Exception as _c_err:
-            st.warning(f"情緒雷達 C變化 欄位計算失敗：{_c_err}")
-            display_df["C變化"] = display_df["C_days"].astype(str)
-        display_df["轉弱訊號"] = display_df.apply(
-            lambda r: get_warning(r, prev_map.get(str(r["stock_id"]))), axis=1
-        )
-        display_df["強度"] = display_df["score"].apply(get_momentum_level)
-        display_df["⚡動作"] = display_df.apply(
-            lambda r: get_action_signal(r["轉弱訊號"], r["強度"]), axis=1
-        )
-        display_df["🧠教練"] = display_df.apply(
-            lambda r: get_coach_message(r["轉弱訊號"], r["強度"]), axis=1
-        )
-        display_df = display_df[["rank", "stock_id", "name", "B/A/C", "C變化", "flow_status", "強度", "⚡動作", "🧠教練"]]
-
-        if momentum_df.empty:
-            st.write("（今日無爆發訊號 No momentum spike today）")
-        else:
-            st.dataframe(display_df, use_container_width=True)
-    except Exception as e:
-        st.warning(f"情緒雷達載入失敗：{e}")
-
-    # ── ⭐ 重點觀察 ───────────────────────────────────────────────────────
-    pinned_ids = st.session_state["pinned"]
-    frames = [src for src in [action_df, watchlist_df, candidate_df] if not src.empty]
-    pinned_df = pd.concat(frames) if frames else pd.DataFrame()
-    if not pinned_df.empty:
-        pinned_df = pinned_df[pinned_df["stock_id"].isin(pinned_ids)]
-    if not pinned_df.empty:
-        pinned_df["confidence"] = pd.to_numeric(pinned_df["confidence"], errors="coerce")
-        pinned_df = pinned_df.sort_values(by="confidence", ascending=False)
-        st.subheader("⭐ 重點觀察")
-        for _, row in pinned_df.iterrows():
-            d = build_display_row(row)
-            st.text(f"{d['股票']} ｜ {format_decision_label(d['決策'])} ｜ {d['軌跡']} ｜ 信心 {d['信心']}")
-
-    # ── 今日最強 ──────────────────────────────────────────────────────────
-    st.subheader("🔥 今日最強")
-    if not action_df.empty:
-        top1 = action_df.iloc[0]
-        d = build_display_row(top1)
-        top_html = (
-            '<div style="background:#f0f7ff;padding:12px;border-radius:10px;'
-            'border:2px solid #28a745;margin-bottom:10px;">'
-            f'<div style="font-size:16px;font-weight:bold;color:#111;">{d["股票"]} ｜ '
-            f'{format_decision_label(d["決策"])} ｜ {format_signal_type(str(top1.get("signal_type","")))} </div>'
-            f'<div style="margin-top:6px;color:#333;">{d["軌跡"]} ｜ {d["資金流"]} ｜ {d["成本位"]}</div>'
-            f'<div style="margin-top:8px;color:#333;">信心：{d["信心"]}<br>{render_confidence_bar(d["信心"])}</div>'
-            '</div>'
-        )
-        components.html(top_html, height=120)
-    else:
-        st.info("今日沒有最強標的（無 BUY 訊號）")
-
-    # ── 🏆 綜合評分 Top 20 ───────────────────────────────────────────────
-    with st.expander("🏆 綜合評分 Top 20（WAIT + BUY）", expanded=True):
-        _top_wl = (
-            df[df["decision"].isin(["WAIT", "BUY"])]
-            .sort_values("total_score", ascending=False)
-            .head(20)
-            .reset_index(drop=True)
-        )
-        if _top_wl.empty:
-            st.info("暫無 WAIT/BUY 資料")
-        else:
-            _top_wl_disp = _top_wl[["stock_id", "name", "total_score", "B_quality", "A_days", "decision"]].copy()
-            _top_wl_disp.index = _top_wl_disp.index + 1
-            _top_wl_disp.index.name = "排名"
-            _top_wl_disp.columns = ["代號", "名稱", "總分", "B品質", "A天數", "決策"]
-            _top_wl_disp["總分"] = _top_wl_disp["總分"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "N/A")
-            _top_wl_disp["B品質"] = pd.to_numeric(_top_wl_disp["B品質"], errors="coerce").apply(
-                lambda x: str(int(x)) if pd.notna(x) else "N/A")
-            _top_wl_disp["A天數"] = pd.to_numeric(_top_wl_disp["A天數"], errors="coerce").apply(
-                lambda x: str(int(x)) if pd.notna(x) else "N/A")
-            st.dataframe(_top_wl_disp, use_container_width=True)
-
-    # ── 行動清單 ──────────────────────────────────────────────────────────
-    st.subheader("行動清單（Action）")
-    if action_df.empty:
-        st.info("今日沒有符合條件的進場機會")
-    st.dataframe(style_decision_table(build_display_table(filtered_action_df)), use_container_width=True)
-    if not filtered_action_df.empty:
-        action_ids = [str(r.get("stock_id", "")) for _, r in filtered_action_df.iterrows() if r.get("stock_id")]
-        track_cols = st.columns(min(len(action_ids), 8))
-        for i, sid in enumerate(action_ids):
-            with track_cols[i % 8]:
-                if st.button(f"📌 {sid}", key=f"track_action_{sid}", help="加入自訂追蹤清單"):
-                    add_to_custom_watchlist(sid)
-                    st.toast(f"已加入追蹤：{sid}")
-
-    # ── 觀察名單 ──────────────────────────────────────────────────────────
-    st.subheader("觀察名單（Watchlist）")
-
-    # 排序 session state 初始化
-    if "wl_sort_key" not in st.session_state:
-        st.session_state["wl_sort_key"] = "confidence"
-        st.session_state["wl_sort_asc"] = False
-
-    _wl_sort_defs = [
-        ("信心分數", "confidence"),
-        ("C天", "C_days"),
-        ("B天", "B_days"),
-        ("A天", "A_days"),
-    ]
-    _sb1, _sb2, _sb3, _sb4 = st.columns(4)
-    for _col, (_label, _key) in zip([_sb1, _sb2, _sb3, _sb4], _wl_sort_defs):
-        _active = st.session_state["wl_sort_key"] == _key
-        _arrow = "↑" if (_active and st.session_state["wl_sort_asc"]) else "↓"
-        _btn_label = f"{_label} {_arrow}" if _active else _label
-        with _col:
-            if st.button(_btn_label, key=f"wl_sort_btn_{_key}", use_container_width=True):
-                if st.session_state["wl_sort_key"] == _key:
-                    st.session_state["wl_sort_asc"] = not st.session_state["wl_sort_asc"]
-                else:
-                    st.session_state["wl_sort_key"] = _key
-                    st.session_state["wl_sort_asc"] = False
-                st.rerun()
-
-    _wl_sort_key = st.session_state["wl_sort_key"]
-    _wl_ascending = st.session_state["wl_sort_asc"]
-    if _wl_sort_key in filtered_watchlist_df.columns:
-        filtered_watchlist_df = filtered_watchlist_df.copy()
-        filtered_watchlist_df[_wl_sort_key] = pd.to_numeric(filtered_watchlist_df[_wl_sort_key], errors="coerce")
-        filtered_watchlist_df = filtered_watchlist_df.sort_values(_wl_sort_key, ascending=_wl_ascending)
-    for _, row in filtered_watchlist_df.iterrows():
-        stock_id = str(row.get("stock_id", ""))
-        d = build_display_row(row)
-        is_pinned = stock_id in st.session_state["pinned"]
-        wl_live_key = f"wl_live_show_{stock_id}"
-        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
-        with col1:
-            components.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
-            if stock_id in state_changes:
-                chg_label, chg_detail = state_changes[stock_id]
-                st.caption(f"{chg_label}｜{chg_detail}")
-        with col2:
-            pin_label = "★" if is_pinned else "⭐"
-            if st.button(pin_label, key=f"pin_{stock_id}"):
-                if is_pinned:
-                    st.session_state["pinned"].discard(stock_id)
-                else:
-                    st.session_state["pinned"].add(stock_id)
-                save_pinned(st.session_state["pinned"])
-                st.rerun()
-        with col3:
-            live_label = "🔬 收起" if st.session_state.get(wl_live_key, False) else "🔬 即時分析"
-            if st.button(live_label, key=f"wl_live_btn_{stock_id}"):
-                st.session_state[wl_live_key] = not st.session_state.get(wl_live_key, False)
-                if not st.session_state[wl_live_key]:
-                    st.session_state.pop(f"wl_live_result_{stock_id}", None)
-                st.rerun()
-        with col4:
-            if st.button("📌", key=f"track_wl_{stock_id}", help="加入自訂追蹤清單"):
-                add_to_custom_watchlist(stock_id)
-                st.toast(f"已加入追蹤：{stock_id}")
-        with col5:
-            if st.button("✕ 移除", key=f"remove_{stock_id}"):
-                if stock_id in st.session_state["overrides"]:
-                    st.session_state["overrides"].pop(stock_id)
-                    save_watchlist_overrides(st.session_state["overrides"])
-                st.rerun()
-
-        if st.session_state.get(wl_live_key, False):
-            wl_result_key = f"wl_live_result_{stock_id}"
-            if wl_result_key not in st.session_state:
-                with st.spinner(f"分析 {stock_id} 中..."):
-                    try:
-                        from main import load_params
-                        params = load_params()
-                        st.session_state[wl_result_key] = process_stock_live(stock_id, params, print_snapshot=False)
-                    except Exception as e:
-                        st.error(str(e))
-                        st.session_state[wl_result_key] = None
-            wl_res = st.session_state.get(wl_result_key)
-            if wl_res:
-                render_live_result_block(stock_id, wl_res)
-            elif wl_res is None:
-                st.warning("分析失敗，請確認代號是否正確")
-
-    # ── 候選清單 ──────────────────────────────────────────────────────────
-    st.subheader("候選清單（Candidate）")
-    for _, row in filtered_candidate_df.iterrows():
-        stock_id = str(row.get("stock_id", ""))
-        d = build_display_row(row)
-        is_pinned = stock_id in st.session_state["pinned"]
-        cd_live_key = f"cd_live_show_{stock_id}"
-        col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
-        with col1:
-            components.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
-            if stock_id in state_changes:
-                chg_label, chg_detail = state_changes[stock_id]
-                st.caption(f"{chg_label}｜{chg_detail}")
-        with col2:
-            pin_label = "★" if is_pinned else "⭐"
-            if st.button(pin_label, key=f"pin_{stock_id}"):
-                if is_pinned:
-                    st.session_state["pinned"].discard(stock_id)
-                else:
-                    st.session_state["pinned"].add(stock_id)
-                save_pinned(st.session_state["pinned"])
-                st.rerun()
-        with col3:
-            live_label = "🔬 收起" if st.session_state.get(cd_live_key, False) else "🔬 即時分析"
-            if st.button(live_label, key=f"cd_live_btn_{stock_id}"):
-                st.session_state[cd_live_key] = not st.session_state.get(cd_live_key, False)
-                if not st.session_state[cd_live_key]:
-                    st.session_state.pop(f"cd_live_result_{stock_id}", None)
-                st.rerun()
-        with col4:
-            if st.button("📌", key=f"track_cd_{stock_id}", help="加入自訂追蹤清單"):
-                add_to_custom_watchlist(stock_id)
-                st.toast(f"已加入追蹤：{stock_id}")
-        with col5:
-            if st.button("+ 加入觀察", key=f"add_{stock_id}"):
-                st.session_state["overrides"][stock_id] = True
-                save_watchlist_overrides(st.session_state["overrides"])
-                st.rerun()
-
-        if st.session_state.get(cd_live_key, False):
-            cd_result_key = f"cd_live_result_{stock_id}"
-            if cd_result_key not in st.session_state:
-                with st.spinner(f"分析 {stock_id} 中..."):
-                    try:
-                        from main import load_params
-                        params = load_params()
-                        st.session_state[cd_result_key] = process_stock_live(stock_id, params, print_snapshot=False)
-                    except Exception as e:
-                        st.error(str(e))
-                        st.session_state[cd_result_key] = None
-            cd_res = st.session_state.get(cd_result_key)
-            if cd_res:
-                render_live_result_block(stock_id, cd_res)
-            elif cd_res is None:
-                st.warning("分析失敗，請確認代號是否正確")
-
-
-    # ── 今日快照 ──────────────────────────────────────────────────────────
-    st.divider()
-    st.subheader("📋 今日快照")
-
-    def build_snapshot(rows: pd.DataFrame) -> str:
-        lines = []
-        for _, r in rows.iterrows():
-            d = build_display_row(r)
-            lines.append(f"{d['股票']} | {d['決策']} | {d['軌跡']} | 信心 {d['信心']}")
-        return "\n".join(lines) if lines else "（今日無訊號）"
-
-    snap_frames = [src for src in [action_df, watchlist_df] if not src.empty]
-    snapshot_rows = pd.concat(snap_frames).head(10) if snap_frames else pd.DataFrame()
-    st.code(build_snapshot(snapshot_rows))
-
-    # ── 交易行為統計 ──────────────────────────────────────────────────────
-    st.divider()
-    st.subheader("📊 交易行為統計")
-    analyze_mistakes()
-
-    st.subheader("📈 勝率統計")
-    analyze_winrate()
-
+    render_war_room_body(df, prev_map, state_changes, key_prefix="", quick_mode=quick_mode)
 
 
 if __name__ == "__main__":
