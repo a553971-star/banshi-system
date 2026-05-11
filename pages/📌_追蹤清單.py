@@ -164,7 +164,7 @@ def render_result_card(stock_id, result, key_prefix):
 with st.form("add_form", clear_on_submit=True):
     col1, col2 = st.columns([5, 1])
     with col1:
-        query = st.text_input("", placeholder="輸入股票代號或中文名稱，例如：2330 或 台積電",
+        query = st.text_input("搜尋股票", placeholder="輸入股票代號或中文名稱，例如：2330 或 台積電",
                               label_visibility="collapsed")
     with col2:
         submitted = st.form_submit_button("➕ 加入追蹤", type="primary", use_container_width=True)
