@@ -12,24 +12,30 @@ import streamlit as st
 
 # ── Import shared logic from app.py ──────────────────────────────────────────
 # app.py has `if __name__ == "__main__": main()` so importing is safe.
-from app import (
-    _DIR,
-    _STATE_LOG_PATH,
-    _OVERRIDES_PATH,
-    load_state_log,
-    load_watchlist_overrides,
-    save_watchlist_overrides,
-    load_pinned,
-    save_pinned,
-    add_to_custom_watchlist,
-    get_latest_state_changes,
-    _cached_daily_verse,
-    render_war_room_body,
-    process_stock_live,
-    render_live_result_block,
-    explain_metrics,
-    load_foreign_ratio_map,
-)
+try:
+    from app import (
+        _DIR,
+        _STATE_LOG_PATH,
+        _OVERRIDES_PATH,
+        load_state_log,
+        load_watchlist_overrides,
+        save_watchlist_overrides,
+        load_pinned,
+        save_pinned,
+        add_to_custom_watchlist,
+        get_latest_state_changes,
+        _cached_daily_verse,
+        render_war_room_body,
+        render_live_result_block,
+        explain_metrics,
+        load_foreign_ratio_map,
+    )
+    from live_analyzer import process_stock_live
+except ImportError as _ie:
+    import streamlit as st
+    st.error(f"❌ Import 失敗：{_ie}")
+    st.exception(_ie)
+    st.stop()
 
 _AI_CSV = os.path.join(_DIR, "ai_supply_chain.csv")
 _UNI_CSV = os.path.join(_DIR, "latest_decisions_universe.csv")
