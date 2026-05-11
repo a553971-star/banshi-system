@@ -1675,6 +1675,7 @@ def render_war_room_body(
 
 def main() -> None:
     st.set_page_config(page_title="AI戰情室", layout="wide")
+    st.info(_cached_daily_verse(datetime.date.today().isoformat()))
     st.title("🤖 AI戰情室")
     st.caption("AI供應鏈法人建倉 × C/B/A軌跡 × Theme Rotation（主題輪動）")
 
@@ -2047,9 +2048,6 @@ KD：{kd_k}/{kd_d}
                 "Cost：成本位\n\n"
                 "Confidence：信心分數"
             )
-
-    today_str = datetime.date.today().isoformat()
-    st.info(_cached_daily_verse(today_str))
 
     try:
         _ai_meta  = pd.read_csv(os.path.join(_DIR, "ai_supply_chain.csv"), dtype={"stock_id": str})

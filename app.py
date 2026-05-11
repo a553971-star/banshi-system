@@ -1675,6 +1675,7 @@ def render_war_room_body(
 
 def main() -> None:
     st.set_page_config(page_title="磐石決策系統", layout="wide")
+    st.info(_cached_daily_verse(datetime.date.today().isoformat()))
     st.title("磐石決策系統 戰情室")
 
     # ── 全市場即時個股分析 ────────────────────────────────────────────────
@@ -2046,9 +2047,6 @@ KD：{kd_k}/{kd_d}
                 "Cost：成本位\n\n"
                 "Confidence：信心分數"
             )
-
-    today_str = datetime.date.today().isoformat()
-    st.info(_cached_daily_verse(today_str))
 
     df = load_latest_decisions()
     if df.empty:
