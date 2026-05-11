@@ -65,7 +65,7 @@ def explain_metrics(result):
         return [], "👉 資料不足，無法判讀"
 from data_fetcher_fm import fetch_stock_data
 
-_DIR = os.path.dirname(os.path.abspath(__file__))
+_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DECISIONS_PATH = os.path.join(_DIR, "latest_decisions.csv")
 _STATE_LOG_PATH   = os.path.join(_DIR, "state_log.csv")
 _OVERRIDES_PATH   = os.path.join(_DIR, "watchlist_overrides.json")
