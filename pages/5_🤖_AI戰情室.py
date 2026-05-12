@@ -2154,6 +2154,11 @@ KD：{kd_k}/{kd_d}
 
     state_log = load_state_log()
     state_changes = get_latest_state_changes(state_log)
+    try:
+        _ai_ids = set(pd.read_csv(os.path.join(_DIR, "ai_supply_chain.csv"), dtype=str)["stock_id"])
+        state_changes = {k: v for k, v in state_changes.items() if k in _ai_ids}
+    except Exception:
+        pass
 
     # 昨日對照表（供情緒雷達使用）
     prev_map = {}
