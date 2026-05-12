@@ -188,6 +188,7 @@ st.table(pd.DataFrame(rows).set_index("條件"))
 # ═══════════════════════════════════════════════════════════════════════════════
 st.divider()
 st.subheader("③ SmartMoney 燈號")
+st.write(list(r.keys()))  # DEBUG: confirm available keys in result dict
 
 # ok=None → 資料不足，不計入 pass/total
 sm_conds = [
