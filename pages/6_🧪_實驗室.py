@@ -202,6 +202,7 @@ st.table(pd.DataFrame(rows).set_index("條件"))
 # ═══════════════════════════════════════════════════════════════════════════════
 st.divider()
 st.subheader("③ SmartMoney 燈號")
+st.caption(f"DEBUG margin_change_pct raw: {r.get('margin_change_pct')}")
 
 # ok=None → 資料不足，不計入 pass/total
 sm_conds = [
