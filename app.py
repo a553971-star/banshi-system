@@ -495,6 +495,22 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
     # ── 強B排行榜 ─────────────────────────────────────────────────────
     st.divider()
     st.subheader("🔥 強B排行榜（主力建倉候選）")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**找主力正在偷偷買、還沒發動的股票。**  \n"
+            "Find stocks where smart money is quietly accumulating before launch.\n\n"
+            "| 條件 Condition | 加分 Score |\n|---|---|\n"
+            "| B_days（B階段天數）≥ 8 | +30 |\n"
+            "| B_days ≥ 5 | +20 |\n"
+            "| B_days ≥ 3 | +10 |\n"
+            "| flow = ACCUMULATING（建倉中） | +30 |\n"
+            "| flow = NEUTRAL（中性） | +5 |\n"
+            "| cost_level = SAFE（安全區） | +15 |\n"
+            "| A_days = 0（尚未發動） | +15 |\n"
+            "| A_days ≤ 2 | +5 |\n"
+            "| confidence（信心分數，上限10） | +max 10 |\n\n"
+            "無門檻過濾，取分數最高前 5 名。No minimum threshold — top 5 by score."
+        )
     try:
         from b_ranker import get_top_strong_B
         top_b = get_top_strong_B(df, top_n=5)
@@ -1246,6 +1262,22 @@ def render_war_room_body(
 
     # ── 強B排行榜 ─────────────────────────────────────────────────────────
     st.subheader("🔥 強B排行榜（主力建倉候選）")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**找主力正在偷偷買、還沒發動的股票。**  \n"
+            "Find stocks where smart money is quietly accumulating before launch.\n\n"
+            "| 條件 Condition | 加分 Score |\n|---|---|\n"
+            "| B_days（B階段天數）≥ 8 | +30 |\n"
+            "| B_days ≥ 5 | +20 |\n"
+            "| B_days ≥ 3 | +10 |\n"
+            "| flow = ACCUMULATING（建倉中） | +30 |\n"
+            "| flow = NEUTRAL（中性） | +5 |\n"
+            "| cost_level = SAFE（安全區） | +15 |\n"
+            "| A_days = 0（尚未發動） | +15 |\n"
+            "| A_days ≤ 2 | +5 |\n"
+            "| confidence（信心分數，上限10） | +max 10 |\n\n"
+            "無門檻過濾，取分數最高前 5 名。No minimum threshold — top 5 by score."
+        )
     try:
         from b_ranker import get_top_strong_B
         top_b = get_top_strong_B(df, top_n=5)
@@ -1273,6 +1305,17 @@ def render_war_room_body(
 
     # ── 戰情室 War Room ──────────────────────────────────────────────────
     st.subheader("⚔️ 戰情室 War Room")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**主力已在布局但盤石還沒說買的雷達，分三層。**  \n"
+            "Radar for stocks where smart money is positioning before the system signals BUY.\n\n"
+            "全部先排除 flow = DISTRIBUTION（出貨中）。All tiers exclude DISTRIBUTION.\n\n"
+            "| 等級 Tier | 條件 Conditions |\n|---|---|\n"
+            "| 🔴 ATTACK（正在發動） | B_days ≥ 8, 2 ≤ A_days ≤ 6, C_days ≥ 3 |\n"
+            "| 🟠 LAUNCH（即將發動） | B_quality（B品質）≥ 45, B_days ≥ 8, 1 ≤ A_days ≤ 2 |\n"
+            "| 🔵 PREPARE（建倉完成） | B_quality ≥ 45, B_days ≥ 8, volume_ratio（量比）≥ 0.7 |\n\n"
+            "優先順序 Priority: ATTACK > LAUNCH > PREPARE（第一個符合就停）"
+        )
     st.info("⚡ 行動清單是盤石說『現在可以買』；戰情室是盤石還沒說，但主力已經在布局。兩個互補——行動清單給你確認，戰情室讓你提前看到。")
 
     def _get_c_icon(c):
@@ -1453,6 +1496,17 @@ def render_war_room_body(
 
     # ── 情緒雷達 Momentum Radar ──────────────────────────────────────────
     st.subheader("⚡ 情緒雷達 Momentum Radar")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**抓沒有底部結構卻突然噴的股票，爆發快但風險高。**  \n"
+            "Catches momentum bursts without a B-structure base — fast but high-risk.\n\n"
+            "篩選條件 Filter: B_days ≤ 2, A_days ≥ 2, C_days ≥ 2, Flow ≠ DISTRIBUTION, close（收盤價）> vwap（均量成本）\n\n"
+            "強度分數 Intensity score = A_days × 2 + C_days × 3\n\n"
+            "| 分數 Score | 強度 Level |\n|---|---|\n"
+            "| ≥ 13 | 🚀 過熱 Overheated — 不追，慢慢賣 |\n"
+            "| ≥ 9 | 🔥 強爆 Strong — 可持倉，準備走 |\n"
+            "| ≥ 6 | ⚠️ 初爆 Early — 小倉試單 |"
+        )
     st.info(
         "【這是什麼】抓「沒有B卻突然噴」的股票。盤石負責穩定賺，情緒雷達負責抓爆發機會。\n"
         "【強度等級】🚀 過熱：不追高，慢慢賣　🔥 強爆：可持倉，準備走　⚠️ 初爆：小倉試單\n"
@@ -1539,6 +1593,12 @@ def render_war_room_body(
 
     # ── 🔥 今日最強 ──────────────────────────────────────────────────────
     st.subheader("🔥 今日最強")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**今日 BUY（買進）訊號裡信心分數最高的一支。**  \n"
+            "The single highest-confidence BUY signal of the day.\n\n"
+            "邏輯 Logic: decision = BUY，按 confidence（信心分數）降冪排序，取第一名。"
+        )
     if not action_df.empty:
         top1 = action_df.iloc[0]
         d = build_display_row(top1)
@@ -1579,6 +1639,16 @@ def render_war_room_body(
 
     # ── 行動清單 ──────────────────────────────────────────────────────────
     st.subheader("行動清單（Action）")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**盤石說現在可以買的股票。**  \n"
+            "Stocks the system currently rates as BUY.\n\n"
+            "邏輯 Logic: decision = BUY，即同時滿足：\n"
+            "- flow_status = ACCUMULATING（建倉中）\n"
+            "- A_days ∈ [1, 2, 3]（發動初期）\n"
+            "- cost_level = SAFE（安全區）\n"
+            "- 非假突破（B_validity ≠ FAKE_B）"
+        )
     if action_df.empty:
         st.info("今日沒有符合條件的進場機會")
     st.dataframe(style_decision_table(build_display_table(filtered_action_df)), use_container_width=True)
@@ -1593,6 +1663,13 @@ def render_war_room_body(
 
     # ── 觀察名單 ──────────────────────────────────────────────────────────
     st.subheader("觀察名單（Watchlist）")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**你手動釘選或盤石說 WAIT 的股票。**  \n"
+            "Stocks you've pinned manually or the system rates as WAIT.\n\n"
+            "邏輯 Logic: decision = WAIT（觀察中），或 stock_id 在 pinned.json（手動加入）中。\n"
+            "WAIT 代表結構形成中，還差一步才到 BUY。"
+        )
     _sk = f"{p}wl_sort_key"
     _sa = f"{p}wl_sort_asc"
     if _sk not in st.session_state:
@@ -1683,6 +1760,13 @@ def render_war_room_body(
 
     # ── 候選清單 ──────────────────────────────────────────────────────────
     st.subheader("候選清單（Candidate）")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**底部打好但還沒到進場時機。**  \n"
+            "Stocks with a formed base but not yet ready to enter.\n\n"
+            "邏輯 Logic: decision = IGNORE 但 C_days（C階段天數）≥ 5，且不在行動/觀察名單中。\n"
+            "代表底部結構有了，只是 B_days / A_days 還不成熟，放進視野等待。"
+        )
     for _, row in filtered_candidate_df.iterrows():
         stock_id = str(row.get("stock_id", ""))
         d = build_display_row(row)
