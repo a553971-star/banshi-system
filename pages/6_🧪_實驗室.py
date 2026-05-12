@@ -179,11 +179,7 @@ rows = [
     },
 ]
 
-st.dataframe(
-    pd.DataFrame(rows),
-    use_container_width=True,
-    hide_index=True,
-)
+st.table(pd.DataFrame(rows).set_index("條件"))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section 3 — SmartMoney 燈號
@@ -191,38 +187,40 @@ st.dataframe(
 st.divider()
 st.subheader("③ SmartMoney 燈號")
 
+# ok=None → 資料不足，不計入 pass/total
 sm_conds = [
-    ("股價距半年低點 < 20%",  bias20 <= 20,      f"bias_ma20 = {bias20:.1f}%",   "≤ 20%"),
-    ("融資連增 ≥ 3天",        margin5d >= 3,     f"margin_change_5d = {margin5d:.1f}", "≥ 3"),
-    ("融資增幅 > 5%",         margin5d > 5,      f"margin_change_5d = {margin5d:.1f}", "> 5%"),
-    ("量回溫（量比 ≥ 0.8）",  vol_r >= 0.8,      f"volume_ratio = {vol_r:.2f}",   "≥ 0.8"),
-    ("成本位 SAFE",           cost == "SAFE",     f"cost_level = {cost}",          "SAFE"),
-    ("KD K值 < 70",           kd_k < 70,         f"kd_k = {kd_k:.1f}",           "< 70"),
+    ("股價距半年低點 < 20%",  bias20 <= 20,  f"bias_ma20 = {bias20:.1f}%",          "≤ 20%"),
+    ("融資連增 ≥ 3天",        None,          "margin_change_5d（張數變化，非天數）",  "待補欄位"),
+    ("融資增幅 > 5%",         None,          "margin_change_5d（張數變化，非百分比）", "待補欄位"),
+    ("量回溫（量比 ≥ 0.8）",  vol_r >= 0.8,  f"volume_ratio = {vol_r:.2f}",          "≥ 0.8"),
+    ("成本位 SAFE",           cost == "SAFE", f"cost_level = {cost}",                 "SAFE"),
+    ("KD K值 < 70",           kd_k < 70,     f"kd_k = {kd_k:.1f}",                  "< 70"),
 ]
 
-passed = sum(1 for _, ok, _, _ in sm_conds if ok)
-total  = len(sm_conds)
+passed = sum(1 for _, ok, _, _ in sm_conds if ok is True)
+total  = sum(1 for _, ok, _, _ in sm_conds if ok is not None)
 
-if passed == total:
+if total > 0 and passed == total:
     lamp = "🔴 SmartMoney 強烈啟動"
-elif passed >= 4:
+elif total > 0 and passed >= total - 1:
     lamp = "🟠 SmartMoney 部分啟動"
 elif passed >= 2:
     lamp = "🟡 SmartMoney 弱訊號"
 else:
     lamp = "⚪ SmartMoney 未啟動"
 
-st.markdown(f"### {lamp}　（{passed}/{total} 條件達標）")
+st.markdown(f"### {lamp}　（{passed}/{total} 條件達標，2 條待補）")
 
 for label, ok, raw, threshold in sm_conds:
-    icon = "✅" if ok else "❌"
-    st.markdown(
-        f"{icon} **{label}**　`{raw}`　門檻：{threshold}",
-        unsafe_allow_html=False,
-    )
+    if ok is None:
+        icon = "⚠️"
+        st.markdown(f"{icon} **{label}**　`{raw}`　門檻：{threshold}　_（資料不足，待補）_")
+    else:
+        icon = "✅" if ok else "❌"
+        st.markdown(f"{icon} **{label}**　`{raw}`　門檻：{threshold}")
 
 if passed < 2:
-    st.warning("⚪ SmartMoney 品質過濾器未通過（達標條件不足 2 項）")
+    st.warning("⚪ SmartMoney 品質過濾器未通過（有效條件達標不足 2 項）")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section 4 — ForeignContextTag（背景資訊，不計分）
