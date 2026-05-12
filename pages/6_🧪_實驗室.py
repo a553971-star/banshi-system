@@ -40,7 +40,8 @@ if r is None:
 # ── 安全取值工具 ───────────────────────────────────────────────────────────────
 def _n(key, default=0):
     try:
-        v = float(r.get(key) or default)
+        raw = r.get(key)
+        v = float(raw if raw is not None else default)
         return default if v != v else v  # NaN guard
     except (TypeError, ValueError):
         return default
@@ -188,7 +189,6 @@ st.table(pd.DataFrame(rows).set_index("條件"))
 # ═══════════════════════════════════════════════════════════════════════════════
 st.divider()
 st.subheader("③ SmartMoney 燈號")
-st.write(list(r.keys()))  # DEBUG: confirm available keys in result dict
 
 # ok=None → 資料不足，不計入 pass/total
 sm_conds = [
