@@ -120,7 +120,10 @@ def compute_margin_change_nd(margin_balance: pd.Series, n: int) -> pd.Series:
 
 
 def compute_margin_consecutive_increase(margin_balance: pd.Series) -> pd.Series:
-    """Streak of consecutive days where margin_balance increased (diff > 0)."""
+    """Streak of consecutive days where margin_balance increased (diff > 0).
+
+    NaN diff (e.g. first row) resets streak to 0 and outputs 0 — never None.
+    """
     try:
         mb = _numeric(margin_balance)
         streak = 0
@@ -128,7 +131,7 @@ def compute_margin_consecutive_increase(margin_balance: pd.Series) -> pd.Series:
         for val in (mb - mb.shift(1)):
             if val is None or (val != val):
                 streak = 0
-                results.append(None)
+                results.append(0)
             elif val > 0:
                 streak += 1
                 results.append(streak)
@@ -138,7 +141,7 @@ def compute_margin_consecutive_increase(margin_balance: pd.Series) -> pd.Series:
         return pd.Series(results, index=margin_balance.index, dtype=object)
     except Exception as exc:
         logger.error("compute_margin_consecutive_increase failed: %s", exc)
-        return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
+        return pd.Series([0] * len(margin_balance), index=margin_balance.index, dtype=object)
 
 
 def compute_margin_change_pct(margin_balance: pd.Series, n: int = 5) -> pd.Series:
