@@ -148,8 +148,10 @@ def process_stock_live(
             "flow_status":             flow_status,
             "volume_ratio":            _g("volume_ratio"),
             "foreign_consecutive_buy": _g("foreign_consecutive_buy"),
-            "margin_change_5d":        _g("margin_change_5d"),
-            "return_10d":              _g("return_10d"),
+            "margin_change_5d":           _g("margin_change_5d"),
+            "margin_consecutive_increase": _g("margin_consecutive_increase"),
+            "margin_change_pct":           _g("margin_change_pct"),
+            "return_10d":                  _g("return_10d"),
             "bias_ma20":               _g("bias_ma20"),
             "volatility_5d_prev":      _g("volatility_5d_prev"),
         }

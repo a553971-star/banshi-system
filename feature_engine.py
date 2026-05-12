@@ -119,6 +119,43 @@ def compute_margin_change_nd(margin_balance: pd.Series, n: int) -> pd.Series:
         return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
 
 
+def compute_margin_consecutive_increase(margin_balance: pd.Series) -> pd.Series:
+    """Streak of consecutive days where margin_balance increased (diff > 0)."""
+    try:
+        mb = _numeric(margin_balance)
+        streak = 0
+        results = []
+        for val in (mb - mb.shift(1)):
+            if val is None or (val != val):
+                streak = 0
+                results.append(None)
+            elif val > 0:
+                streak += 1
+                results.append(streak)
+            else:
+                streak = 0
+                results.append(0)
+        return pd.Series(results, index=margin_balance.index, dtype=object)
+    except Exception as exc:
+        logger.error("compute_margin_consecutive_increase failed: %s", exc)
+        return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
+
+
+def compute_margin_change_pct(margin_balance: pd.Series, n: int = 5) -> pd.Series:
+    """(margin_balance[t] - margin_balance[t-n]) / margin_balance[t-n] * 100.
+
+    Returns None where base is zero or None.
+    """
+    try:
+        mb = _numeric(margin_balance)
+        base = mb.shift(n)
+        pct = (mb - base) / base.where(base != 0) * 100
+        return _to_none(pct)
+    except Exception as exc:
+        logger.error("compute_margin_change_pct(n=%d) failed: %s", n, exc)
+        return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
+
+
 def compute_foreign_consecutive_buy(foreign_net: pd.Series) -> pd.Series:
     """Streak of consecutive days with foreign_net > 0.
 
@@ -359,8 +396,16 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # Margin change
     if "margin_balance" in df.columns:
         result["margin_change_5d"] = compute_margin_change_nd(df["margin_balance"], 5)
+        result["margin_consecutive_increase"] = compute_margin_consecutive_increase(df["margin_balance"])
+        result["margin_change_pct"] = compute_margin_change_pct(df["margin_balance"], 5)
     else:
         result["margin_change_5d"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+        result["margin_consecutive_increase"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+        result["margin_change_pct"] = pd.Series(
             [None] * len(df), index=df.index, dtype=object
         )
 
