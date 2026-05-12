@@ -166,7 +166,8 @@ def process_stock_live(
         )
 
         for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
-                    "B_window_20", "B_quality"):
+                    "B_window_20", "B_quality",
+                    "margin_consecutive_increase", "margin_change_pct"):
             decision[col] = _g(col)
 
         try:
