@@ -202,7 +202,7 @@ st.table(pd.DataFrame(rows).set_index("條件"))
 # ═══════════════════════════════════════════════════════════════════════════════
 st.divider()
 st.subheader("③ SmartMoney 燈號")
-st.caption(f"DEBUG margin_change_pct raw: {r.get('margin_change_pct')}")
+st.caption(f"DEBUG margin_change_pct raw: {r.get('margin_change_pct')} | margin_consecutive_increase raw: {r.get('margin_consecutive_increase')} | margin_change_5d raw: {r.get('margin_change_5d')}")
 
 # ok=None → 資料不足，不計入 pass/total
 sm_conds = [
