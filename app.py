@@ -1298,19 +1298,42 @@ def render_war_room_body(
         for _col in ["B_days", "A_days", "C_days"]:
             war_df[_col] = pd.to_numeric(war_df[_col], errors="coerce").fillna(0).astype(int)
 
+        war_df["B_quality"] = pd.to_numeric(war_df.get("B_quality", 0), errors="coerce").fillna(0)
+        war_df["volume_ratio"] = pd.to_numeric(war_df.get("volume_ratio", 0), errors="coerce").fillna(0)
+
         def _classify_war(row):
-            B      = int(row["B_days"])
-            A      = int(row["A_days"])
-            C      = int(row["C_days"])
-            b_type = str(row.get("B_type", "") or "")
-            flow   = str(row.get("flow_status", "") or "")
-            if B >= 8 and A >= 2 and C >= 3:
+            B    = int(row["B_days"])
+            A    = int(row["A_days"])
+            C    = int(row["C_days"])
+            bq   = float(row.get("B_quality", 0) or 0)
+            vr   = float(row.get("volume_ratio", 0) or 0)
+            flow = str(row.get("flow_status", "") or "")
+            if flow == "DISTRIBUTION":
+                return None
+            if B >= 8 and 2 <= A <= 6 and C >= 3:
                 return "ATTACK"
-            if b_type == "STRONG_B" and B >= 10 and A >= 1 and C >= 2 and flow in ["ACCUMULATING", "NEUTRAL"]:
+            if bq >= 45 and B >= 8 and 1 <= A <= 2:
                 return "LAUNCH"
-            if b_type == "STRONG_B" and B >= 10:
+            if bq >= 45 and B >= 8 and vr >= 0.7:
                 return "PREPARE"
             return None
+
+        _m5d_series = pd.to_numeric(war_df.get("margin_change_5d", pd.Series(dtype=float)), errors="coerce")
+        _m5d_baseline = float(_m5d_series[_m5d_series > 0].mean()) if (_m5d_series > 0).any() else None
+
+        def _margin_radar_tag(row):
+            m5d = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
+            if pd.isna(m5d):
+                return ""
+            if m5d <= 0:
+                return "💰↓ 融資退潮"
+            if _m5d_baseline is None or _m5d_baseline == 0:
+                return "💰 融資微升"
+            if m5d >= _m5d_baseline * 2:
+                return "💰💰💰 融資大火"
+            elif m5d >= _m5d_baseline * 1.5:
+                return "💰💰 融資升溫"
+            return "💰 融資微升"
 
         war_df["war_class"] = war_df.apply(_classify_war, axis=1)
         _attack  = war_df[war_df["war_class"] == "ATTACK"].copy()
@@ -1338,9 +1361,10 @@ def render_war_room_body(
                 C    = int(r["C_days"])
                 flow = str(r.get("flow_status", "-") or "-")
                 tag  = _get_status_tag(A, C)
+                mtag = _margin_radar_tag(r)
                 wcol1, wcol2 = st.columns([9, 1])
                 with wcol1:
-                    st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}")
+                    st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}　{mtag}")
                 with wcol2:
                     if st.button("📌", key=f"{p}track_war_{title_en}_{sid}", help="加入自訂追蹤清單"):
                         add_to_custom_watchlist(sid)
