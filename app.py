@@ -510,6 +510,7 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
                 cost  = row.get("cost_level","")
                 st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
                 st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
+                _render_obs_expander(row, f"search_topb_{stock}")
     except Exception as e:
         st.warning(f"強B排行榜載入失敗：{e}")
 
@@ -1266,6 +1267,7 @@ def render_war_room_body(
                     if st.button("📌", key=f"{p}track_topb_{stock}", help="加入自訂追蹤清單"):
                         add_to_custom_watchlist(str(stock))
                         st.toast(f"已加入追蹤：{stock}")
+                _render_obs_expander(row, f"{p}topb_{stock}")
     except Exception as e:
         st.warning(f"強B排行榜載入失敗：{e}")
 
