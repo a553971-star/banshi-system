@@ -75,7 +75,9 @@ f_pos    = _n("foreign_position", None)
 inst     = _s("institutional_state", "UNKNOWN")
 ret_10d  = _n("return_10d", 0)
 bias20   = _n("bias_ma20", 0)
-margin5d = _n("margin_change_5d", 0)
+margin5d   = _n("margin_change_5d", 0)
+margin_ci  = _n("margin_consecutive_increase", None)
+margin_pct = _n("margin_change_pct", None)
 vol5prev = _n("volatility_5d_prev", 0)
 conf     = _i("confidence")
 decision = _s("decision", "N/A")
@@ -190,8 +192,10 @@ st.subheader("③ SmartMoney 燈號")
 # ok=None → 資料不足，不計入 pass/total
 sm_conds = [
     ("股價距半年低點 < 20%",  bias20 <= 20,  f"bias_ma20 = {bias20:.1f}%",          "≤ 20%"),
-    ("融資連增 ≥ 3天",        None,          "margin_change_5d（張數變化，非天數）",  "待補欄位"),
-    ("融資增幅 > 5%",         None,          "margin_change_5d（張數變化，非百分比）", "待補欄位"),
+    ("融資連增 ≥ 3天",  (margin_ci  >= 3)  if margin_ci  is not None else None,
+                       f"margin_consecutive_increase = {int(margin_ci) if margin_ci is not None else 'N/A'}",  "≥ 3"),
+    ("融資增幅 > 5%",  (margin_pct > 5)   if margin_pct is not None else None,
+                       f"margin_change_pct = {margin_pct:.1f}%" if margin_pct is not None else "N/A",         "> 5%"),
     ("量回溫（量比 ≥ 0.8）",  vol_r >= 0.8,  f"volume_ratio = {vol_r:.2f}",          "≥ 0.8"),
     ("成本位 SAFE",           cost == "SAFE", f"cost_level = {cost}",                 "SAFE"),
     ("KD K值 < 70",           kd_k < 70,     f"kd_k = {kd_k:.1f}",                  "< 70"),
@@ -209,7 +213,8 @@ elif passed >= 2:
 else:
     lamp = "⚪ SmartMoney 未啟動"
 
-st.markdown(f"### {lamp}　（{passed}/{total} 條件達標，2 條待補）")
+_n_pending = sum(1 for _, ok, _, _ in sm_conds if ok is None)
+st.markdown(f"### {lamp}　（{passed}/{total} 條件達標" + (f"，{_n_pending} 條待補）" if _n_pending else "）"))
 
 for label, ok, raw, threshold in sm_conds:
     if ok is None:
