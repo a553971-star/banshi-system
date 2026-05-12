@@ -1422,7 +1422,22 @@ def render_war_room_body(
 
     # ── TRUE_B 選股池 ──────────────────────────────────────────────────────────
     st.subheader("🎯 TRUE_B 選股池")
-    st.caption("已通過：C≥3 + B_quality≥60 + 無外資出貨 + 處於MATURE或LAUNCH階段")
+    with st.expander("💡 說明"):
+        st.markdown(
+            "**最嚴格的主力建倉確認池。**  \n"
+            "True Institutional Accumulation Pool — highest-conviction filter.\n\n"
+            "入池條件 Entry filter:\n"
+            "- C_days（C階段天數）≥ 3\n"
+            "- B_quality（B品質）≥ 75\n"
+            "- B_validity = TRUE_B（真建倉：B_quality ≥ 75 且 flow ≠ DISTRIBUTION）\n"
+            "- B_phase ∈ MATURE（成熟）或 LAUNCH（發動）\n\n"
+            "B_phase 判斷 Phase logic:\n"
+            "- LAUNCH：B_quality ≥ 70 且 A_days ∈ [1, 2]\n"
+            "- MATURE：B_quality ≥ 70 且 A_days = 0\n"
+            "- LATE：A_days ≥ 5（太晚，已排除）\n\n"
+            "排序分數 Score = B_quality × 0.4 + B_window_20 × 1.5 + volume_ratio × 10 + ACCUMULATING（+10）"
+        )
+    st.caption("已通過：C≥3 + B_quality≥75 + 無外資出貨 + 處於MATURE或LAUNCH階段")
     try:
         tb_df = df.copy()
         if "B_quality" not in tb_df.columns:
