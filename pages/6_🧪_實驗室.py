@@ -119,17 +119,30 @@ rp_ret   = -10 if ret_10d > 12 else (-5 if ret_10d > 8 else 0)
 rp_dist  = -15 if flow == "DISTRIBUTION" else 0
 risk_penalty = rp_cost + rp_a + rp_ret + rp_dist
 
+# --- 正規化到 0-100 ---
+_S_MAX = 85   # 25+20+20+10+10
+_F_MAX = 50   # 25+15+10
+_C_MAX = 45   # 20+15+10
+_R_MAX = 60   # |最大罰分|
+
+s_norm = round(min(100, structure_score / _S_MAX * 100), 1)
+f_norm = round(min(100, flow_score      / _F_MAX * 100), 1)
+c_norm = round(min(100, capital_score   / _C_MAX * 100), 1)
+r_norm = round(max(0, min(100, 100 + risk_penalty / _R_MAX * 100)), 1)
+
+# FinalScore = S×0.40 + F×0.25 + C×0.25 + R×0.10
+final_score = round(s_norm * 0.40 + f_norm * 0.25 + c_norm * 0.25 + r_norm * 0.10, 1)
+
 dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
 st.markdown(f"### {dec_icon} `{sid}` {r.get('name','')}　**{decision}**　信心分數 **{conf}**")
 
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("🏗 StructureScore",     structure_score, help="C/B結構+品質+量價健康")
-col2.metric("🌊 FlowScore",         flow_score,      help="資金流向+外資連買+建倉密度")
-col3.metric("💰 CapitalBehavior",   capital_score,   help="法人行為+B有效性+外資獲利")
-col4.metric("⚠️ RiskPenalty",       risk_penalty,    help="成本位/延伸/高漲幅/出貨罰分")
-col5.metric("📊 實驗合計",
-            structure_score + flow_score + capital_score + risk_penalty,
-            help="四項合計（實驗值，僅供參考）")
+col1.metric("🏗 Structure",  f"{s_norm}",  help=f"原始={structure_score}，滿分{_S_MAX}正規化")
+col2.metric("🌊 Flow",       f"{f_norm}",  help=f"原始={flow_score}，滿分{_F_MAX}正規化")
+col3.metric("💰 Capital",    f"{c_norm}",  help=f"原始={capital_score}，滿分{_C_MAX}正規化")
+col4.metric("⚠️ Risk",       f"{r_norm}",  help=f"罰分={risk_penalty}，100分=無風險")
+col5.metric("📊 加權合計",   f"{final_score}",
+            help="S×0.40 + F×0.25 + C×0.25 + R×0.10，滿分100")
 
 st.caption("⚠️ 以上分項為實驗室自定義拆解，與原系統 confidence 計算方式不同，僅供參考。")
 
