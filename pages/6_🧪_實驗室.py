@@ -93,7 +93,7 @@ st.subheader("① FinalConfidenceScore 總覽")
 # StructureScore
 ss_c    = min(25, c_days * 3)        # C成熟最多 25
 ss_b    = min(20, b_days * 2)        # B結構最多 20
-ss_bq   = min(20, bq // 5)           # B品質 0-100 → 0-20
+ss_bq   = min(20, round(bq / 80 * 20, 1))  # B品質以80為滿分正規化 → 0-20
 ss_vol  = 10 if 0.8 <= vol_r <= 2.5 else 0
 ss_cool = 10 if a_days <= 2 else (5 if a_days <= 4 else 0)
 structure_score = ss_c + ss_b + ss_bq + ss_vol + ss_cool
@@ -123,15 +123,15 @@ risk_penalty = rp_cost + rp_a + rp_ret + rp_dist
 _S_MAX = 85   # 25+20+20+10+10
 _F_MAX = 50   # 25+15+10
 _C_MAX = 45   # 20+15+10
-_R_MAX = 60   # |最大罰分|
 
 s_norm = round(min(100, structure_score / _S_MAX * 100), 1)
 f_norm = round(min(100, flow_score      / _F_MAX * 100), 1)
 c_norm = round(min(100, capital_score   / _C_MAX * 100), 1)
-r_norm = round(max(0, min(100, 100 + risk_penalty / _R_MAX * 100)), 1)
 
-# FinalScore = S×0.40 + F×0.25 + C×0.25 + R×0.10
-final_score = round(s_norm * 0.40 + f_norm * 0.25 + c_norm * 0.25 + r_norm * 0.10, 1)
+# FinalScore = S×0.40 + F×0.25 + C×0.25，再減去風險扣分
+_base        = s_norm * 0.40 + f_norm * 0.25 + c_norm * 0.25
+_risk_deduct = round(abs(risk_penalty) * 0.10, 1)
+final_score  = round(max(0, min(100, _base - _risk_deduct)), 1)
 
 dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
 st.markdown(f"### {dec_icon} `{sid}` {r.get('name','')}　**{decision}**　信心分數 **{conf}**")
@@ -140,9 +140,9 @@ col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("🏗 Structure",  f"{s_norm}",  help=f"原始={structure_score}，滿分{_S_MAX}正規化")
 col2.metric("🌊 Flow",       f"{f_norm}",  help=f"原始={flow_score}，滿分{_F_MAX}正規化")
 col3.metric("💰 Capital",    f"{c_norm}",  help=f"原始={capital_score}，滿分{_C_MAX}正規化")
-col4.metric("⚠️ Risk",       f"{r_norm}",  help=f"罰分={risk_penalty}，100分=無風險")
+col4.metric("⚠️ Risk 扣分",  f"-{_risk_deduct}",  help=f"罰分={risk_penalty}，×0.10後從加權分中扣除")
 col5.metric("📊 加權合計",   f"{final_score}",
-            help="S×0.40 + F×0.25 + C×0.25 + R×0.10，滿分100")
+            help="(S×0.40 + F×0.25 + C×0.25) − Risk扣分，滿分100")
 
 st.caption("⚠️ 以上分項為實驗室自定義拆解，與原系統 confidence 計算方式不同，僅供參考。")
 
