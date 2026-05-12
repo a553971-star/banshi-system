@@ -1096,6 +1096,65 @@ def calc_b_validity_from_row(row):
         return "UNCERTAIN"
 
 
+# ── Observation Layer helpers ─────────────────────────────────────────────────
+
+_OBS_STATUS_LABELS = {
+    "ACCUMULATING": "ACCUMULATING（建倉中）",
+    "DISTRIBUTION":  "DISTRIBUTION（出貨中）",
+    "BREAKOUT":      "BREAKOUT（突破）",
+    "NEUTRAL":       "NEUTRAL（中性）",
+    "PREPARE":       "PREPARE（準備）",
+    "SAFE":          "SAFE（安全區）",
+    "HIGH_RISK":     "HIGH_RISK（高風險）",
+    "MEDIUM_RISK":   "MEDIUM_RISK（中風險）",
+    "TRUE_B":        "TRUE_B（真B結構）",
+    "FAKE_B":        "FAKE_B（假B結構）",
+    "UNCERTAIN":     "UNCERTAIN（待確認）",
+    "ACCUMULATION":  "ACCUMULATION（建倉狀態）",
+    "SHAKEOUT":      "SHAKEOUT（洗盤）",
+    "EXTENDED":      "EXTENDED（過度延伸）",
+}
+
+
+def _render_obs_expander(row: "pd.Series", uid: str) -> None:
+    def _fv(col, fmt=None):
+        v = row.get(col) if hasattr(row, "get") else (row[col] if col in row.index else None)
+        if v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("", "nan"):
+            return "—"
+        s = str(v)
+        if s in _OBS_STATUS_LABELS:
+            return _OBS_STATUS_LABELS[s]
+        if fmt is not None:
+            try:
+                return fmt.format(float(v))
+            except Exception:
+                pass
+        return s
+
+    rows = [
+        {"欄位": "C_days（C階段天數）",                     "值": _fv("C_days"),                        "門檻": "≥ 8",        "說明": "打底成熟"},
+        {"欄位": "B_days（B階段天數）",                     "值": _fv("B_days"),                        "門檻": "≥ 3",        "說明": "主力建倉中"},
+        {"欄位": "A_days（A延伸天數）",                     "值": _fv("A_days"),                        "門檻": "≤ 2",        "說明": "未過熱"},
+        {"欄位": "B_quality（B品質分）",                    "值": _fv("B_quality"),                     "門檻": "≥ 60",       "說明": "品質良好"},
+        {"欄位": "B_window_20（B建倉窗口）",                "值": _fv("B_window_20"),                   "門檻": "≥ 3",        "說明": "建倉密度"},
+        {"欄位": "volume_ratio（量比）",                    "值": _fv("volume_ratio", "{:.2f}"),        "門檻": "0.8–2.5",    "說明": "量價健康"},
+        {"欄位": "cost_level（成本位）",                    "值": _fv("cost_level"),                    "門檻": "SAFE",       "說明": "主力安全"},
+        {"欄位": "flow_status（資金流向）",                 "值": _fv("flow_status"),                   "門檻": "ACCUMULATING", "說明": "主力持續累積"},
+        {"欄位": "foreign_consecutive_buy（外資連買）",     "值": _fv("foreign_consecutive_buy"),       "門檻": "≥ 3",        "說明": "外資持續入場"},
+        {"欄位": "foreign_cost（外資成本估計）",            "值": _fv("foreign_cost", "{:.1f}"),        "門檻": "—",          "說明": "外資平均成本"},
+        {"欄位": "foreign_profit_pct（外資獲利%）",         "值": _fv("foreign_profit_pct", "{:.1f}%"), "門檻": "< 10%",     "說明": "獲利未過高則安全"},
+        {"欄位": "margin_change_5d（融資5日變化）",         "值": _fv("margin_change_5d"),              "門檻": "> 0",        "說明": "有資金開始使用融資"},
+        {"欄位": "margin_consecutive_increase（融資連增）", "值": _fv("margin_consecutive_increase"),   "門檻": "≥ 3",        "說明": "融資持續入場"},
+        {"欄位": "margin_change_pct（融資增幅%）",          "值": _fv("margin_change_pct", "{:.1f}%"), "門檻": "> 5%",       "說明": "增幅明顯"},
+        {"欄位": "kd_k（KD K值）",                          "值": _fv("kd_k", "{:.1f}"),                "門檻": "< 70",       "說明": "未超買"},
+        {"欄位": "return_10d（10日漲幅%）",                 "值": _fv("return_10d", "{:.1f}%"),         "門檻": "< 12%",      "說明": "未過熱"},
+        {"欄位": "bias_ma20（乖離MA20%）",                  "值": _fv("bias_ma20", "{:.1f}%"),          "門檻": "< 20%",      "說明": "股價合理"},
+    ]
+    with st.expander("📊 原始資料", expanded=False):
+        st.caption("欄位顯示 — 代表資料尚未收錄於今日快照，重跑 main.py 後更新")
+        st.table(pd.DataFrame(rows).set_index("欄位"))
+
+
 # ── 共用戰情室渲染函式 ─────────────────────────────────────────────────────────
 
 def render_war_room_body(
@@ -1538,12 +1597,16 @@ def render_war_room_body(
         d = build_display_row(row)
         is_pinned = stock_id in st.session_state.get("pinned", set())
         wl_live_key = f"{p}wl_live_show_{stock_id}"
+        _m5d_wl = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
+        _margin_badge_wl = "💰 融資入場" if (pd.notna(_m5d_wl) and _m5d_wl > 0) else ""
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
                 chg_label, chg_detail = state_changes[stock_id]
                 st.caption(f"{chg_label}｜{chg_detail}")
+            if _margin_badge_wl:
+                st.caption(_margin_badge_wl)
         with col2:
             pin_label = "★" if is_pinned else "⭐"
             if st.button(pin_label, key=f"{p}pin_{stock_id}"):
@@ -1590,6 +1653,7 @@ def render_war_room_body(
                 render_live_result_block(stock_id, wl_res)
             elif wl_res is None:
                 st.warning("分析失敗，請確認代號是否正確")
+        _render_obs_expander(row, f"{p}obs_wl_{stock_id}")
 
     # ── 候選清單 ──────────────────────────────────────────────────────────
     st.subheader("候選清單（Candidate）")
@@ -1598,12 +1662,16 @@ def render_war_room_body(
         d = build_display_row(row)
         is_pinned = stock_id in st.session_state.get("pinned", set())
         cd_live_key = f"{p}cd_live_show_{stock_id}"
+        _m5d_cd = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
+        _margin_badge_cd = "💰 融資入場" if (pd.notna(_m5d_cd) and _m5d_cd > 0) else ""
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
                 chg_label, chg_detail = state_changes[stock_id]
                 st.caption(f"{chg_label}｜{chg_detail}")
+            if _margin_badge_cd:
+                st.caption(_margin_badge_cd)
         with col2:
             pin_label = "★" if is_pinned else "⭐"
             if st.button(pin_label, key=f"{p}pin_cd_{stock_id}"):
@@ -1649,6 +1717,7 @@ def render_war_room_body(
                 render_live_result_block(stock_id, cd_res)
             elif cd_res is None:
                 st.warning("分析失敗，請確認代號是否正確")
+        _render_obs_expander(row, f"{p}obs_cd_{stock_id}")
 
     # ── 今日快照 ──────────────────────────────────────────────────────────
     st.divider()

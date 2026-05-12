@@ -232,6 +232,8 @@ _LATEST_COLS = [
     "B_quality", "B_window_20", "B_validity", "B_phase",
     "foreign_position", "foreign_level",
     "volume_ratio", "foreign_cost", "foreign_profit_pct",
+    "foreign_consecutive_buy", "margin_change_5d", "return_10d", "bias_ma20",
+    "margin_consecutive_increase", "margin_change_pct",
 ]
 
 
