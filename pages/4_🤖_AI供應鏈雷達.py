@@ -2,16 +2,15 @@
 pages/4_🤖_AI供應鏈雷達.py
 AI 上下游供應鏈雷達，共用 Ranking 2.0 + C/B/A 引擎。
 """
-import json
 import os
 
 import pandas as pd
 import streamlit as st
+from pinned_store import load_pinned, save_pinned
 
 BASE_PATH    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AI_CSV       = os.path.join(BASE_PATH, "ai_supply_chain.csv")
 UNIVERSE_CSV = os.path.join(BASE_PATH, "latest_decisions_universe.csv")
-PIN_PATH     = os.path.join(BASE_PATH, "pinned.json")
 
 THEME_LABEL = {
     "AI_Core":    "🔴 AI核心（晶片/封裝）",
@@ -28,24 +27,6 @@ THEME_ORDER = list(THEME_LABEL.keys())
 st.set_page_config(page_title="AI供應鏈雷達", layout="wide")
 st.title("🤖 AI供應鏈雷達")
 st.caption("AI上下游完整架構 × 磐石 Ranking 2.0 × C/B/A軌跡")
-
-
-# ── pinned.json 共用 ──────────────────────────────────────────────────────────
-def load_pinned() -> set:
-    try:
-        with open(PIN_PATH, "r") as f:
-            data = json.load(f)
-            return set(data) if isinstance(data, list) else set()
-    except Exception:
-        return set()
-
-
-def save_pinned(pinned: set) -> None:
-    try:
-        with open(PIN_PATH, "w") as f:
-            json.dump(sorted(pinned), f)
-    except Exception:
-        pass
 
 
 # ── 讀資料 ────────────────────────────────────────────────────────────────────

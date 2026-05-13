@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import json
 import os
 import sys
 
@@ -9,8 +8,8 @@ sys.path.insert(0, BASE_PATH)
 
 from app import explain_metrics
 from live_analyzer import process_stock_live
+from pinned_store import load_pinned, save_pinned
 
-PIN_PATH     = os.path.join(BASE_PATH, "pinned.json")
 COMPANY_PATH = os.path.join(BASE_PATH, "companies.csv")
 
 st.set_page_config(page_title="📌 追蹤清單", layout="wide")
@@ -21,27 +20,19 @@ st.caption("加入想追蹤的股票，一鍵取得即時盤石分析")
 # ── 工具函式 ──────────────────────────────────────────────────────────────────
 
 def load_watchlist() -> list:
-    try:
-        with open(PIN_PATH, "r") as f:
-            data = json.load(f)
-            return list(data) if isinstance(data, list) else []
-    except Exception:
-        return []
+    return list(load_pinned())
 
 
 def add_to_watchlist(stock_id: str) -> None:
-    wl = load_watchlist()
-    if stock_id not in wl:
-        wl.append(stock_id)
-        with open(PIN_PATH, "w") as f:
-            json.dump(wl, f)
+    pinned = load_pinned()
+    pinned.add(str(stock_id))
+    save_pinned(pinned)
 
 
 def remove_from_watchlist(stock_id: str) -> None:
-    wl = load_watchlist()
-    wl = [s for s in wl if s != stock_id]
-    with open(PIN_PATH, "w") as f:
-        json.dump(wl, f)
+    pinned = load_pinned()
+    pinned.discard(str(stock_id))
+    save_pinned(pinned)
 
 
 def resolve_stock_id(query: str) -> str | None:

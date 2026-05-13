@@ -12,6 +12,7 @@ import os
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+from pinned_store import load_pinned, save_pinned
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
@@ -69,7 +70,6 @@ _DIR = os.path.dirname(os.path.abspath(__file__))
 _DECISIONS_PATH = os.path.join(_DIR, "latest_decisions.csv")
 _STATE_LOG_PATH   = os.path.join(_DIR, "state_log.csv")
 _OVERRIDES_PATH   = os.path.join(_DIR, "watchlist_overrides.json")
-PIN_PATH          = os.path.join(_DIR, "pinned.json")
 TRADES_PATH       = os.path.join(_DIR, "trades_log.csv")
 _SHAREHOLDING_PATH= os.path.join(_DIR, "shareholding_latest.csv")
 
@@ -118,22 +118,6 @@ def load_watchlist_overrides(path: str = _OVERRIDES_PATH) -> dict:
 def save_watchlist_overrides(overrides: dict, path: str = _OVERRIDES_PATH) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(overrides, f, ensure_ascii=False, indent=2)
-
-
-def load_pinned() -> set:
-    try:
-        with open(PIN_PATH, "r") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                return set(data)
-            return set()
-    except Exception:
-        return set()
-
-
-def save_pinned(pinned: set) -> None:
-    with open(PIN_PATH, "w") as f:
-        json.dump(list(pinned), f)
 
 
 # ── 交易紀錄 ──────────────────────────────────────────────────────────────────
