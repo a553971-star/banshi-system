@@ -9,6 +9,7 @@ sys.path.insert(0, BASE_PATH)
 from app import explain_metrics
 from live_analyzer import process_stock_live
 from pinned_store import load_pinned, save_pinned
+from notes_store import load_notes, save_notes
 
 COMPANY_PATH = os.path.join(BASE_PATH, "companies.csv")
 
@@ -225,11 +226,13 @@ with col_refresh:
 if "wl_results" not in st.session_state:
     st.session_state["wl_results"] = {}
 
+notes = load_notes()
+
 for stock_id in wl:
     show_key   = f"wl_show_{stock_id}"
     result_key = f"wl_result_{stock_id}"
 
-    col1, col2, col3 = st.columns([6, 2, 1])
+    col1, col2, col3, col4 = st.columns([5, 3, 2, 1])
     with col1:
         cached = st.session_state["wl_results"].get(stock_id)
         name = (cached.get("name", "") if cached else "") or name_map.get(stock_id, "")
@@ -246,13 +249,25 @@ for stock_id in wl:
             st.markdown(f"**{validity_icon} {b_validity}**　{phase_icon} {b_phase}")
             st.caption(f"B_quality: {b_quality}　B_window: {b_window}")
     with col2:
+        note_val = notes.get(stock_id, "")
+        new_note = st.text_input(
+            "備註",
+            value=note_val,
+            key=f"note_{stock_id}",
+            label_visibility="collapsed",
+            placeholder="備註...",
+        )
+        if new_note != note_val:
+            notes[stock_id] = new_note
+            save_notes(notes)
+    with col3:
         live_label = "🔬 收起" if st.session_state.get(show_key, False) else "🔬 即時分析"
         if st.button(live_label, key=f"wl_live_btn_{stock_id}", use_container_width=True):
             st.session_state[show_key] = not st.session_state.get(show_key, False)
             if not st.session_state[show_key]:
                 st.session_state["wl_results"].pop(stock_id, None)
             st.rerun()
-    with col3:
+    with col4:
         if st.button("🗑️", key=f"wl_remove_{stock_id}", help="移除追蹤"):
             remove_from_watchlist(stock_id)
             st.session_state["wl_results"].pop(stock_id, None)
