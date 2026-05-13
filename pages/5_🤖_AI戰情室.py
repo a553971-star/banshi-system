@@ -1226,7 +1226,7 @@ def render_war_room_body(
             if "name" in df.columns:
                 _name_lookup.update(dict(zip(df["stock_id"].astype(str), df["name"].astype(str))))
             try:
-                _uni = pd.read_csv(os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
+                _uni = pd.read_csv(os.path.join(_DIR, "latest_decisions_ai.csv"), dtype=str)
                 if "name" in _uni.columns:
                     _name_lookup.update({k: v for k, v in zip(_uni["stock_id"].astype(str), _uni["name"].astype(str)) if v and v != "nan"})
             except Exception:
@@ -1793,11 +1793,11 @@ def main() -> None:
                 live_id = match_name.iloc[0]["stock_id"]
                 st.caption(f"查詢：{match_name.iloc[0]['name']} ({live_id})")
             else:
-                # 查 universe（latest_decisions_universe.csv 含 name 欄）
+                # 查 AI 決策表（latest_decisions_ai.csv 含 name 欄）
                 _uni_found = False
                 try:
                     _uni_df = pd.read_csv(
-                        os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
+                        os.path.join(_DIR, "latest_decisions_ai.csv"), dtype=str)
                     _uid = _uni_df[_uni_df["stock_id"] == live_input]
                     _uname = _uni_df[_uni_df["name"].str.contains(live_input, na=False)]
                     if not _uid.empty:
@@ -2144,17 +2144,12 @@ KD：{kd_k}/{kd_d}
             )
 
     try:
-        _ai_meta  = pd.read_csv(os.path.join(_DIR, "ai_supply_chain.csv"), dtype={"stock_id": str})
-        _uni_data = pd.read_csv(os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
-        df = _ai_meta.merge(_uni_data, on="stock_id", how="inner", suffixes=("_ai", ""))
-        if "name_ai" in df.columns:
-            df["name"] = df["name_ai"].fillna(df.get("name", df["name_ai"]))
-            df.drop(columns=["name_ai"], inplace=True)
+        df = pd.read_csv(os.path.join(_DIR, "latest_decisions_ai.csv"), dtype=str)
     except Exception as _e:
         st.error(f"資料載入失敗：{_e}")
         return
     if df.empty:
-        st.caption("尚無資料（ai_supply_chain.csv 或 latest_decisions_universe.csv 不存在或無交集）")
+        st.caption("尚無資料（latest_decisions_ai.csv 不存在或為空）")
         return
 
     # 補充股票名稱（從 companies.csv 和 banshi.db 的 price_history）
