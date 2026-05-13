@@ -250,12 +250,13 @@ for stock_id in wl:
             st.caption(f"B_quality: {b_quality}　B_window: {b_window}")
     with col2:
         note_val = notes.get(stock_id, "")
-        new_note = st.text_input(
+        new_note = st.text_area(
             "備註",
             value=note_val,
             key=f"note_{stock_id}",
             label_visibility="collapsed",
             placeholder="備註...",
+            height=68,
         )
         if new_note != note_val:
             notes[stock_id] = new_note
