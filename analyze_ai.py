@@ -1,7 +1,9 @@
 """
-analyze_ai.py — 對 AI 供應鏈清單跑完整磐石三引擎
-讀取 ai_supply_chain.csv，逐支呼叫 _process_stock()，輸出 latest_decisions_ai.csv
-不經過 universe 流動性篩選，直接執行三引擎。
+analyze_ai.py — 產生 AI 供應鏈決策清單
+策略：
+  1. 先從 latest_decisions_universe.csv 撈已算好的 AI 股票（最快，不重算）
+  2. 不在 universe 的 AI 股票，再個別跑 _process_stock()
+輸出 latest_decisions_ai.csv
 用法：python3 analyze_ai.py [--date YYYY-MM-DD]
 """
 import argparse
@@ -21,9 +23,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BASE_PATH   = os.path.dirname(os.path.abspath(__file__))
-AI_CSV_PATH = os.path.join(BASE_PATH, "ai_supply_chain.csv")
-OUTPUT_PATH = os.path.join(BASE_PATH, "latest_decisions_ai.csv")
+BASE_PATH    = os.path.dirname(os.path.abspath(__file__))
+AI_CSV_PATH  = os.path.join(BASE_PATH, "ai_supply_chain.csv")
+UNI_CSV_PATH = os.path.join(BASE_PATH, "latest_decisions_universe.csv")
+OUTPUT_PATH  = os.path.join(BASE_PATH, "latest_decisions_ai.csv")
 
 
 def main():
@@ -35,39 +38,57 @@ def main():
     args = parser.parse_args()
 
     ai_df     = pd.read_csv(AI_CSV_PATH, dtype=str)
-    stock_ids = ai_df["stock_id"].dropna().unique().tolist()
-    logger.info("AI 供應鏈：%d 支，分析日期：%s", len(stock_ids), args.date)
+    ai_ids    = set(ai_df["stock_id"].dropna().astype(str).unique())
+    logger.info("AI 供應鏈：%d 支，分析日期：%s", len(ai_ids), args.date)
 
-    params = load_params(args.params)
-    params["companies_path"] = AI_CSV_PATH   # 白名單設為 AI 清單，跳過 companies.csv 限制
-    prev_states = {}
-    results     = []
-    failed      = 0
+    # ── Step 1：從 universe 結果直接撈 ─────────────────────────────────────────
+    rows = []
+    covered = set()
+    try:
+        uni_df = pd.read_csv(UNI_CSV_PATH, dtype=str)
+        ai_from_uni = uni_df[uni_df["stock_id"].isin(ai_ids)]
+        rows.extend(ai_from_uni.to_dict("records"))
+        covered = set(ai_from_uni["stock_id"].astype(str))
+        logger.info("從 universe 撈到 %d 支 AI 股票", len(covered))
+    except Exception as e:
+        logger.warning("無法讀取 latest_decisions_universe.csv：%s", e)
 
-    for i, sid in enumerate(stock_ids, 1):
-        try:
-            decision = _process_stock(
-                stock_id=sid,
-                date=args.date,
-                params=params,
-                prev_states=prev_states,
-                print_snapshot=False,
-            )
-            if decision is not None:
-                results.append(decision)
-        except Exception as exc:
-            failed += 1
-            print(f"❌ {sid} failed: {exc}")
+    # ── Step 2：剩餘未涵蓋的 AI 股票個別跑引擎 ─────────────────────────────────
+    remaining = sorted(ai_ids - covered)
+    logger.info("剩餘需個別分析：%d 支", len(remaining))
 
-        if i % 50 == 0:
-            logger.info("進度：%d / %d（成功 %d，失敗 %d）",
-                        i, len(stock_ids), len(results), failed)
+    if remaining:
+        params = load_params(args.params)
+        params["companies_path"] = AI_CSV_PATH
+        prev_states = {}
+        failed = 0
 
-    logger.info("掃描完成：成功 %d / %d，失敗 %d", len(results), len(stock_ids), failed)
+        for i, sid in enumerate(remaining, 1):
+            try:
+                decision = _process_stock(
+                    stock_id=sid,
+                    date=args.date,
+                    params=params,
+                    prev_states=prev_states,
+                    print_snapshot=False,
+                )
+                if decision is not None:
+                    rows.append({col: decision.get(col, "") for col in _LATEST_COLS})
+            except Exception as exc:
+                failed += 1
+                print(f"❌ {sid} failed: {exc}")
 
-    if results:
-        rows = [{col: d.get(col, "") for col in _LATEST_COLS} for d in results]
-        pd.DataFrame(rows).to_csv(OUTPUT_PATH, index=False)
+        logger.info("個別分析完成：成功 %d / %d，失敗 %d",
+                    len(remaining) - failed, len(remaining), failed)
+
+    logger.info("總計：%d 筆 AI 股票決策", len(rows))
+
+    if rows:
+        out_df = pd.DataFrame(rows)
+        for col in _LATEST_COLS:
+            if col not in out_df.columns:
+                out_df[col] = ""
+        out_df[_LATEST_COLS].to_csv(OUTPUT_PATH, index=False)
         logger.info("輸出：%s（%d 筆）", OUTPUT_PATH, len(rows))
     else:
         logger.warning("無任何結果，未輸出檔案")
