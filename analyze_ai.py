@@ -39,6 +39,7 @@ def main():
     logger.info("AI 供應鏈：%d 支，分析日期：%s", len(stock_ids), args.date)
 
     params = load_params(args.params)
+    params["companies_path"] = AI_CSV_PATH   # 白名單設為 AI 清單，跳過 companies.csv 限制
     prev_states = {}
     results     = []
     failed      = 0
