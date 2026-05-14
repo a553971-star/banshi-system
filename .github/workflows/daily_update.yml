@@ -27,11 +27,7 @@ jobs:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
         run: |
           cd $GITHUB_WORKSPACE
-          if [ "$(date +%u)" = "6" ]; then
-            python3 download_stock_names.py
-          else
-            echo "週一到週五跳過 download_stock_names"
-          fi
+          python3 download_stock_names.py
 
       - name: Build universe
         env:
