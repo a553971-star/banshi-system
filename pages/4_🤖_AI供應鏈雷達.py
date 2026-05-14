@@ -38,6 +38,9 @@ if not os.path.exists(UNIVERSE_CSV):
     st.stop()
 
 ai_df  = pd.read_csv(AI_CSV, dtype={"stock_id": str})
+UNIVERSE_THEME_CSV = os.path.join(BASE_PATH, "universe.csv")
+theme_df = pd.read_csv(UNIVERSE_THEME_CSV, dtype=str)[["stock_id", "theme"]] if os.path.exists(UNIVERSE_THEME_CSV) else pd.DataFrame(columns=["stock_id", "theme"])
+ai_df = ai_df.merge(theme_df, on="stock_id", how="left")
 uni_df = pd.read_csv(UNIVERSE_CSV, dtype=str)
 
 # inner join
