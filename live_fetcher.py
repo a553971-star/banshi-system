@@ -3,7 +3,12 @@ import requests
 import pandas as pd
 import os
 
-TOKEN = os.getenv("FINMIND_TOKEN")
+def _get_token():
+    try:
+        import streamlit as st
+        return st.secrets.get("FINMIND_TOKEN", "") or os.getenv("FINMIND_TOKEN", "")
+    except Exception:
+        return os.getenv("FINMIND_TOKEN", "")
 
 
 def _fm(dataset, stock_id, start):
@@ -11,7 +16,7 @@ def _fm(dataset, stock_id, start):
         try:
             r = requests.get(
                 "https://api.finmindtrade.com/api/v4/data",
-                params={"dataset": dataset, "data_id": stock_id, "start_date": start, "token": TOKEN},
+                params={"dataset": dataset, "data_id": stock_id, "start_date": start, "token": _get_token()},
                 timeout=15,
             )
             d = r.json()
