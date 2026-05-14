@@ -2143,8 +2143,19 @@ KD：{kd_k}/{kd_d}
                 "Confidence：信心分數"
             )
 
+    _ai_csv  = os.path.join(_DIR, "latest_decisions_ai.csv")
+    _uni_csv = os.path.join(_DIR, "latest_decisions_universe.csv")
     try:
-        df = pd.read_csv(os.path.join(_DIR, "latest_decisions_ai.csv"), dtype=str)
+        if os.path.exists(_ai_csv):
+            df = pd.read_csv(_ai_csv, dtype=str)
+        elif os.path.exists(_uni_csv):
+            st.info("⏳ latest_decisions_ai.csv 尚未產生，暫時顯示 universe 資料中的 AI 股票。請手動觸發 Daily Banshi Update workflow。")
+            _ai_ids = set(pd.read_csv(os.path.join(_DIR, "ai_supply_chain.csv"), dtype=str)["stock_id"].astype(str))
+            df = pd.read_csv(_uni_csv, dtype=str)
+            df = df[df["stock_id"].isin(_ai_ids)]
+        else:
+            st.warning("⏳ 尚無 AI 分析資料，請先觸發 GitHub Actions → Daily Banshi Update。")
+            return
     except Exception as _e:
         st.error(f"資料載入失敗：{_e}")
         return
