@@ -1,0 +1,2 @@
+date,stock_id,name,decision,confidence,C_days,B_days,A_days,flow_status,cost_level,signal_type,adx,atr,vwap,kd_k,kd_d,bb_upper,bb_middle,bb_lower,B_quality,B_window_20,B_validity,B_phase,foreign_position,foreign_level,volume_ratio,foreign_cost,foreign_profit_pct,foreign_consecutive_buy,margin_change_5d,return_10d,bias_ma20,margin_consecutive_increase,margin_change_pct
+2026-05-14,6669,緯穎,IGNORE,0,9,0,19,,HIGH_RISK,,45.36,262.1363,4170.0713,82.45,88.75,5890.2019,4748.0,3605.7981,0,1,UNCERTAIN,LATE,56566,HEAVY,0.5912440088281483,,,,,12.177502579979361,0.14469250210615003,,
