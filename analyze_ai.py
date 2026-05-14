@@ -41,12 +41,25 @@ def main():
     ai_ids    = set(ai_df["stock_id"].dropna().astype(str).unique())
     logger.info("AI 供應鏈：%d 支，分析日期：%s", len(ai_ids), args.date)
 
+    # ── 名稱對照表（stock_names.csv 優先）────────────────────────────────────
+    name_map = {}
+    try:
+        sn_path = os.path.join(BASE_PATH, "stock_names.csv")
+        if os.path.exists(sn_path):
+            sn_df = pd.read_csv(sn_path, dtype=str)
+            name_map = dict(zip(sn_df["stock_id"], sn_df["name"]))
+            logger.info("載入 stock_names.csv：%d 筆", len(name_map))
+    except Exception as e:
+        logger.warning("無法載入 stock_names.csv：%s", e)
+
     # ── Step 1：從 universe 結果直接撈 ─────────────────────────────────────────
     rows = []
     covered = set()
     try:
         uni_df = pd.read_csv(UNI_CSV_PATH, dtype=str)
-        ai_from_uni = uni_df[uni_df["stock_id"].isin(ai_ids)]
+        ai_from_uni = uni_df[uni_df["stock_id"].isin(ai_ids)].copy()
+        if name_map:
+            ai_from_uni["name"] = ai_from_uni["stock_id"].map(name_map).fillna(ai_from_uni["name"])
         rows.extend(ai_from_uni.to_dict("records"))
         covered = set(ai_from_uni["stock_id"].astype(str))
         logger.info("從 universe 撈到 %d 支 AI 股票", len(covered))

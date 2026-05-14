@@ -151,6 +151,18 @@ def merge_all(
 
 
 def get_stock_name(stock_id: str, db_path: str = _DEFAULT_DB) -> str:
+    # 先試 stock_names.csv（比 DB 優先，Actions runner 每次都有最新版）
+    try:
+        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stock_names.csv")
+        if os.path.exists(csv_path):
+            import pandas as _pd
+            df = _pd.read_csv(csv_path, dtype=str)
+            row = df[df["stock_id"] == str(stock_id)]
+            if not row.empty:
+                return str(row.iloc[0]["name"])
+    except Exception:
+        pass
+    # fallback：查 DB
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()

@@ -39,7 +39,9 @@ def main():
     conn.commit()
     conn.close()
 
-    print(f"完成，共 {len(df)} 支股票名稱")
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stock_names.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"完成，共 {len(df)} 支股票名稱（已存 stock_names.csv）")
 
 if __name__ == "__main__":
     main()
