@@ -16,6 +16,7 @@ from pinned_store import load_pinned, save_pinned
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
+from main import load_params
 
 def _to_num(val, default=0.0):
     """安全轉 float，NaN / None / 非數字 → default"""
@@ -1856,323 +1857,88 @@ def main() -> None:
     st.info(_cached_daily_verse(datetime.date.today().isoformat()))
     st.title("磐石決策系統 戰情室")
 
-    # ── 全市場即時個股分析 ────────────────────────────────────────────────
-    st.subheader("🔬 全市場即時個股分析")
-    st.caption("輸入股票代號或中文名稱，即時跑完整盤石分析")
+    # ── Sidebar 即時查詢 ──────────────────────────────────────────────────────
+    _MAX_CACHE = 10
+    if "live_cache" not in st.session_state:
+        st.session_state["live_cache"] = {}
 
-    live_input = st.text_input("股票代號或名稱", placeholder="例：2330 或 台積電", key="live_query")
+    with st.sidebar:
+        st.markdown("### 🔬 即時個股查詢")
+        _sb_input = st.text_input(
+            "股票代號或名稱",
+            placeholder="例：2330 或 台積電",
+            key="sidebar_live_query",
+        )
+        if st.button("查詢", key="sidebar_live_btn", type="primary", use_container_width=True):
+            if _sb_input.strip():
+                st.session_state["sidebar_trigger"] = _sb_input.strip()
+        if st.button("🗑️ 清除所有查詢", key="sidebar_clear", use_container_width=True):
+            st.session_state["live_cache"] = {}
+            st.rerun()
 
-    if live_input:
-        live_input = live_input.strip()
+    # ── 觸發查詢邏輯 ─────────────────────────────────────────────────────────
+    _trigger = st.session_state.pop("sidebar_trigger", None)
+    if _trigger:
+        _live_id = _trigger.strip()
+        # 先查 companies.csv
         try:
-            import requests as _req, os as _os
-            _token = _os.getenv("FINMIND_TOKEN")
-            co_df = pd.read_csv(os.path.join(_DIR, "companies.csv"), dtype=str)
-            match_id   = co_df[co_df["stock_id"] == live_input]
-            match_name = co_df[co_df["name"].str.contains(live_input, na=False)]
-            if not match_id.empty:
-                live_id = live_input
-            elif not match_name.empty:
-                live_id = match_name.iloc[0]["stock_id"]
-                st.caption(f"查詢：{match_name.iloc[0]['name']} ({live_id})")
+            _co = pd.read_csv(os.path.join(_DIR, "companies.csv"), dtype=str)
+            _mid = _co[_co["stock_id"] == _live_id]
+            if not _mid.empty:
+                _live_id = str(_mid.iloc[0]["stock_id"])
             else:
-                # 查 universe（latest_decisions_universe.csv 含 name 欄）
-                _uni_found = False
-                try:
-                    _uni_df = pd.read_csv(
-                        os.path.join(_DIR, "latest_decisions_universe.csv"), dtype=str)
-                    _uid = _uni_df[_uni_df["stock_id"] == live_input]
-                    _uname = _uni_df[_uni_df["name"].str.contains(live_input, na=False)]
-                    if not _uid.empty:
-                        live_id = live_input
-                        _uni_found = True
-                    elif not _uname.empty:
-                        live_id = _uname.iloc[0]["stock_id"]
-                        st.caption(f"查詢：{_uname.iloc[0]['name']} ({live_id})")
-                        _uni_found = True
-                except Exception:
-                    pass
-                if not _uni_found:
-                    try:
-                        _r = _req.get("https://api.finmindtrade.com/api/v4/data",
-                            params={"dataset": "TaiwanStockInfo", "token": _token}, timeout=15)
-                        _info = pd.DataFrame(_r.json().get("data", []))
-                        if not _info.empty:
-                            _m = _info[_info["stock_name"].str.contains(live_input, na=False)]
-                            _m = _m[_m["stock_id"].str.match(r"^\d{4}$")]
-                            if not _m.empty:
-                                live_id = _m.iloc[0]["stock_id"]
-                                st.caption(f"查詢：{_m.iloc[0]['stock_name']} ({live_id})")
-                            else:
-                                live_id = live_input
-                        else:
-                            live_id = live_input
-                    except Exception as e:
-                        st.error(f"搜尋失敗: {e}")
-                        live_id = live_input
-        except Exception as e:
-            st.error(f"搜尋失敗: {e}")
-            live_id = live_input
-
-        with st.spinner(f"正在分析 {live_id}..."):
+                if "name" in _co.columns:
+                    _mname = _co[_co["name"].str.contains(_live_id, na=False)]
+                    if not _mname.empty:
+                        _live_id = str(_mname.iloc[0]["stock_id"])
+        except Exception:
+            pass
+        # 再查 stock_names.csv
+        if _live_id == _trigger.strip():
             try:
-                from main import load_params
-                params = load_params()
-                result = process_stock_live(live_id, params, print_snapshot=False)
-                if result is None:
-                    st.error(f"process_stock_live({live_id}) 回傳 None，請查 Streamlit Cloud logs")
-            except Exception as e:
-                result = None
-                st.error(str(e))
+                _sn = pd.read_csv(os.path.join(_DIR, "stock_names.csv"), dtype=str)
+                _sm = _sn[_sn["name"].str.contains(_live_id, na=False)]
+                if not _sm.empty:
+                    _live_id = str(_sm.iloc[0]["stock_id"])
+            except Exception:
+                pass
+        # 再查 universe csv
+        if _live_id == _trigger.strip():
+            try:
+                _ucsv = os.path.join(_DIR, "latest_decisions_universe.csv")
+                _udf  = pd.read_csv(_ucsv, dtype=str)
+                _um   = _udf[_udf["name"].str.contains(_live_id, na=False)]
+                if not _um.empty:
+                    _live_id = str(_um.iloc[0]["stock_id"])
+            except Exception:
+                pass
 
-        if result is None:
-            st.warning("查無資料或分析失敗，請確認代號是否正確")
+        with st.spinner(f"正在分析 {_live_id}..."):
+            _params = load_params()
+            _result = process_stock_live(_live_id, _params, print_snapshot=False)
+
+        if _result is not None:
+            _cache = st.session_state["live_cache"]
+            _cache.pop(_live_id, None)          # refresh to front
+            _cache[_live_id] = _result
+            while len(_cache) > _MAX_CACHE:
+                _cache.pop(next(iter(_cache)))
         else:
-            decision   = result.get("decision", "N/A")
-            confidence = result.get("confidence", 0)
-            dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
+            st.warning(f"查無資料：{_live_id}，請確認代號是否正確")
 
-            def safe_round(x):
-                return round(x, 1) if x is not None else "N/A"
-
-            st.markdown(f"### {dec_color} {live_id} {result.get('name','')}　**{decision}**　信心 {confidence}")
-            st.caption(f"資料日期：{result.get('date', 'N/A')}")
-
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("C天", result.get("C_days", "N/A"))
-            c2.metric("B天", result.get("B_days", "N/A"))
-            c3.metric("A天", result.get("A_days", "N/A"))
-            c4.metric("Flow", result.get("flow_status") or "N/A")
-            c5.metric("成本位", result.get("cost_level") or "N/A")
-
-            bw = result.get("B_window_20")
-            bq = result.get("B_quality")
-            if bw is not None or bq is not None:
-                bw1, bw2 = st.columns(2)
-                bw1.metric("B_window_20（近20日建倉密度）", bw if bw is not None else "N/A")
-                bw2.metric("B_quality（建倉強度）", bq if bq is not None else "N/A")
-
-            t1, t2, t3, t4 = st.columns(4)
-            t1.metric("收盤", result.get("current_price") or "N/A")
-            t2.metric("ADX", safe_round(result.get("adx")))
-            t3.metric("KD", str(safe_round(result.get("kd_k")))+"/"+str(safe_round(result.get("kd_d"))))
-            t4.metric("ATR", safe_round(result.get("atr")))
-
-            reason = result.get("reason")
-            if isinstance(reason, list) and reason:
-                st.info("📋 " + " ／ ".join(reason))
-            elif isinstance(reason, str) and reason:
-                st.info("📋 " + reason)
-
-            exp_lines, coach = explain_metrics(result)
-            st.markdown("#### 🧠 教練解讀")
-            st.success(coach)
-            for line in exp_lines:
-                st.caption(line)
-
-            # ── 主力分析 ──────────────────────────────────────────────
-            inst_state = result.get("institutional_state")
-            inst_text  = result.get("institutional_text")
-            if inst_state and inst_state != "UNKNOWN":
-                st.markdown("#### 🏦 主力分析")
-                color_map = {
-                    "ACCUMULATION": "#28a745",
-                    "SHAKEOUT":     "#ffc107",
-                    "DISTRIBUTION": "#dc3545",
-                    "EXTENDED":     "#fd7e14",
-                    "NEUTRAL":      "#6c757d"
-                }
-                color = color_map.get(inst_state, "#6c757d")
-                i1, i2, i3 = st.columns(3)
-                i1.metric("外資成本", result.get("foreign_cost") or "N/A")
-                _fp_val2 = result.get("foreign_position")
-                _fr_val2 = load_foreign_ratio_map().get(str(live_id), "")
-                _fp_disp2 = (f'{int(_fp_val2):,}張' + (f'（{float(_fr_val2):.1f}%）' if _fr_val2 and _fr_val2 != "nan" else "")) if _fp_val2 else "N/A"
-                i2.metric("持倉估計", _fp_disp2)
-                i3.metric("主力獲利%", f'{result.get("foreign_profit_pct"):.1f}%' if result.get("foreign_profit_pct") is not None else "N/A")
-                st.markdown(f"""
-<div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
-  <b style="color:{color};font-size:16px;">主力狀態：{inst_state}</b><br>
-  <span style="color:#ccc;">{inst_text}</span>
-</div>
-""", unsafe_allow_html=True)
-
-            # ── 結構品質（強B/弱B）─────────────────────────────────
-            b_type = result.get("B_type")
-            b_text = result.get("B_text")
-            if b_type:
-                b_icon = {"STRONG_B": "🟢", "WEAK_B": "🔴", "NORMAL_B": "🟡"}.get(b_type, "⚪")
-                st.markdown("#### 🧱 結構品質")
-                st.markdown(f"**{b_icon} {b_type}**")
-                if b_text:
-                    st.info(b_text)
-
-            b_phase = result.get("B_phase")
-            if b_phase:
-                phase_map = {
-                    "LAUNCH": ("🔴", "LAUNCH 發動初期", "盤石最佳進場點，剛突破，有量"),
-                    "MATURE": ("🟠", "MATURE 成熟建倉", "主力已在裡面，等待發動，最值得盯"),
-                    "BUILD":  ("🔵", "BUILD 穩定建倉",  "主力開始進場，結構成形中"),
-                    "PREPARE":("🟡", "PREPARE 建倉中",  "有人在看，但還沒形成優勢"),
-                    "LATE":   ("⚫", "LATE 太晚",       "已漲一段，不要追"),
-                }
-                icon, label, desc = phase_map.get(b_phase, ("⚪", f"UNKNOWN ({b_phase})", ""))
-                st.markdown("#### 📍 主力階段")
-                st.markdown(f"**{icon} {label}**")
-                if desc:
-                    st.caption(desc)
-
-            b_validity = result.get("B_validity")
-            if b_validity:
-                validity_map = {
-                    "TRUE_B":    ("✅", "TRUE_B 真建倉",    "有人在做，結構可信"),
-                    "FAKE_B":    ("❌", "FAKE_B 假整理",    "只是盤整，外資在賣，不要碰"),
-                    "UNCERTAIN": ("❓", "UNCERTAIN 待確認", "訊號不明確，繼續觀察"),
-                }
-                icon, label, desc = validity_map.get(b_validity, ("⚪", b_validity, ""))
-                st.markdown("#### 🔍 建倉真偽")
-                st.markdown(f"**{icon} {label}**")
-                if desc:
-                    st.caption(desc)
-
-            _fp = result.get("foreign_position")
-            _fl = result.get("foreign_level")
-            st.markdown("#### 📊 外資持倉")
-            if _fp and int(_fp) > 0:
-                _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
-                _ratio = load_foreign_ratio_map().get(str(live_id), "")
-                _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
-                st.metric("外資持股", _fp_label)
-                if _level_icon:
-                    st.caption(f"{_level_icon} {_fl}")
-            else:
-                st.caption("外資持倉：-")
-
-            # ── AI Prompt ──────────────────────────────────────────
-            with st.expander("📋 產生 AI 分析 Prompt"):
-                name    = result.get("name", live_id)
-                decision = result.get("decision", "N/A")
-                confidence = result.get("confidence", 0)
-                signal_type = result.get("signal_type") or "-"
-                C    = result.get("C_days", "N/A")
-                B    = result.get("B_days", "N/A")
-                A    = result.get("A_days", "N/A")
-                flow = result.get("flow_status") or "N/A"
-                cost = result.get("cost_level") or "N/A"
-                adx  = safe_round(result.get("adx"))
-                atr  = safe_round(result.get("atr"))
-                vwap = safe_round(result.get("vwap"))
-                kd_k = safe_round(result.get("kd_k"))
-                kd_d = safe_round(result.get("kd_d"))
-                bb_u = safe_round(result.get("bb_upper"))
-                bb_m = safe_round(result.get("bb_middle"))
-                bb_l = safe_round(result.get("bb_lower"))
-                date = result.get("date", "N/A")
-
-                _b_type = result.get("B_type", "N/A") or "N/A"
-                _b_text = result.get("B_text", "") or ""
-                _f_cost = str(result.get("foreign_cost", "N/A"))
-                _f_pos_raw2 = result.get("foreign_position")
-                _f_ratio2 = load_foreign_ratio_map().get(str(live_id), "")
-                _f_pos  = (f'{int(_f_pos_raw2):,}張' + (f'（{float(_f_ratio2):.1f}%）' if _f_ratio2 and _f_ratio2 != "nan" else "")) if _f_pos_raw2 else "N/A"
-                _f_prof = str(result.get("foreign_profit_pct", "N/A"))
-                _i_state = result.get("institutional_state", "N/A") or "N/A"
-                _i_text  = result.get("institutional_text", "") or ""
-                prompt = f"""你是專業短線交易員 + 產業分析師，擅長結構分析、資金流、成本位與同產業橫向比較。
-請用「結構優先、消息輔助、橫向比較」的原則，對以下股票做詳細分析。
-
-⚠️ 核心規則：
-- 絕對不推翻盤石決策
-- 結構 > 指標 > 消息 > 橫向比較（優先順序不可顛倒）
-- 消息面與比較必須使用最新公開資訊，並標註來源或日期
-
-━━━━━━━━━━━━━━━━━━
-【股票】
-{live_id} {name}
-
-【盤石決策】
-決策：{decision}｜信心：{confidence}｜型態：{signal_type}
-C天：{C}｜B天：{B}｜A天：{A}
-Flow：{flow}｜Cost：{cost}
-結構品質：{_b_type}（{_b_text})
-B_window_20：{result.get("B_window_20", "N/A")}（近20日符合B條件天數）
-B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強）
-主力成本：{_f_cost}｜持倉：{_f_pos}張｜主力獲利：{_f_prof}%
-主力狀態：{_i_state}（{_i_text})
-
-【技術指標】
-ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
-KD：{kd_k}/{kd_d}
-布林：上 {bb_u} / 中 {bb_m} / 下 {bb_l}
-
-【日期】
-{date}
-━━━━━━━━━━━━━━━━━━
-請依序詳細回答：
-
-【1️⃣ 結構階段判斷】
-- 目前處於哪個階段？（起漲 / 發動初期 / 延伸 / 末段 / 情緒段）
-- 是否為「無B直接A」類型？（是 / 否）
-
-【2️⃣ 結構 vs 消息 驅動拆解】
-（A）結構面原因（必填）
-- C/B/A 狀態的意義與可持續性
-- Flow 與 Cost 的判讀
-
-（B）外部驅動因素（消息 / 題材 / 事件）
-- 請搜尋並列出最近可能影響該股的公開消息、訂單、認證、政策等
-- 若無明確消息 → 寫「目前未觀察到重大催化劑」
-
-【3️⃣ 深入橫向比較（同產業）】
-請選擇 2~3 家最相關的同產業公司進行比較。
-比較維度（必須涵蓋以下全部）：
-- 結構強度（C/B/A 天數與完整度）
-- 資金流動能（外資/投信/融資變化）
-- 成本位安全度（相對於均線位置）
-- 技術指標相對位置（KD、RSI、ADX、布林）
-- 近期消息/題材差異
-
-請清楚指出：
-- 本股在同業中的相對位置（領先 / 中間 / 落後）
-- 本股的優勢與劣勢（相較同業）
-
-【4️⃣ 風險評估】
-- 風險等級：低 / 中 / 高
-- 最大風險來源（只講最關鍵的一點）
-
-【5️⃣ 時間框架分析】
-- 短線（1~5天）
-- 中線（1~4週）
-- 長線（1~3月）
-
-【6️⃣ 操作屬性分類】
-請三選一並說明理由：
-- 結構股（可持續）
-- 情緒股（短期波動）
-- 題材股（消息驅動）
-
-【7️⃣ 最終結論】
-👉 類型：結構股 / 情緒股 / 題材股
-👉 階段：
-👉 同業相對位置：
-👉 風險：
-👉 一句話評價：
-━━━━━━━━━━━━━━━━━━
-回答風格：專業、直接、像資深交易員在開會報告。橫向比較要具體、有數據對比，並突出關鍵差異。"""
-
-                st.code(prompt, language="")
-
-            fomo_flags = []
-            if (result.get("B_days") or 0) == 0 and (result.get("A_days") or 0) >= 1:
-                fomo_flags.append("無B直接A（可能追高）")
-            if (result.get("A_days") or 0) >= 3:
-                fomo_flags.append("A段已延伸")
-            if result.get("cost_level") == "HIGH_RISK":
-                fomo_flags.append("成本位過高")
-            if fomo_flags:
-                st.warning("⚠️ 這檔你很可能會想買，但要小心：")
-                for f in fomo_flags:
-                    st.caption(f"👉 {f}")
+    # ── 即時查詢快取顯示 ──────────────────────────────────────────────────────
+    st.subheader("🔬 全市場即時個股分析")
+    if not st.session_state.get("live_cache"):
+        st.caption("在左側 Sidebar 輸入股票代號或名稱查詢")
+    else:
+        for _sid, _res in reversed(list(st.session_state["live_cache"].items())):
+            _dec = _res.get("decision", "N/A")
+            _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
+            with st.expander(
+                f"{_dec_icon} {_sid} {_res.get('name', '')} — {_dec}",
+                expanded=True,
+            ):
+                render_live_result_block(_sid, _res)
 
     st.divider()
 
