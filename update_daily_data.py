@@ -49,11 +49,43 @@ def setup_tables(cursor):
     """)
 
 
+def get_db_last_date(db_path: str) -> str:
+    """
+    查詢三張主表的最新日期，取最舊的那張作為同步基準。
+    若無資料則回傳 60 個交易日前（初始化模式）。
+    """
+    tables = ["price_history", "institutional_history", "margin_history"]
+    dates = []
+    try:
+        conn = sqlite3.connect(db_path)
+        for table in tables:
+            try:
+                row = conn.execute(f"SELECT MAX(date) FROM {table}").fetchone()
+                if row and row[0]:
+                    dates.append(row[0])
+            except Exception:
+                pass
+        conn.close()
+    except Exception:
+        pass
+
+    if dates:
+        return min(dates)  # 取最舊的，確保所有表都同步
+    return (pd.Timestamp.today() - pd.tseries.offsets.BDay(60)).strftime("%Y-%m-%d")
+
+
 def main():
     import pandas as pd
     end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
-    start_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(60)).strftime("%Y-%m-%d")
-    print(f"📅 更新範圍：{start_date} ~ {end_date}")
+
+    # 增量更新：查三張表最舊的最新日期，作為同步基準
+    db_last_date = get_db_last_date(DB_PATH)
+
+    # 回補 3 個交易日（overlap buffer，修復 API 延遲或漏資料）
+    # 若 DB 是空的，db_last_date 會是 60 天前，照常初始化
+    start_date = (pd.Timestamp(db_last_date) - pd.tseries.offsets.BDay(3)).strftime("%Y-%m-%d")
+
+    print(f"📅 更新範圍：{start_date} ~ {end_date}（DB 最新：{db_last_date}，回補3天buffer）")
 
     universe_df = pd.read_csv(UNIVERSE_PATH, dtype=str)
     universe = universe_df["stock_id"].tolist()
