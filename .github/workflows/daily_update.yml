@@ -91,6 +91,7 @@ jobs:
           git add eps_latest.csv 2>/dev/null || true
           git add latest_decisions_ai.csv 2>/dev/null || true
           git add stock_names.csv 2>/dev/null || true
+          git add banshi.db 2>/dev/null || true
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
           git pull --rebase || true
           git push
