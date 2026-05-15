@@ -74,6 +74,13 @@ _OVERRIDES_PATH   = os.path.join(_DIR, "watchlist_overrides.json")
 TRADES_PATH       = os.path.join(_DIR, "trades_log.csv")
 _SHAREHOLDING_PATH= os.path.join(_DIR, "shareholding_latest.csv")
 
+# 載入 EPS 資料（module level，供 render_live_result_block 使用）
+_eps_path = os.path.join(_DIR, "eps_latest.csv")
+if os.path.exists(_eps_path):
+    _eps_df = pd.read_csv(_eps_path, dtype={"stock_id": str})
+else:
+    _eps_df = pd.DataFrame(columns=["stock_id", "EPS_TTM", "eps_status"])
+
 
 @st.cache_data(ttl=3600)
 def load_foreign_ratio_map() -> dict:
@@ -867,11 +874,38 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         bw1.metric("B_window_20（近20日建倉密度）", bw if bw is not None else "N/A")
         bw2.metric("B_quality（建倉強度）", bq if bq is not None else "N/A")
 
-    t1, t2, t3, t4 = st.columns(4)
+    # EPS / PE 計算
+    _sid_r = str(result.get("stock_id", ""))
+    _eps_row = _eps_df[_eps_df["stock_id"] == _sid_r] if not _eps_df.empty else pd.DataFrame()
+    if not _eps_row.empty and pd.notna(_eps_row.iloc[0].get("EPS_TTM")) and float(_eps_row.iloc[0]["EPS_TTM"]) > 0:
+        _eps_val = float(_eps_row.iloc[0]["EPS_TTM"])
+        _close_val = float(result.get("current_price") or 0)
+        _pe_val = _close_val / _eps_val if _close_val > 0 else None
+        _eps_str = f"{_eps_val:.2f}"
+        if _pe_val is None:
+            _pe_str = "N/A"
+            _pe_tag = ""
+        elif _pe_val > 60:
+            _pe_str = f"{_pe_val:.1f}x"
+            _pe_tag = " 🔴HIGH"
+        elif _pe_val < 14:
+            _pe_str = f"{_pe_val:.1f}x"
+            _pe_tag = " 🟢LOW"
+        else:
+            _pe_str = f"{_pe_val:.1f}x"
+            _pe_tag = ""
+    else:
+        _eps_str = "N/A"
+        _pe_str = "N/A"
+        _pe_tag = ""
+
+    t1, t2, t3, t4, t5, t6 = st.columns(6)
     t1.metric("收盤", result.get("current_price") or "N/A")
-    t2.metric("ADX", _safe_round(result.get("adx")))
-    t3.metric("KD", str(_safe_round(result.get("kd_k"))) + "/" + str(_safe_round(result.get("kd_d"))))
-    t4.metric("ATR", _safe_round(result.get("atr")))
+    t2.metric("EPS(TTM)", _eps_str)
+    t3.metric("本益比 PE", _pe_str + _pe_tag)
+    t4.metric("ADX", _safe_round(result.get("adx")))
+    t5.metric("KD", str(_safe_round(result.get("kd_k"))) + "/" + str(_safe_round(result.get("kd_d"))))
+    t6.metric("ATR", _safe_round(result.get("atr")))
 
     reason = result.get("reason")
     if isinstance(reason, list) and reason:
