@@ -931,13 +931,14 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         _pe_str = "N/A"
         _pe_tag = ""
 
-    t1, t2, t3, t4, t5, t6 = st.columns(6)
+    t1, t2, t3, t4, t5, t6, t7 = st.columns(7)
     t1.metric("收盤", result.get("current_price") or "N/A")
     t2.metric("EPS(TTM)", _eps_str)
     t3.metric("本益比 PE", _pe_str + _pe_tag)
     t4.metric("ADX", _safe_round(result.get("adx")))
-    t5.metric("KD", str(_safe_round(result.get("kd_k"))) + "/" + str(_safe_round(result.get("kd_d"))))
-    t6.metric("ATR", _safe_round(result.get("atr")))
+    t5.metric("K", _safe_round(result.get("kd_k")))
+    t6.metric("D", _safe_round(result.get("kd_d")))
+    t7.metric("ATR", _safe_round(result.get("atr")))
 
     reason = result.get("reason")
     if isinstance(reason, list) and reason:
