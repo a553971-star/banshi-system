@@ -1857,6 +1857,21 @@ def main() -> None:
     st.info(_cached_daily_verse(datetime.date.today().isoformat()))
     st.title("磐石決策系統 戰情室")
 
+    # ── 融資 tag 輔助函式（main 層級，供 cache 顯示使用）──────────────────────
+    def _margin_radar_tag(row, _m5d_baseline=None):
+        m5d = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce") if hasattr(row, "get") else None
+        if m5d is None or pd.isna(m5d):
+            return ""
+        if m5d <= 0:
+            return "💰↓ 融資退潮"
+        if _m5d_baseline is None or _m5d_baseline == 0:
+            return "💰 融資微升"
+        if m5d >= _m5d_baseline * 2:
+            return "💰💰💰 融資大火"
+        elif m5d >= _m5d_baseline * 1.5:
+            return "💰💰 融資升溫"
+        return "💰 融資微升"
+
     # ── Sidebar 即時查詢 ──────────────────────────────────────────────────────
     _MAX_CACHE = 10
     if "live_cache" not in st.session_state:
