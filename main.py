@@ -51,6 +51,16 @@ _DEFAULT_PARAMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "para
 _DEFAULT_DB     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
 _LOOKBACK_DAYS  = 150
 
+# 載入 stock_names.csv 作為名稱補充來源（只載入一次）
+_sn_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stock_names.csv")
+_sn_map: dict = {}
+if os.path.exists(_sn_path):
+    try:
+        _sn_df = pd.read_csv(_sn_path, dtype=str)
+        _sn_map = dict(zip(_sn_df["stock_id"], _sn_df["name"]))
+    except Exception:
+        pass
+
 
 def load_params(path: str = _DEFAULT_PARAMS) -> dict:
     """Load all decision thresholds from a JSON config file.
@@ -161,7 +171,7 @@ def _process_stock(
 
         target    = pd.to_datetime(date)
         start_dt  = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
-        name      = get_company_name(stock_id, co_path) or get_stock_name(stock_id, db_path) or stock_id
+        name      = get_company_name(stock_id, co_path) or get_stock_name(stock_id, db_path) or _sn_map.get(str(stock_id)) or stock_id
 
         # ── Data → Features → Trajectory ────────────────────────────────
         df_raw = merge_all_local(stock_id, start_dt, date, db_path)
