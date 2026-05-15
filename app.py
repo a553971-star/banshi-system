@@ -1914,8 +1914,12 @@ def main() -> None:
                 pass
 
         with st.spinner(f"正在分析 {_live_id}..."):
-            _params = load_params()
-            _result = process_stock_live(_live_id, _params, print_snapshot=False)
+            try:
+                _params = load_params()
+                _result = process_stock_live(_live_id, _params, print_snapshot=False)
+            except Exception as _e:
+                st.sidebar.error(f"分析例外：{_e}")
+                _result = None
 
         if _result is not None:
             _cache = st.session_state["live_cache"]
@@ -1942,7 +1946,7 @@ def main() -> None:
             _cts = _cdata.get("ts", "") if isinstance(_cdata, dict) else ""
             _dec = _cresult.get("decision", "N/A") if _cresult else "N/A"
             _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
-            _col1, _col2 = st.columns([9, 1])
+            _col1, _col2, _col3 = st.columns([8, 1, 1])
             with _col1:
                 with st.expander(
                     f"{_dec_icon} {_sid} {_cname} — {_dec}　🕐 {_cts}",
@@ -1956,6 +1960,19 @@ def main() -> None:
                 st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"cache_rm_{_sid}"):
                     del st.session_state["live_cache"][_sid]
+                    st.rerun()
+            with _col3:
+                st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+                _is_pinned = _sid in st.session_state.get("pinned", {})
+                _pin_label = "📌" if _is_pinned else "➕"
+                if st.button(_pin_label, key=f"cache_pin_{_sid}", help="加入追蹤清單"):
+                    _pinned = load_pinned()
+                    if _sid in _pinned:
+                        _pinned.discard(_sid)
+                    else:
+                        _pinned.add(_sid)
+                    save_pinned(_pinned)
+                    st.session_state["pinned"] = _pinned
                     st.rerun()
 
     st.divider()
