@@ -44,6 +44,17 @@ jobs:
             echo "週一到週五跳過 build_universe"
           fi
 
+      - name: Fetch EPS data (週六)
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [ "$(date +%u)" = "6" ]; then
+            python3 fetch_eps.py
+          else
+            echo "週一到週五跳過 fetch_eps"
+          fi
+
       - name: Update daily data
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
@@ -77,6 +88,7 @@ jobs:
           git config user.name "banshi-bot"
           git config user.email "banshi-bot@github.com"
           git add latest_decisions.csv universe.csv state_log.csv shareholding_latest.csv latest_decisions_universe.csv
+          git add eps_latest.csv 2>/dev/null || true
           git add latest_decisions_ai.csv 2>/dev/null || true
           git add stock_names.csv 2>/dev/null || true
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
