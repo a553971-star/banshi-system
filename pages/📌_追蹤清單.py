@@ -197,6 +197,14 @@ for _csv in ["companies.csv", "latest_decisions.csv", "latest_decisions_universe
     except Exception:
         pass
 
+# 補充 stock_names.csv
+try:
+    _sn_df = pd.read_csv(os.path.join(BASE_PATH, "stock_names.csv"), dtype=str)
+    name_map.update({k: v for k, v in zip(_sn_df["stock_id"], _sn_df["name"])
+                     if v and v != "nan" and k not in name_map})
+except Exception:
+    pass
+
 # B 資料對照表（latest_decisions.csv + latest_decisions_universe.csv）
 b_map = {}
 for csv_file in ["latest_decisions.csv", "latest_decisions_universe.csv"]:
