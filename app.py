@@ -395,6 +395,29 @@ def safe_str(x):
     return "-" if s.lower() == "nan" or s.strip() == "" else s
 
 
+# ── 爆量燈號 ─────────────────────────────────────────────────────────────────
+
+def _volume_spike_tag(row):
+    """
+    爆量燈號（資金異動）
+    條件：volume_ratio > 1.5 AND abs(daily_return_pct) > 3
+    🟢 資金異動：爆量 + 非 DISTRIBUTION + 非 HIGH_RISK
+    🔴 資金異動：爆量 + DISTRIBUTION 或 HIGH_RISK
+    """
+    try:
+        vr   = float(row.get("volume_ratio") or 0)
+        dr   = float(row.get("daily_return_pct") or 0)
+        flow = str(row.get("flow_status") or "")
+        cost = str(row.get("cost_level") or "")
+        if vr > 1.5 and abs(dr) > 3:
+            if flow == "DISTRIBUTION" or cost == "HIGH_RISK":
+                return "🔴 資金異動"
+            return "🟢 資金異動"
+        return ""
+    except Exception:
+        return ""
+
+
 # ── 情緒雷達 helpers ───────────────────────────────────────────────────────────
 
 def get_c_arrow(today_c, prev):
@@ -1348,7 +1371,8 @@ def render_war_room_body(
                 cost  = row.get("cost_level", "")
                 _bc1, _bc2 = st.columns([10, 1])
                 with _bc1:
-                    st.markdown(f"**🟢 {stock} {name}｜分數 {score}**")
+                    _vtag = _volume_spike_tag(row)
+                    st.markdown(f"**🟢 {stock} {name}｜分數 {score}**　{_vtag}")
                     st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
                 with _bc2:
                     if st.button("📌", key=f"{p}track_topb_{stock}", help="加入自訂追蹤清單"):
@@ -1460,9 +1484,10 @@ def render_war_room_body(
                 flow = str(r.get("flow_status", "-") or "-")
                 tag  = _get_status_tag(A, C)
                 mtag = _margin_radar_tag(r)
+                vtag = _volume_spike_tag(r)
                 wcol1, wcol2 = st.columns([9, 1])
                 with wcol1:
-                    st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}　{mtag}")
+                    st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}　{mtag}　{vtag}")
                 with wcol2:
                     if st.button("📌", key=f"{p}track_war_{title_en}_{sid}", help="加入自訂追蹤清單"):
                         add_to_custom_watchlist(sid)
@@ -2034,9 +2059,10 @@ def main() -> None:
             _col1, _col2, _col3 = st.columns([8, 1, 1])
             _cm5d = float(_cresult.get("margin_change_5d") or 0) if _cresult else 0
             _cmtag = _margin_radar_tag(_cresult) if _cresult else ""
+            _cvtag = _volume_spike_tag(_cresult) if _cresult else ""
             with _col1:
                 with st.expander(
-                    f"{_dec_icon} {_sid} {_cname} — {_dec}　{_cmtag}　🕐 {_cts}",
+                    f"{_dec_icon} {_sid} {_cname} — {_dec}　{_cmtag}　{_cvtag}　🕐 {_cts}",
                     expanded=False,
                 ):
                     if _cresult:
