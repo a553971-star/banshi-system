@@ -230,6 +230,7 @@ def _process_stock(
             "foreign_consecutive_buy": _g("foreign_consecutive_buy"),
             "margin_change_5d":        _g("margin_change_5d"),
             "return_10d":              _g("return_10d"),
+            "daily_return_pct":        _g("daily_return_pct"),
             "bias_ma20":               _g("bias_ma20"),
             "volatility_5d_prev":      _g("volatility_5d_prev"),
         }
