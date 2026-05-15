@@ -17,6 +17,7 @@ from pinned_store import load_pinned, save_pinned
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
 from main import load_params
+from ui.sidebar import render_sidebar_query
 
 def _to_num(val, default=0.0):
     """安全轉 float，NaN / None / 非數字 → default"""
@@ -1968,135 +1969,7 @@ def main() -> None:
         return "💰 融資微升"
 
     # ── Sidebar 即時查詢 ──────────────────────────────────────────────────────
-    _MAX_CACHE = 10
-    if "live_cache" not in st.session_state:
-        st.session_state["live_cache"] = {}
-
-    with st.sidebar:
-        st.markdown("### 🔬 即時個股查詢")
-        _sb_input = st.text_input(
-            "股票代號或名稱",
-            placeholder="例：2330 或 台積電",
-            key="sidebar_live_query",
-        )
-        if st.button("查詢", key="sidebar_live_btn", type="primary", use_container_width=True):
-            if _sb_input.strip():
-                st.session_state["sidebar_trigger"] = _sb_input.strip()
-        if st.button("🗑️ 清除所有查詢", key="sidebar_clear", use_container_width=True):
-            st.session_state["live_cache"] = {}
-            st.rerun()
-
-    # ── 觸發查詢邏輯 ─────────────────────────────────────────────────────────
-    _trigger = st.session_state.pop("sidebar_trigger", None)
-    if _trigger:
-        _live_id = _trigger.strip()
-        # 先查 companies.csv
-        try:
-            _co = pd.read_csv(os.path.join(_DIR, "companies.csv"), dtype=str)
-            _mid = _co[_co["stock_id"] == _live_id]
-            if not _mid.empty:
-                _live_id = str(_mid.iloc[0]["stock_id"])
-            else:
-                if "name" in _co.columns:
-                    _mname = _co[_co["name"].str.contains(_live_id, na=False)]
-                    if not _mname.empty:
-                        _live_id = str(_mname.iloc[0]["stock_id"])
-        except Exception:
-            pass
-        # 再查 stock_names.csv
-        if _live_id == _trigger.strip():
-            try:
-                _sn = pd.read_csv(os.path.join(_DIR, "stock_names.csv"), dtype=str)
-                _sm = _sn[_sn["name"].str.contains(_live_id, na=False)]
-                if not _sm.empty:
-                    _live_id = str(_sm.iloc[0]["stock_id"])
-            except Exception:
-                pass
-        # 再查 universe csv
-        if _live_id == _trigger.strip():
-            try:
-                _ucsv = os.path.join(_DIR, "latest_decisions_universe.csv")
-                _udf  = pd.read_csv(_ucsv, dtype=str)
-                _um   = _udf[_udf["name"].str.contains(_live_id, na=False)]
-                if not _um.empty:
-                    _live_id = str(_um.iloc[0]["stock_id"])
-            except Exception:
-                pass
-
-        with st.spinner(f"正在分析 {_live_id}..."):
-            try:
-                _params = load_params()
-                _result = process_stock_live(_live_id, _params, print_snapshot=False)
-            except Exception as _e:
-                st.sidebar.error(f"分析例外：{_e}")
-                _result = None
-
-        if _result is not None:
-            _cache = st.session_state["live_cache"]
-            _cache.pop(_live_id, None)
-            _cache[_live_id] = {
-                "result": _result,
-                "name": _result.get("name", _live_id),
-                "ts": pd.Timestamp.now().strftime("%H:%M:%S")
-            }
-            while len(_cache) > _MAX_CACHE:
-                _cache.pop(next(iter(_cache)))
-            st.rerun()
-        else:
-            st.sidebar.error(f"查無資料：{_live_id}，請確認代號是否正確")
-
-    # ── 即時查詢快取顯示 ──────────────────────────────────────────────────────
-    st.subheader("🔬 全市場即時個股分析")
-    if not st.session_state.get("live_cache"):
-        st.caption("在左側 Sidebar 輸入股票代號或名稱查詢")
-    else:
-        for _sid, _cdata in reversed(list(st.session_state["live_cache"].items())):
-            _cresult = _cdata.get("result") if isinstance(_cdata, dict) else _cdata
-            _cname = _cdata.get("name", _sid) if isinstance(_cdata, dict) else (_cresult.get("name", _sid) if _cresult else _sid)
-            _cts = _cdata.get("ts", "") if isinstance(_cdata, dict) else ""
-            _dec = _cresult.get("decision", "N/A") if _cresult else "N/A"
-            _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
-            _col1, _col2, _col3 = st.columns([8, 1, 1])
-            _cm5d = float(_cresult.get("margin_change_5d") or 0) if _cresult else 0
-            _cmtag = _margin_radar_tag(_cresult) if _cresult else ""
-            _cvtag = _volume_spike_tag(_cresult) if _cresult else ""
-            with _col1:
-                with st.expander(
-                    f"{_dec_icon} {_sid} {_cname} — {_dec}　{_cmtag}　{_cvtag}　🕐 {_cts}",
-                    expanded=False,
-                ):
-                    if _cresult:
-                        _m5d = float(_cresult.get("margin_change_5d") or 0)
-                        _mchg = float(_cresult.get("margin_change_pct") or 0)
-                        _mcon = int(_cresult.get("margin_consecutive_increase") or 0)
-                        _mcol1, _mcol2, _mcol3 = st.columns(3)
-                        with _mcol1:
-                            st.metric("融資5日增減", f"{_m5d:+,.0f} 張")
-                        with _mcol2:
-                            st.metric("融資增幅", f"{_mchg:+.1f}%")
-                        with _mcol3:
-                            st.metric("融資連增天數", f"{_mcon} 天")
-                        render_live_result_block(_sid, _cresult)
-                    else:
-                        st.warning("無法取得資料")
-            with _col2:
-                st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-                if st.button("✕", key=f"cache_rm_{_sid}"):
-                    del st.session_state["live_cache"][_sid]
-                    st.rerun()
-            with _col3:
-                st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-                _is_pinned = _sid in st.session_state.get("pinned", {})
-                _pin_label = "📌" if _is_pinned else "➕"
-                if st.button(_pin_label, key=f"cache_pin_{_sid}", help="加入追蹤清單"):
-                    _pinned = load_pinned()
-                    if _sid in _pinned:
-                        _pinned.discard(_sid)
-                    else:
-                        _pinned.add(_sid)
-                    save_pinned(_pinned)
-                    st.session_state["pinned"] = _pinned
-                    st.rerun()
+    render_sidebar_query(render_result_fn=render_live_result_block)
 
     st.divider()
 

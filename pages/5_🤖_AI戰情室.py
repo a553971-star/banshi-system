@@ -18,8 +18,10 @@ from app import (
     get_latest_state_changes,
     load_state_log,
     load_watchlist_overrides,
+    render_live_result_block,
 )
 from pinned_store import load_pinned
+from ui.sidebar import render_sidebar_query
 
 st.set_page_config(page_title="AI戰情室", layout="wide")
 st.title("🤖 AI 戰情室")
@@ -85,6 +87,11 @@ if "overrides" not in st.session_state:
     st.session_state["overrides"] = load_watchlist_overrides()
 if "pinned" not in st.session_state:
     st.session_state["pinned"] = load_pinned()
+
+# ── Sidebar 即時查詢 ──────────────────────────────────────────────────────────
+render_sidebar_query(key_suffix="_ai", render_result_fn=render_live_result_block)
+
+st.divider()
 
 # ── 渲染 ─────────────────────────────────────────────────────────────────────
 st.caption(f"共 {len(df)} 支 AI 概念股")
