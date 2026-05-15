@@ -358,7 +358,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     Input: raw merged DataFrame from data_fetcher.merge_all().
     Output: new DataFrame with all original columns plus:
             ma20, ma60, ma120, bias_ma20, bias_ma60,
-            volume_ratio, return_10d, margin_change_5d,
+            volume_ratio, return_10d, daily_return_pct, margin_change_5d,
             foreign_consecutive_buy, is_new_low, volatility_5d.
 
     Pure function — input is never mutated.
@@ -395,6 +395,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Returns
     result["return_10d"] = compute_return_nd(df["close"], 10)
+    result["daily_return_pct"] = compute_return_nd(df["close"], 1)
 
     # Margin change
     if "margin_balance" in df.columns:
