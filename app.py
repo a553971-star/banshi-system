@@ -583,6 +583,10 @@ def render_stock_search_section(df: pd.DataFrame) -> None:
             _f_cost = str(result.get("foreign_cost", "N/A"))
             _f_pos  = str(result.get("foreign_position", "N/A"))
             _f_prof = str(result.get("foreign_profit_pct", "N/A"))
+            _vol_ratio  = safe_float(row.get("volume_ratio"))
+            _m5d        = safe_float(row.get("margin_change_5d"))
+            _mchg_pct   = safe_float(row.get("margin_change_pct"))
+            _mcon       = safe_int(row.get("margin_consecutive_increase"))
             _i_state = result.get("institutional_state", "N/A") or "N/A"
             _i_text  = result.get("institutional_text", "") or ""
             prompt = f"""你是專業短線交易員 + 市場分析師，擅長結構分析、資金流、成本位與事件驅動判讀。
@@ -621,6 +625,10 @@ B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強
 ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
 KD：{kd_k}/{kd_d}
 布林：上 {bb_u} / 中 {bb_m} / 下 {bb_l}
+成交量比：{_vol_ratio}（1.0=正常，>1.5放量，<0.5縮量）
+
+【融資動向】
+融資5日增減：{_m5d}張｜融資增幅：{_mchg_pct}%｜融資連增：{_mcon}天
 
 【日期】{date}
 
@@ -1019,6 +1027,10 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         _f_ratio = load_foreign_ratio_map().get(str(stock_id), "")
         _f_pos   = (f'{int(_f_pos_raw):,}張' + (f'（{float(_f_ratio):.1f}%）' if _f_ratio and _f_ratio != "nan" else "")) if _f_pos_raw else "N/A"
         _f_prof  = str(result.get("foreign_profit_pct", "N/A"))
+        _vol_ratio  = _safe_round(result.get("volume_ratio"))
+        _m5d        = _safe_round(result.get("margin_change_5d"))
+        _mchg_pct   = _safe_round(result.get("margin_change_pct"))
+        _mcon       = result.get("margin_consecutive_increase") or 0
         _i_state = result.get("institutional_state", "N/A") or "N/A"
         _i_text  = result.get("institutional_text", "") or ""
         prompt = f"""你是專業短線交易員 + 產業分析師，擅長結構分析、資金流、成本位與同產業橫向比較。
@@ -1057,6 +1069,10 @@ B_quality：{result.get("B_quality", "N/A")}（建倉強度分數，越高越強
 ADX：{adx}｜ATR：{atr}｜VWAP：{vwap}
 KD：{kd_k}/{kd_d}
 布林：上 {bb_u} / 中 {bb_m} / 下 {bb_l}
+成交量比：{_vol_ratio}（1.0=正常，>1.5放量，<0.5縮量）
+
+【融資動向】
+融資5日增減：{_m5d}張｜融資增幅：{_mchg_pct}%｜融資連增：{_mcon}天
 
 【日期】
 {date}
