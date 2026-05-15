@@ -133,28 +133,33 @@ def main():
         print(f"  融資抓取失敗：{e}")
     print(f"  融資：{len(df_margin)} 筆")
 
-    # 4. 外資持股（集保）— 只抓 companies.csv 白名單，不抓全市場
-    companies_df = pd.read_csv(os.path.join(BASE_PATH, "companies.csv"), dtype=str)
-    companies    = companies_df["stock_id"].tolist()
-    chunks = []
-    for sid in companies:
-        try:
-            _raw = api.taiwan_stock_shareholding(stock_id=sid, start_date=end_date, end_date=end_date)
-            if not _raw.empty:
-                chunks.append(_raw)
-        except Exception:
-            pass
+    # 4. 外資持股（集保）— 週一或週六才抓（集保資料週更新，每天抓浪費 API 額度）
+    import datetime as _dt
+    _weekday = _dt.date.today().isoweekday()  # 1=Monday, 6=Saturday
     df_sh = pd.DataFrame()
-    if chunks:
-        df_sh_raw = pd.concat(chunks, ignore_index=True)
-        df_sh_raw.columns = [c.lower() for c in df_sh_raw.columns]
-        df_sh = df_sh_raw.rename(columns={
-            "foreigninvestmentshares":      "foreign_shares",
-            "foreigninvestmentsharesratio": "foreign_ratio",
-        })
-        df_sh = df_sh[["stock_id", "date", "foreign_shares", "foreign_ratio"]]
-        df_sh = df_sh.drop_duplicates(subset=["stock_id", "date"])
-    print(f"  外資持股：{len(df_sh)} 筆")
+    if _weekday in (1, 6):
+        companies_df = pd.read_csv(os.path.join(BASE_PATH, "companies.csv"), dtype=str)
+        companies    = companies_df["stock_id"].tolist()
+        chunks = []
+        for sid in companies:
+            try:
+                _raw = api.taiwan_stock_shareholding(stock_id=sid, start_date=end_date, end_date=end_date)
+                if not _raw.empty:
+                    chunks.append(_raw)
+            except Exception:
+                pass
+        if chunks:
+            df_sh_raw = pd.concat(chunks, ignore_index=True)
+            df_sh_raw.columns = [c.lower() for c in df_sh_raw.columns]
+            df_sh = df_sh_raw.rename(columns={
+                "foreigninvestmentshares":      "foreign_shares",
+                "foreigninvestmentsharesratio": "foreign_ratio",
+            })
+            df_sh = df_sh[["stock_id", "date", "foreign_shares", "foreign_ratio"]]
+            df_sh = df_sh.drop_duplicates(subset=["stock_id", "date"])
+        print(f"  外資持股：{len(df_sh)} 筆（週一/週六更新）")
+    else:
+        print("  外資持股：跳過（非週一/週六，沿用 shareholding_latest.csv）")
 
     # 5. 寫入 SQLite（防重複）
     conn = sqlite3.connect(DB_PATH)
