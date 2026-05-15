@@ -1919,26 +1919,44 @@ def main() -> None:
 
         if _result is not None:
             _cache = st.session_state["live_cache"]
-            _cache.pop(_live_id, None)          # refresh to front
-            _cache[_live_id] = _result
+            _cache.pop(_live_id, None)
+            _cache[_live_id] = {
+                "result": _result,
+                "name": _result.get("name", _live_id),
+                "ts": pd.Timestamp.now().strftime("%H:%M:%S")
+            }
             while len(_cache) > _MAX_CACHE:
                 _cache.pop(next(iter(_cache)))
+            st.rerun()
         else:
-            st.warning(f"查無資料：{_live_id}，請確認代號是否正確")
+            st.sidebar.error(f"查無資料：{_live_id}，請確認代號是否正確")
 
     # ── 即時查詢快取顯示 ──────────────────────────────────────────────────────
     st.subheader("🔬 全市場即時個股分析")
     if not st.session_state.get("live_cache"):
         st.caption("在左側 Sidebar 輸入股票代號或名稱查詢")
     else:
-        for _sid, _res in reversed(list(st.session_state["live_cache"].items())):
-            _dec = _res.get("decision", "N/A")
+        for _sid, _cdata in reversed(list(st.session_state["live_cache"].items())):
+            _cresult = _cdata.get("result") if isinstance(_cdata, dict) else _cdata
+            _cname = _cdata.get("name", _sid) if isinstance(_cdata, dict) else (_cresult.get("name", _sid) if _cresult else _sid)
+            _cts = _cdata.get("ts", "") if isinstance(_cdata, dict) else ""
+            _dec = _cresult.get("decision", "N/A") if _cresult else "N/A"
             _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
-            with st.expander(
-                f"{_dec_icon} {_sid} {_res.get('name', '')} — {_dec}",
-                expanded=True,
-            ):
-                render_live_result_block(_sid, _res)
+            _col1, _col2 = st.columns([9, 1])
+            with _col1:
+                with st.expander(
+                    f"{_dec_icon} {_sid} {_cname} — {_dec}　🕐 {_cts}",
+                    expanded=True,
+                ):
+                    if _cresult:
+                        render_live_result_block(_sid, _cresult)
+                    else:
+                        st.warning("無法取得資料")
+            with _col2:
+                st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+                if st.button("✕", key=f"cache_rm_{_sid}"):
+                    del st.session_state["live_cache"][_sid]
+                    st.rerun()
 
     st.divider()
 
