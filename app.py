@@ -1947,12 +1947,24 @@ def main() -> None:
             _dec = _cresult.get("decision", "N/A") if _cresult else "N/A"
             _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
             _col1, _col2, _col3 = st.columns([8, 1, 1])
+            _cm5d = float(_cresult.get("margin_change_5d") or 0) if _cresult else 0
+            _cmtag = _margin_radar_tag(_cresult) if _cresult else ""
             with _col1:
                 with st.expander(
-                    f"{_dec_icon} {_sid} {_cname} — {_dec}　🕐 {_cts}",
-                    expanded=True,
+                    f"{_dec_icon} {_sid} {_cname} — {_dec}　{_cmtag}　🕐 {_cts}",
+                    expanded=False,
                 ):
                     if _cresult:
+                        _m5d = float(_cresult.get("margin_change_5d") or 0)
+                        _mchg = float(_cresult.get("margin_change_pct") or 0)
+                        _mcon = int(_cresult.get("margin_consecutive_increase") or 0)
+                        _mcol1, _mcol2, _mcol3 = st.columns(3)
+                        with _mcol1:
+                            st.metric("融資5日增減", f"{_m5d:+,.0f} 張")
+                        with _mcol2:
+                            st.metric("融資增幅", f"{_mchg:+.1f}%")
+                        with _mcol3:
+                            st.metric("融資連增天數", f"{_mcon} 天")
                         render_live_result_block(_sid, _cresult)
                     else:
                         st.warning("無法取得資料")
