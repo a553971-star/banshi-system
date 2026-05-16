@@ -191,6 +191,132 @@ def _parse_margin(text: str, universe_set: set) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# ──────────────────────────────────────────────
+# TPEx 下載（上櫃股票補充）
+# ──────────────────────────────────────────────
+
+def _roc_date(date_iso: str) -> str:
+    """把 YYYY-MM-DD 轉成民國年格式 115/05/15"""
+    from datetime import datetime as _dt
+    dt = _dt.strptime(date_iso, "%Y-%m-%d")
+    return f"{dt.year-1911:03d}/{dt.month:02d}/{dt.day:02d}"
+
+
+def _fetch_tpex_price(date_iso: str, universe_set: set) -> pd.DataFrame:
+    """抓 TPEx 當日股價（OpenAPI JSON）"""
+    try:
+        r = requests.get(
+            "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+            timeout=15
+        )
+        try:
+            data = r.json()
+            if not isinstance(data, list):
+                print("  ⚠️ TPEx 股價回傳格式異常")
+                return pd.DataFrame()
+        except Exception:
+            print("  ⚠️ TPEx 股價 JSON 解析失敗")
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        df = df.rename(columns={
+            "SecuritiesCompanyCode": "stock_id",
+            "Open": "open", "High": "high", "Low": "low",
+            "Close": "close", "TradingShares": "volume",
+        })
+        df["stock_id"] = df["stock_id"].astype(str).str.strip().str.zfill(4)
+        df = df[df["stock_id"].isin(universe_set)]
+        df = df[["stock_id", "open", "high", "low", "close", "volume"]].copy()
+        for col in ["open", "high", "low", "close", "volume"]:
+            df[col] = pd.to_numeric(df[col].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        return df.dropna(subset=["close", "stock_id"])
+    except Exception as e:
+        print(f"  TPEx 股價抓取失敗：{e}")
+        return pd.DataFrame()
+
+
+def _fetch_tpex_institutional(date_iso: str, universe_set: set) -> pd.DataFrame:
+    """抓 TPEx 三大法人（JSON）"""
+    def to_num(v):
+        val = pd.to_numeric(str(v).replace(",", ""), errors="coerce")
+        return 0 if pd.isna(val) else val
+    try:
+        d = _roc_date(date_iso)
+        r = requests.get(
+            f"https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d={d}&s=0,asc",
+            timeout=15
+        )
+        try:
+            raw = r.json()
+            rows = raw["tables"][0]["data"]
+        except Exception:
+            print("  ⚠️ TPEx 法人 JSON 解析失敗")
+            return pd.DataFrame()
+        if not rows:
+            print("  ⚠️ TPEx 法人資料為空")
+            return pd.DataFrame()
+        records = []
+        for row in rows:
+            if len(row) < 23:
+                continue
+            stock_id = str(row[0]).strip().zfill(4)
+            if stock_id not in universe_set:
+                continue
+            records.append({
+                "stock_id":        stock_id,
+                "foreign_buy":     to_num(row[17]),
+                "foreign_sell":    to_num(row[18]),
+                "foreign_net":     to_num(row[19]),
+                "investment_buy":  to_num(row[5]),
+                "investment_sell": to_num(row[6]),
+                "investment_net":  to_num(row[7]),
+                "dealer_net":      to_num(row[22]),
+            })
+        df = pd.DataFrame(records)
+        return df.dropna(subset=["stock_id"]) if not df.empty else df
+    except Exception as e:
+        print(f"  TPEx 法人抓取失敗：{e}")
+        return pd.DataFrame()
+
+
+def _fetch_tpex_margin(date_iso: str, universe_set: set) -> pd.DataFrame:
+    """抓 TPEx 融資融券（JSON）"""
+    def to_num(v):
+        val = pd.to_numeric(str(v).replace(",", ""), errors="coerce")
+        return 0 if pd.isna(val) else val
+    try:
+        d = _roc_date(date_iso)
+        r = requests.get(
+            f"https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?l=zh-tw&o=json&d={d}",
+            timeout=15
+        )
+        try:
+            raw = r.json()
+            rows = raw["tables"][0]["data"]
+        except Exception:
+            print("  ⚠️ TPEx 融資 JSON 解析失敗")
+            return pd.DataFrame()
+        if not rows:
+            print("  ⚠️ TPEx 融資資料為空")
+            return pd.DataFrame()
+        records = []
+        for row in rows:
+            if len(row) < 15:
+                continue
+            stock_id = str(row[0]).strip().zfill(4)
+            if stock_id not in universe_set:
+                continue
+            records.append({
+                "stock_id":       stock_id,
+                "margin_balance": to_num(row[6]),
+                "short_balance":  to_num(row[14]),
+            })
+        df = pd.DataFrame(records)
+        return df.dropna(subset=["stock_id"]) if not df.empty else df
+    except Exception as e:
+        print(f"  TPEx 融資抓取失敗：{e}")
+        return pd.DataFrame()
+
+
 def main():
     import pandas as pd
     end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
@@ -220,6 +346,12 @@ def main():
     if len(df_price) < expected_count * 0.5:
         print(f"  ⚠️ 股價 completeness low: {len(df_price)}/{expected_count}（含 OTC 正常偏低）")
     print(f"  股價：{len(df_price)} 筆")
+    _tpex_price = _fetch_tpex_price(end_date, universe_set)
+    if not _tpex_price.empty:
+        _existing_price = set(df_price["stock_id"]) if not df_price.empty else set()
+        _tpex_price = _tpex_price[~_tpex_price["stock_id"].isin(_existing_price)]
+        df_price = pd.concat([df_price, _tpex_price], ignore_index=True)
+    print(f"  股價（含TPEx {len(_tpex_price)} 筆）：共 {len(df_price)} 筆")
 
     # 2. 法人（TWSE）
     text = _twse_fetch(date_str, "institutional")
@@ -228,6 +360,12 @@ def main():
     if len(df_inst) < expected_count * 0.5:
         print(f"  ⚠️ 法人 completeness low: {len(df_inst)}/{expected_count}（含 OTC 正常偏低）")
     print(f"  法人：{len(df_inst)} 筆")
+    _tpex_inst = _fetch_tpex_institutional(end_date, universe_set)
+    if not _tpex_inst.empty:
+        _existing_inst = set(df_inst["stock_id"]) if not df_inst.empty else set()
+        _tpex_inst = _tpex_inst[~_tpex_inst["stock_id"].isin(_existing_inst)]
+        df_inst = pd.concat([df_inst, _tpex_inst], ignore_index=True)
+    print(f"  法人（含TPEx {len(_tpex_inst)} 筆）：共 {len(df_inst)} 筆")
 
     # 3. 融資（TWSE）
     text = _twse_fetch(date_str, "margin")
@@ -236,6 +374,12 @@ def main():
     if len(df_margin) < expected_count * 0.5:
         print(f"  ⚠️ 融資 completeness low: {len(df_margin)}/{expected_count}（含 OTC 正常偏低）")
     print(f"  融資：{len(df_margin)} 筆")
+    _tpex_margin = _fetch_tpex_margin(end_date, universe_set)
+    if not _tpex_margin.empty:
+        _existing_margin = set(df_margin["stock_id"]) if not df_margin.empty else set()
+        _tpex_margin = _tpex_margin[~_tpex_margin["stock_id"].isin(_existing_margin)]
+        df_margin = pd.concat([df_margin, _tpex_margin], ignore_index=True)
+    print(f"  融資（含TPEx {len(_tpex_margin)} 筆）：共 {len(df_margin)} 筆")
 
     # 4. 外資持股（FinMind，週一/週六才跑）
     from FinMind.data import DataLoader
