@@ -14,6 +14,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from pinned_store import load_pinned, save_pinned
 from engine.ui.ui_b_validity import rebuild_b_validity
+from engine.signals.battle_room import get_battle_room
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
@@ -1426,6 +1427,8 @@ def render_war_room_body(
         war_df["B_quality"] = pd.to_numeric(war_df.get("B_quality", 0), errors="coerce").fillna(0)
         war_df["volume_ratio"] = pd.to_numeric(war_df.get("volume_ratio", 0), errors="coerce").fillna(0)
 
+        # DEPRECATED: 已移至 engine/signals/battle_room.py
+        # 所有新呼叫必須改走 engine
         def _classify_war(row):
             B    = int(row["B_days"])
             A    = int(row["A_days"])
@@ -1460,7 +1463,7 @@ def render_war_room_body(
                 return "💰💰 融資升溫"
             return "💰 融資微升"
 
-        war_df["war_class"] = war_df.apply(_classify_war, axis=1)
+        war_df["war_class"] = war_df.apply(get_battle_room, axis=1)
         _attack  = war_df[war_df["war_class"] == "ATTACK"].copy()
         _launch  = war_df[war_df["war_class"] == "LAUNCH"].copy()
         _prepare = war_df[war_df["war_class"] == "PREPARE"].copy()
