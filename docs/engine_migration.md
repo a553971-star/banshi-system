@@ -5,7 +5,7 @@
 |------|----------|------|
 | engine/ui/ui_b_validity.py | rebuild_b_validity | app.py:1179 |
 
-## Deprecated（待移除）
+## Deprecated
 | 函式 | 位置 | 移至 |
 |------|------|------|
 | calc_b_validity_from_row | app.py | engine/ui/ui_b_validity.py |
