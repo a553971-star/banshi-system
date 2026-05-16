@@ -58,6 +58,13 @@ except Exception:
 
 df["theme"] = df["theme"].fillna("").astype(str)
 
+# AI 概念股清單
+_ai_csv = os.path.join(BASE_PATH, "ai_supply_chain.csv")
+if os.path.exists(_ai_csv):
+    ai_ids = set(pd.read_csv(_ai_csv, dtype=str).iloc[:, 0].astype(str).str.strip())
+else:
+    ai_ids = set()
+
 
 # ── 計算 close（用 vwap 代替）和 PE ──────────────────────────────────────────
 # latest_decisions.csv 沒有 close 欄，用 vwap 作為當日價格代理
@@ -102,6 +109,7 @@ if "volume_ratio" in df.columns:
 
 
 # ── 低本益比篩選 ─────────────────────────────────────────────────────────────
+merged_df = df.copy()  # 保留完整集合供 AI 中段篩選
 filtered_df = df[df["PE"].notna() & (df["PE"] > 0) & (df["PE"] < 14)].copy()
 
 
@@ -121,6 +129,24 @@ filtered_df["conviction"] = filtered_df.apply(_conviction, axis=1)
 _validity_order = {"TRUE_B": 0, "UNCERTAIN": 1, "FAKE_B": 2}
 filtered_df["_v_order"] = filtered_df["B_validity"].map(_validity_order).fillna(9)
 filtered_df = filtered_df.sort_values(["PE", "_v_order"]).reset_index(drop=True)
+
+# ── 分離 AI 股和一般股 ────────────────────────────────────────────────────────
+ai_filtered      = filtered_df[filtered_df["stock_id"].isin(ai_ids)].copy()
+general_filtered = filtered_df[~filtered_df["stock_id"].isin(ai_ids)].copy()
+
+# AI 中段（PE 15~22），從完整資料集取
+if "PE" in merged_df.columns:
+    ai_mid_df = merged_df[
+        merged_df["stock_id"].isin(ai_ids) &
+        merged_df["PE"].notna() &
+        (merged_df["PE"] >= 15) &
+        (merged_df["PE"] <= 22)
+    ].copy()
+    ai_mid_df["conviction"] = ai_mid_df.apply(_conviction, axis=1)
+    ai_mid_df["_v_order"]   = ai_mid_df["B_validity"].map(_validity_order).fillna(9)
+    ai_mid_df = ai_mid_df.sort_values(["PE", "_v_order"]).reset_index(drop=True)
+else:
+    ai_mid_df = pd.DataFrame()
 
 
 # ── PE 顯示格式 ───────────────────────────────────────────────────────────────
@@ -147,12 +173,6 @@ def _fmt_upside(v):
 
 
 # ── 顯示 ─────────────────────────────────────────────────────────────────────
-st.metric("符合條件股票數", len(filtered_df))
-
-if filtered_df.empty:
-    st.info("目前無符合條件的股票（PE < 14、有 EPS、非金融保險）")
-    st.stop()
-
 display_cols = {
     "conviction":          "亮點",
     "stock_id":            "代號",
@@ -170,22 +190,50 @@ display_cols = {
     "cost_level":          "成本位",
 }
 
-# Build display dataframe
-out = pd.DataFrame()
-for col, label in display_cols.items():
-    if col == "PE":
-        out[label] = filtered_df["PE"].apply(_fmt_pe)
-    elif col == "EPS_TTM":
-        out[label] = filtered_df["EPS_TTM"].apply(_fmt_eps)
-    elif col == "upside_room":
-        out[label] = filtered_df["upside_room"].apply(_fmt_upside)
-    elif col == "close":
-        out[label] = filtered_df["close"].apply(
-            lambda v: f"{v:.1f}" if pd.notna(v) else "N/A"
-        )
-    elif col in filtered_df.columns:
-        out[label] = filtered_df[col].fillna("").astype(str)
-    else:
-        out[label] = ""
+def _build_out(src_df: pd.DataFrame) -> pd.DataFrame:
+    out = pd.DataFrame()
+    for col, label in display_cols.items():
+        if col == "PE":
+            out[label] = src_df["PE"].apply(_fmt_pe)
+        elif col == "EPS_TTM":
+            out[label] = src_df["EPS_TTM"].apply(_fmt_eps)
+        elif col == "upside_room":
+            out[label] = src_df["upside_room"].apply(_fmt_upside)
+        elif col == "close":
+            out[label] = src_df["close"].apply(
+                lambda v: f"{v:.1f}" if pd.notna(v) else "N/A"
+            )
+        elif col in src_df.columns:
+            out[label] = src_df[col].fillna("").astype(str)
+        else:
+            out[label] = ""
+    return out
 
-st.dataframe(out, use_container_width=True, hide_index=True)
+
+# ── 一般股區塊 ────────────────────────────────────────────────────────────────
+st.subheader("📊 一般股 低本益比（PE < 14）")
+st.metric("符合條件股票數", len(general_filtered))
+if general_filtered.empty:
+    st.info("目前無符合條件的一般股（PE < 14）")
+else:
+    st.dataframe(_build_out(general_filtered), use_container_width=True, hide_index=True)
+
+st.divider()
+
+# ── AI 概念股區塊 ─────────────────────────────────────────────────────────────
+st.subheader("🤖 AI 概念股 本益比觀察")
+st.caption("AI 股估值普遍偏高，分兩段觀察。")
+
+st.markdown("#### 🟢 超低估（PE < 14）")
+st.metric("符合條件", len(ai_filtered))
+if ai_filtered.empty:
+    st.info("目前無 AI 概念股 PE < 14")
+else:
+    st.dataframe(_build_out(ai_filtered), use_container_width=True, hide_index=True)
+
+st.markdown("#### 🟡 合理低估（PE 15~22）")
+if not ai_mid_df.empty:
+    st.metric("符合條件", len(ai_mid_df))
+    st.dataframe(_build_out(ai_mid_df), use_container_width=True, hide_index=True)
+else:
+    st.info("目前無 AI 概念股 PE 15~22")
