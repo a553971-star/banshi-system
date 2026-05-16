@@ -1748,13 +1748,16 @@ def render_war_room_body(
         st.info("今日沒有符合條件的進場機會")
     st.dataframe(style_decision_table(build_display_table(filtered_action_df)), use_container_width=True)
     if not filtered_action_df.empty:
-        action_ids = [str(r.get("stock_id", "")) for _, r in filtered_action_df.iterrows() if r.get("stock_id")]
-        track_cols = st.columns(min(len(action_ids), 8))
-        for i, sid in enumerate(action_ids):
+        action_rows = [(str(r.get("stock_id", "")), r) for _, r in filtered_action_df.iterrows() if r.get("stock_id")]
+        track_cols = st.columns(min(len(action_rows), 8))
+        for i, (sid, _arow) in enumerate(action_rows):
             with track_cols[i % 8]:
                 if st.button(f"📌 {sid}", key=f"{p}track_action_{sid}", help="加入自訂追蹤清單"):
                     add_to_custom_watchlist(sid)
                     st.toast(f"已加入追蹤：{sid}")
+                _vtag_ac = _volume_spike_tag(_arow)
+                if _vtag_ac:
+                    st.caption(_vtag_ac)
 
     # ── 觀察名單 ──────────────────────────────────────────────────────────
     st.subheader("觀察名單（Watchlist）")
@@ -1797,14 +1800,15 @@ def render_war_room_body(
         wl_live_key = f"{p}wl_live_show_{stock_id}"
         _m5d_wl = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
         _margin_badge_wl = "💰 融資入場" if (pd.notna(_m5d_wl) and _m5d_wl > 0) else ""
+        _vtag_wl = _volume_spike_tag(row)
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
                 chg_label, chg_detail = state_changes[stock_id]
                 st.caption(f"{chg_label}｜{chg_detail}")
-            if _margin_badge_wl:
-                st.caption(_margin_badge_wl)
+            if _margin_badge_wl or _vtag_wl:
+                st.caption(f"{_margin_badge_wl}　{_vtag_wl}".strip())
         with col2:
             pin_label = "★" if is_pinned else "⭐"
             if st.button(pin_label, key=f"{p}pin_{stock_id}"):
@@ -1869,14 +1873,15 @@ def render_war_room_body(
         cd_live_key = f"{p}cd_live_show_{stock_id}"
         _m5d_cd = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
         _margin_badge_cd = "💰 融資入場" if (pd.notna(_m5d_cd) and _m5d_cd > 0) else ""
+        _vtag_cd = _volume_spike_tag(row)
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
             if stock_id in state_changes:
                 chg_label, chg_detail = state_changes[stock_id]
                 st.caption(f"{chg_label}｜{chg_detail}")
-            if _margin_badge_cd:
-                st.caption(_margin_badge_cd)
+            if _margin_badge_cd or _vtag_cd:
+                st.caption(f"{_margin_badge_cd}　{_vtag_cd}".strip())
         with col2:
             pin_label = "★" if is_pinned else "⭐"
             if st.button(pin_label, key=f"{p}pin_cd_{stock_id}"):
