@@ -173,20 +173,25 @@ def download_margin(date_str: str) -> Optional[pd.DataFrame]:
         f"https://www.twse.com.tw/exchangeReport/MI_MARGN"
         f"?response=csv&date={date_str}&selectType=ALL"
     )
-    df = _fetch_csv(url, date_str, "股票代號")
+    # 實際 header 欄位名稱是「代號」，不是「股票代號」
+    df = _fetch_csv(url, date_str, "代號")
     if df is None:
         return None
 
-    required = {"股票代號", "融資餘額", "融券餘額"}
-    if not required.issubset(df.columns):
-        missing = required - set(df.columns)
-        print(f"  [WARN] margin {date_str} 缺欄位：{missing}")
+    # 融資/融券各有「今日餘額」，用 iloc 按位置取，避免重名衝突
+    # 欄位結構：col0=代號, col5=融資今日餘額, col11=融券今日餘額
+    if df.shape[1] < 12:
+        print(f"  [WARN] margin {date_str} 欄位數不足（{df.shape[1]}），跳過")
         return None
 
     out = pd.DataFrame()
-    out["stock_id"]       = df["股票代號"].astype(str).str.strip()
-    out["margin_balance"] = _clean_numeric(df["融資餘額"])
-    out["short_balance"]  = _clean_numeric(df["融券餘額"])
+    # ="XXXX" 格式（Excel 防科學記號）→ 清理成純數字字串
+    out["stock_id"]       = (df.iloc[:, 0].astype(str)
+                               .str.replace('="', "", regex=False)
+                               .str.replace('"', "", regex=False)
+                               .str.strip())
+    out["margin_balance"] = _clean_numeric(df.iloc[:, 5])
+    out["short_balance"]  = _clean_numeric(df.iloc[:, 11])
 
     out = out[out["stock_id"].str.match(r"^\d{4,6}$", na=False)]
     out = out.dropna(subset=["margin_balance", "short_balance"])
