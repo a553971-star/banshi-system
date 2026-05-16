@@ -7,6 +7,8 @@ import os
 import sys
 import sqlite3
 from datetime import datetime, timedelta, date as _date
+import requests
+from io import StringIO
 
 import pandas as pd
 
@@ -74,6 +76,121 @@ def get_db_last_date(db_path: str) -> str:
     return (pd.Timestamp.today() - pd.tseries.offsets.BDay(60)).strftime("%Y-%m-%d")
 
 
+# ──────────────────────────────────────────────
+# TWSE 下載 / 解析（免費，無 API 額度）
+# ──────────────────────────────────────────────
+
+def _twse_fetch(date_str: str, dataset: str) -> str:
+    urls = {
+        "price":         f"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date={date_str}&type=ALLBUT0999",
+        "institutional": f"https://www.twse.com.tw/fund/T86?response=csv&date={date_str}&selectType=ALL",
+        "margin":        f"https://www.twse.com.tw/exchangeReport/MI_MARGN?response=csv&date={date_str}&selectType=ALL",
+    }
+    try:
+        r = requests.get(urls[dataset], timeout=20)
+        r.encoding = "big5"
+        text = r.text.strip()
+        if ("<html" in text.lower() or len(text) < 800 or "無資料" in text
+                or "很抱歉" in text or "查詢過於頻繁" in text):
+            return ""
+        if dataset == "price" and "證券代號" not in text:
+            return ""
+        if dataset == "institutional" and "證券代號" not in text:
+            return ""
+        if dataset == "margin" and "代號" not in text:
+            return ""
+        return text
+    except Exception as e:
+        print(f"  TWSE {dataset} 下載失敗：{e}")
+        return ""
+
+
+def _parse_price(text: str, universe_set: set) -> pd.DataFrame:
+    try:
+        lines = text.split("\n")
+        start_idx = next((i for i, l in enumerate(lines) if "證券代號" in l), None)
+        if start_idx is None:
+            return pd.DataFrame()
+        df = pd.read_csv(StringIO("\n".join(lines[start_idx:])), skiprows=0)
+        volume_col = next((c for c in df.columns if "成交" in c and ("股數" in c or "成交量" in c)), None)
+        if volume_col is None:
+            return pd.DataFrame()
+        df = df.rename(columns={"證券代號": "stock_id", "開盤價": "open", "最高價": "high",
+                                 "最低價": "low", "收盤價": "close", volume_col: "volume"})
+        df["stock_id"] = (df["stock_id"].astype(str)
+                          .str.replace('="', "", regex=False).str.replace('"', "", regex=False)
+                          .str.strip().str.zfill(4))
+        df = df[df["stock_id"].isin(universe_set)]
+        df = df[["stock_id", "open", "high", "low", "close", "volume"]].copy()
+        for col in ["open", "high", "low", "close", "volume"]:
+            df[col] = pd.to_numeric(df[col].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        return df.dropna(subset=["close"])
+    except Exception as e:
+        print(f"  解析股價失敗：{e}")
+        return pd.DataFrame()
+
+
+def _parse_institutional(text: str, universe_set: set) -> pd.DataFrame:
+    try:
+        df = pd.read_csv(StringIO(text), skiprows=1)
+        col_map = {
+            "證券代號":                          "stock_id",
+            "外陸資買進股數(不含外資自營商)":    "foreign_buy",
+            "外陸資賣出股數(不含外資自營商)":    "foreign_sell",
+            "投信買進股數":                       "investment_buy",
+            "投信賣出股數":                       "investment_sell",
+            "自營商買賣超股數":                   "dealer_net",
+        }
+        df = df.rename(columns=col_map)
+        if "stock_id" not in df.columns:
+            return pd.DataFrame()
+        df["stock_id"] = (df["stock_id"].astype(str)
+                          .str.replace('="', "", regex=False).str.replace('"', "", regex=False)
+                          .str.strip().str.zfill(4))
+        df = df[df["stock_id"].isin(universe_set)]
+        for col in ["foreign_buy", "foreign_sell", "investment_buy", "investment_sell", "dealer_net"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col].astype(str).str.replace(",", "", regex=False), errors="coerce").fillna(0)
+        df["foreign_net"]    = df.get("foreign_buy", 0)    - df.get("foreign_sell", 0)
+        df["investment_net"] = df.get("investment_buy", 0) - df.get("investment_sell", 0)
+        return df[["stock_id", "foreign_buy", "foreign_sell", "foreign_net",
+                   "investment_buy", "investment_sell", "investment_net", "dealer_net"]].copy()
+    except Exception as e:
+        print(f"  解析法人失敗：{e}")
+        return pd.DataFrame()
+
+
+def _parse_margin(text: str, universe_set: set) -> pd.DataFrame:
+    try:
+        lines = text.split("\n")
+        start_idx = next((i for i, l in enumerate(lines) if "代號" in l), None)
+        if start_idx is None:
+            return pd.DataFrame()
+        df = pd.read_csv(StringIO("\n".join(lines[start_idx:])), skiprows=0, header=0)
+        df.iloc[:, 0] = (df.iloc[:, 0].astype(str)
+                         .str.replace('="', "", regex=False).str.replace('"', "", regex=False)
+                         .str.strip().str.zfill(4))
+        df = df[df.iloc[:, 0].isin(universe_set)]
+        if df.empty:
+            return pd.DataFrame()
+        margin_col = next((c for c in df.columns if "融資" in str(c) and "餘額" in str(c)), None)
+        short_col  = next((c for c in df.columns if "融券" in str(c) and "餘額" in str(c)), None)
+        result = pd.DataFrame()
+        result["stock_id"] = df.iloc[:, 0].values
+        if margin_col:
+            result["margin_balance"] = pd.to_numeric(df[margin_col].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        else:
+            result["margin_balance"] = pd.to_numeric(df.iloc[:, 5].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        if short_col:
+            result["short_balance"] = pd.to_numeric(df[short_col].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        else:
+            result["short_balance"] = pd.to_numeric(df.iloc[:, 11].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        return result.dropna(subset=["stock_id"])
+    except Exception as e:
+        print(f"  解析融資失敗：{e}")
+        return pd.DataFrame()
+
+
 def main():
     import pandas as pd
     end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
@@ -91,81 +208,41 @@ def main():
     universe = universe_df["stock_id"].tolist()
     print(f"Universe：{len(universe)} 支")
 
+    # universe_set（型別安全，補 zfill 對齊 TWSE 格式）
+    universe_set = {str(x).zfill(4) for x in universe}
+    expected_count = len(universe_set)
+    date_str = end_date.replace("-", "")
+
+    # 1. 股價（TWSE，免費無額度）
+    text = _twse_fetch(date_str, "price")
+    df_price = _parse_price(text, universe_set)
+    df_price = df_price.drop_duplicates(subset=["stock_id"])
+    if len(df_price) < expected_count * 0.5:
+        print(f"  ⚠️ 股價 completeness low: {len(df_price)}/{expected_count}（含 OTC 正常偏低）")
+    print(f"  股價：{len(df_price)} 筆")
+
+    # 2. 法人（TWSE）
+    text = _twse_fetch(date_str, "institutional")
+    df_inst = _parse_institutional(text, universe_set)
+    df_inst = df_inst.drop_duplicates(subset=["stock_id"])
+    if len(df_inst) < expected_count * 0.5:
+        print(f"  ⚠️ 法人 completeness low: {len(df_inst)}/{expected_count}（含 OTC 正常偏低）")
+    print(f"  法人：{len(df_inst)} 筆")
+
+    # 3. 融資（TWSE）
+    text = _twse_fetch(date_str, "margin")
+    df_margin = _parse_margin(text, universe_set)
+    df_margin = df_margin.drop_duplicates(subset=["stock_id"])
+    if len(df_margin) < expected_count * 0.5:
+        print(f"  ⚠️ 融資 completeness low: {len(df_margin)}/{expected_count}（含 OTC 正常偏低）")
+    print(f"  融資：{len(df_margin)} 筆")
+
+    # 4. 外資持股（FinMind，週一/週六才跑）
     from FinMind.data import DataLoader
     api = DataLoader()
     if TOKEN:
         api.login_by_token(api_token=TOKEN)
 
-    # 1. 股價
-    try:
-        df_price_raw = api.taiwan_stock_daily(start_date=start_date, end_date=end_date)
-        if not df_price_raw.empty:
-            df_price = df_price_raw[df_price_raw["stock_id"].isin(universe)].copy()
-            df_price = df_price.rename(columns={"max": "high", "min": "low", "Trading_Volume": "volume"})
-            df_price = df_price[["stock_id", "date", "open", "high", "low", "close", "volume"]]
-            df_price = df_price.drop_duplicates(subset=["stock_id", "date"])
-        else:
-            df_price = pd.DataFrame()
-    except Exception as e:
-        print(f"  股價抓取失敗：{e}")
-        df_price = pd.DataFrame()
-    print(f"  股價：{len(df_price)} 筆")
-
-    # 2. 法人（全市場）
-    df_inst = pd.DataFrame()
-    try:
-        df_inst_raw = api.taiwan_stock_institutional_investors(start_date=start_date, end_date=end_date)
-        if not df_inst_raw.empty:
-            df_inst_raw["buy"]  = pd.to_numeric(df_inst_raw["buy"],  errors="coerce").fillna(0)
-            df_inst_raw["sell"] = pd.to_numeric(df_inst_raw["sell"], errors="coerce").fillna(0)
-            df_inst_raw["net"]  = df_inst_raw["buy"] - df_inst_raw["sell"]
-
-            pivot = df_inst_raw.pivot_table(
-                index=["stock_id", "date"],
-                columns="name",
-                values=["buy", "sell", "net"],
-                aggfunc="sum"
-            ).reset_index().fillna(0)
-
-            pivot.columns = [
-                "_".join(c).strip("_") if isinstance(c, tuple) else c
-                for c in pivot.columns
-            ]
-
-            df_inst = pd.DataFrame({
-                "stock_id":       pivot["stock_id"],
-                "date":           pivot["date"],
-                "foreign_buy":    pivot.get("buy_Foreign_Investor",   0),
-                "foreign_sell":   pivot.get("sell_Foreign_Investor",  0),
-                "foreign_net":    pivot.get("net_Foreign_Investor",   0),
-                "investment_buy":  pivot.get("buy_Investment_Trust",  0),
-                "investment_sell": pivot.get("sell_Investment_Trust", 0),
-                "investment_net":  pivot.get("net_Investment_Trust",  0),
-                "dealer_net":     pivot.get("net_Dealer_self",        0),
-            })
-            df_inst = df_inst[df_inst["stock_id"].isin(universe)]
-            df_inst = df_inst.drop_duplicates(subset=["stock_id", "date"])
-    except Exception as e:
-        print(f"  法人抓取失敗：{e}")
-    print(f"  法人：{len(df_inst)} 筆")
-
-    # 3. 融資
-    df_margin = pd.DataFrame()
-    try:
-        df_margin_raw = api.taiwan_stock_margin_purchase_short_sale(start_date=start_date, end_date=end_date)
-        if not df_margin_raw.empty:
-            df_margin = df_margin_raw[df_margin_raw["stock_id"].isin(universe)].copy()
-            df_margin = df_margin.rename(columns={
-                "MarginPurchaseTodayBalance": "margin_balance",
-                "ShortSaleTodayBalance":      "short_balance",
-            })
-            df_margin = df_margin[["stock_id", "date", "margin_balance", "short_balance"]]
-            df_margin = df_margin.drop_duplicates(subset=["stock_id", "date"])
-    except Exception as e:
-        print(f"  融資抓取失敗：{e}")
-    print(f"  融資：{len(df_margin)} 筆")
-
-    # 4. 外資持股（集保）— 週一或週六才抓（集保資料週更新，每天抓浪費 API 額度）
     import datetime as _dt
     _weekday = _dt.date.today().isoweekday()  # 1=Monday, 6=Saturday
     df_sh = pd.DataFrame()
