@@ -30,6 +30,8 @@ def _margin_radar_tag(row, _m5d_baseline=None):
     return "💰 融資微升"
 
 
+# DEPRECATED: 簡化版，門檻與邏輯與 engine 版不一致，已廢棄
+# 請改用 engine/signals/volume_spike.py get_volume_spike_tag
 def _volume_spike_tag(row):
     if row is None:
         return ""

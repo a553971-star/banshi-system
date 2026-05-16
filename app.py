@@ -15,6 +15,12 @@ import streamlit.components.v1 as components
 from pinned_store import load_pinned, save_pinned
 from engine.ui.ui_b_validity import rebuild_b_validity
 from engine.signals.battle_room import get_battle_room
+from engine.signals.volume_spike import (
+    get_volume_spike_tag,
+    VOLUME_SIGNAL_LABELS,
+    VOLUME_ATTACK,
+    VOLUME_DISTRIBUTION,
+)
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
@@ -400,6 +406,8 @@ def safe_str(x):
 
 # ── 爆量燈號 ─────────────────────────────────────────────────────────────────
 
+# DEPRECATED: 已移至 engine/signals/volume_spike.py
+# 所有新呼叫必須改走 engine（get_volume_spike_tag + VOLUME_SIGNAL_LABELS）
 def _volume_spike_tag(row):
     """
     爆量燈號（資金異動）
@@ -1375,7 +1383,7 @@ def render_war_room_body(
                 cost  = row.get("cost_level", "")
                 _bc1, _bc2 = st.columns([10, 1])
                 with _bc1:
-                    _vtag = _volume_spike_tag(row)
+                    _vtag = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(row), "")
                     st.markdown(f"**🟢 {stock} {name}｜分數 {score}**　{_vtag}")
                     st.caption(f"B={B}｜Flow={flow}｜Cost={cost}")
                 with _bc2:
@@ -1490,7 +1498,7 @@ def render_war_room_body(
                 flow = str(r.get("flow_status", "-") or "-")
                 tag  = _get_status_tag(A, C)
                 mtag = _margin_radar_tag(r)
-                vtag = _volume_spike_tag(r)
+                vtag = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(r), "")
                 wcol1, wcol2 = st.columns([9, 1])
                 with wcol1:
                     st.markdown(f"**#{rank} {sid} {name}**　B={B}｜{_get_a_icon(A)}A={A}｜{_get_c_icon(C)}C={C}｜Flow={flow}　{tag}　{mtag}　{vtag}")
@@ -1761,7 +1769,7 @@ def render_war_room_body(
                 if st.button(f"📌 {sid}", key=f"{p}track_action_{sid}", help="加入自訂追蹤清單"):
                     add_to_custom_watchlist(sid)
                     st.toast(f"已加入追蹤：{sid}")
-                _vtag_ac = _volume_spike_tag(_arow)
+                _vtag_ac = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(_arow), "")
                 if _vtag_ac:
                     st.caption(_vtag_ac)
 
@@ -1806,7 +1814,7 @@ def render_war_room_body(
         wl_live_key = f"{p}wl_live_show_{stock_id}"
         _m5d_wl = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
         _margin_badge_wl = "💰 融資入場" if (pd.notna(_m5d_wl) and _m5d_wl > 0) else ""
-        _vtag_wl = _volume_spike_tag(row)
+        _vtag_wl = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(row), "")
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
@@ -1879,7 +1887,7 @@ def render_war_room_body(
         cd_live_key = f"{p}cd_live_show_{stock_id}"
         _m5d_cd = pd.to_numeric(row.get("margin_change_5d", None), errors="coerce")
         _margin_badge_cd = "💰 融資入場" if (pd.notna(_m5d_cd) and _m5d_cd > 0) else ""
-        _vtag_cd = _volume_spike_tag(row)
+        _vtag_cd = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(row), "")
         col1, col2, col3, col4, col5 = st.columns([5, 1, 2, 1, 1])
         with col1:
             _comp.html(_row_html(d, str(row.get("signal_type", ""))), height=80)
