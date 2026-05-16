@@ -13,6 +13,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from pinned_store import load_pinned, save_pinned
+from engine.ui.ui_b_validity import rebuild_b_validity
 
 from bible_loader import get_daily_verse
 from live_analyzer import process_stock_live
@@ -1177,6 +1178,8 @@ def calc_b_phase_from_row(row):
         return "PREPARE"
 
 
+# DEPRECATED: 已移至 engine/ui/ui_b_validity.py
+# 所有新呼叫必須改走 engine
 def calc_b_validity_from_row(row):
     try:
         b_quality = int(float(row.get("B_quality") or 0))
@@ -1527,7 +1530,7 @@ def render_war_room_body(
                 if col in tb_df.columns:
                     tb_df[col] = pd.to_numeric(tb_df[col], errors="coerce").fillna(0)
             tb_df["_b_phase"]    = tb_df.apply(calc_b_phase_from_row, axis=1)
-            tb_df["_b_validity"] = tb_df.apply(calc_b_validity_from_row, axis=1)
+            tb_df["_b_validity"] = tb_df.apply(rebuild_b_validity, axis=1)
             pool = tb_df[
                 (tb_df["C_days"] >= 3) &
                 (tb_df["B_quality"] >= 75) &
