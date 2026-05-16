@@ -10,6 +10,7 @@ import streamlit as st
 
 from utils.config import load_params
 from pinned_store import load_pinned, save_pinned
+from engine.signals.volume_spike import get_volume_spike_tag, VOLUME_SIGNAL_LABELS
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _MAX_CACHE    = 10
@@ -160,7 +161,7 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
         _dec     = _cresult.get("decision", "N/A") if _cresult else "N/A"
         _dec_icon = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(_dec, "⚪")
         _cmtag   = _margin_radar_tag(_cresult) if _cresult else ""
-        _cvtag   = _volume_spike_tag(_cresult) if _cresult else ""
+        _cvtag   = VOLUME_SIGNAL_LABELS.get(get_volume_spike_tag(_cresult), "") if _cresult else ""
 
         _col1, _col2, _col3 = st.columns([8, 1, 1])
         with _col1:

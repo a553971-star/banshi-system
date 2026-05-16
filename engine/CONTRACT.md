@@ -27,6 +27,12 @@
 - UI 層負責翻譯成顯示文字或 emoji
 - ⚠️ 現階段暫時保留中文回傳值，Phase 2 統一處理
 
+## Signal Layer 規範
+- engine signal 必須 machine-readable
+- engine 不回傳 UI 顯示字串、emoji、或中文
+- presentation layer 負責翻譯 signal 為顯示文字
+- signal constant 化：使用模組內定義的常數，不硬寫字串
+
 ## 違反 Contract 的警示
 以下情況表示 engine 邊界被污染：
 - engine/ 出現 import streamlit
