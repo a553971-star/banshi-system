@@ -25,7 +25,7 @@ from engine.signals.volume_spike import (
 )
 
 from bible_loader import get_daily_verse
-from live_analyzer import process_stock_live
+from main import process_stock_live
 from main import load_params
 from ui.sidebar import render_sidebar_query
 

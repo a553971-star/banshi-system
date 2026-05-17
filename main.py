@@ -153,6 +153,32 @@ def load_params(path: str = _DEFAULT_PARAMS) -> dict:
         return defaults
 
 
+def process_stock_live(
+    stock_id: str,
+    params: dict,
+    print_snapshot: bool = False,
+):
+    """
+    即時單股分析入口（Live Analysis Entry Point）。
+
+    薄 wrapper，填入 live 查詢所需的預設參數後呼叫 _process_stock。
+
+    NOTE:
+    Live analysis and batch analysis now share the same
+    underlying _process_stock engine.
+    live_analyzer.py 已廢棄，即時查詢統一走此入口。
+
+    來源：原 live_analyzer.py process_stock_live（已刪除）
+    """
+    return _process_stock(
+        stock_id=stock_id,
+        date=datetime.today().strftime("%Y-%m-%d"),
+        params=params,
+        prev_states={},
+        print_snapshot=print_snapshot,
+    )
+
+
 def _process_stock(
     stock_id: str,
     date: str,

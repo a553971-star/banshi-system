@@ -7,7 +7,7 @@ BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_PATH)
 
 from app import explain_metrics
-from live_analyzer import process_stock_live
+from main import process_stock_live
 from pinned_store import load_pinned, save_pinned
 from notes_store import load_notes, save_notes
 

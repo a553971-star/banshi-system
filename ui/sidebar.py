@@ -121,7 +121,7 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
     # ── Trigger query ─────────────────────────────────────────────────────────
     _trigger = st.session_state.pop(trigger_key, None)
     if _trigger:
-        from live_analyzer import process_stock_live
+        from main import process_stock_live
         _live_id = _resolve_stock_id(_trigger)
 
         with st.spinner(f"正在分析 {_live_id}..."):
