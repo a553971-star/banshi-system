@@ -54,7 +54,7 @@ with st.expander("➕ 新增持倉", expanded=not positions):
         new_price  = st.number_input("平均成本", min_value=0.0, step=0.5, format="%.2f")
     with col2:
         new_date   = st.date_input("買入日期", value=datetime.date.today())
-        new_shares = st.number_input("持股張數", min_value=0.1, step=0.1, format="%.1f")
+        new_shares = st.number_input("持股張數（張，零股請填小數）", min_value=0.001, step=0.001, format="%.3f")
     with col3:
         new_note = st.text_input("備註（選填）")
         st.write("")
