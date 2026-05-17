@@ -51,7 +51,7 @@ with st.expander("➕ 新增持倉", expanded=not positions):
     col1, col2, col3 = st.columns(3)
     with col1:
         new_id     = st.text_input("股票代號", placeholder="例：3661")
-        new_price  = st.number_input("買入價", min_value=0.0, step=0.5, format="%.2f")
+        new_price  = st.number_input("平均成本", min_value=0.0, step=0.5, format="%.2f")
     with col2:
         new_date   = st.date_input("買入日期", value=datetime.date.today())
         new_shares = st.number_input("持股張數", min_value=0.1, step=0.1, format="%.1f")
@@ -206,7 +206,7 @@ for item in analyzed:
         f"健康分 {health['score']}　{_exit_label.get(alert['level'], alert['level'])}"
     ):
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("買入價", f"{pos.get('entry_price', '—')}")
+        c1.metric("平均成本", f"{pos.get('entry_price', '—')}")
         c2.metric("現價", f"{item['close'] or '—'}")
         c3.metric("損益%", f"{pnl:+.1f}%" if pnl is not None else "—")
         c4.metric("持股張數", f"{pos.get('shares', '—')}")
