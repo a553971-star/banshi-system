@@ -54,5 +54,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.25,
     "note": ""
+  },
+  {
+    "stock_id": "力成",
+    "name": "力成",
+    "entry_price": 223.41,
+    "entry_date": "2026-05-06",
+    "shares": 0.091,
+    "note": ""
   }
 ]
