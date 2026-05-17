@@ -210,6 +210,27 @@ def _build_out(src_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+# ── 個股查詢 ─────────────────────────────────────────────────────────────────
+st.divider()
+st.subheader("🔍 個股查詢")
+query_id = st.text_input("輸入股票代號", placeholder="例：2330", max_chars=6).strip()
+if query_id:
+    row = df[df["stock_id"] == query_id]
+    if row.empty:
+        st.warning(f"找不到 {query_id}，請確認代號或等 Actions 更新")
+    else:
+        r = row.iloc[0]
+        pe = _calc_pe(r)
+        conviction = _conviction(r)
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("股票", f"{r['stock_id']} {r.get('name', '')}")
+        col2.metric("EPS(TTM)", _fmt_eps(r.get("EPS_TTM")))
+        col3.metric("本益比 PE", _fmt_pe(pe))
+        col4.metric("評級", conviction)
+        st.caption(f"Flow: {r.get('flow_status', '-')}　Cost: {r.get('cost_level', '-')}　B_quality: {r.get('B_quality', '-')}　決策: {r.get('decision', '-')}")
+st.divider()
+
+
 # ── 一般股區塊 ────────────────────────────────────────────────────────────────
 st.subheader("📊 一般股 低本益比（PE < 14）")
 st.metric("符合條件股票數", len(general_filtered))
