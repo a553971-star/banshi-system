@@ -16,6 +16,7 @@ from pinned_store import load_pinned, save_pinned
 from engine.ui.ui_b_validity import rebuild_b_validity
 from engine.signals.battle_room import get_battle_room
 from engine.signals.b_phase import classify_b_phase
+from engine.signals.row_classifier import classify_rows as _engine_classify_rows
 from engine.signals.volume_spike import (
     get_volume_spike_tag,
     VOLUME_SIGNAL_LABELS,
@@ -244,6 +245,8 @@ def analyze_winrate() -> None:
 
 # ── 分類邏輯 ──────────────────────────────────────────────────────────────────
 
+# DEPRECATED: 已移至 engine/signals/row_classifier.py
+# 所有新呼叫必須改走 engine
 def classify_rows(
     df: pd.DataFrame, overrides: dict
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -1293,7 +1296,7 @@ def render_war_room_body(
 
     # ── classify rows ─────────────────────────────────────────────────────
     overrides = st.session_state.get("overrides", {})
-    action_df, watchlist_df, candidate_df = classify_rows(df, overrides)
+    action_df, watchlist_df, candidate_df = _engine_classify_rows(df, overrides)
 
     action_df["confidence"] = pd.to_numeric(action_df["confidence"], errors="coerce")
     watchlist_df["confidence"] = pd.to_numeric(watchlist_df["confidence"], errors="coerce")
