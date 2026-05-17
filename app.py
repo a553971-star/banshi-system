@@ -1072,7 +1072,7 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
         _ratio = load_foreign_ratio_map().get(str(stock_id), "")
         if not _ratio or str(_ratio).lower() == "nan":
-            _ratio = fetch_foreign_ratio_live(str(stock_id))
+            _ratio = str(result.get("foreign_ratio_live", "")) or fetch_foreign_ratio_live(str(stock_id))
         _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
         st.metric("外資持股", _fp_label)
         if _level_icon:
