@@ -62,5 +62,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.091,
     "note": ""
+  },
+  {
+    "stock_id": "瑞祺電通",
+    "name": "瑞祺電通",
+    "entry_price": 84.57,
+    "entry_date": "2026-05-06",
+    "shares": 0.25,
+    "note": ""
   }
 ]
