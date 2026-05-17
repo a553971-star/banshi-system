@@ -1,1 +1,6 @@
 FinMind
+tqdm
+requests
+pandas
+numpy
+loguru
