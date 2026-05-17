@@ -15,6 +15,7 @@ import streamlit.components.v1 as components
 from pinned_store import load_pinned, save_pinned
 from engine.ui.ui_b_validity import rebuild_b_validity
 from engine.signals.battle_room import get_battle_room
+from engine.signals.b_phase import classify_b_phase
 from engine.signals.volume_spike import (
     get_volume_spike_tag,
     VOLUME_SIGNAL_LABELS,
@@ -1166,25 +1167,10 @@ KD：{kd_k}/{kd_d}
 
 # ── TRUE_B 選股池 helpers ─────────────────────────────────────────────────────
 
+# DEPRECATED: 已搬移至 engine/signals/b_phase.py classify_b_phase
+# 請改用 from engine.signals.b_phase import classify_b_phase
 def calc_b_phase_from_row(row):
-    try:
-        b_quality = int(float(row.get("B_quality") or 0))
-    except Exception:
-        b_quality = 0
-    try:
-        a_days = int(float(row.get("A_days") or 0))
-    except Exception:
-        a_days = 0
-    if a_days >= 5:
-        return "LATE"
-    elif b_quality >= 70 and 1 <= a_days <= 2:
-        return "LAUNCH"
-    elif b_quality >= 70 and a_days == 0:
-        return "MATURE"
-    elif b_quality >= 40:
-        return "BUILD"
-    else:
-        return "PREPARE"
+    return classify_b_phase(row)
 
 
 # DEPRECATED: 已移至 engine/ui/ui_b_validity.py
@@ -1540,7 +1526,7 @@ def render_war_room_body(
             for col in ["C_days", "B_days", "A_days", "B_quality", "B_window_20", "volume_ratio"]:
                 if col in tb_df.columns:
                     tb_df[col] = pd.to_numeric(tb_df[col], errors="coerce").fillna(0)
-            tb_df["_b_phase"]    = tb_df.apply(calc_b_phase_from_row, axis=1)
+            tb_df["_b_phase"]    = tb_df.apply(classify_b_phase, axis=1)
             tb_df["_b_validity"] = tb_df.apply(rebuild_b_validity, axis=1)
             pool = tb_df[
                 (tb_df["C_days"] >= 3) &
