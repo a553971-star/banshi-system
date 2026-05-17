@@ -38,5 +38,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.01,
     "note": ""
+  },
+  {
+    "stock_id": "偉詮電",
+    "name": "偉詮電",
+    "entry_price": 79.93,
+    "entry_date": "2026-05-06",
+    "shares": 0.03,
+    "note": ""
   }
 ]
