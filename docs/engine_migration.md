@@ -23,12 +23,16 @@ VOLUME_DISTRIBUTION = "VOLUME_DISTRIBUTION"
 | _volume_spike_tag（簡化版）| ui/sidebar.py | engine/signals/volume_spike.py |
 | calc_b_phase_from_row | app.py | engine/signals/b_phase.py |
 
-## Phase 2 預計
-- ui/labels.py：統一 presentation mapping（VOLUME_SIGNAL_LABELS 移出 engine）
-- signal constant 化：ATTACK、LAUNCH、PREPARE、TRUE_B 加入 constants 模組
-- analyze_stock() / analyze_market() 中央分析入口
+## Phase 2 已完成
+| 模組/修改 | 說明 |
+|----------|------|
+| engine/signals/b_phase.py | classify_b_phase，State Machine，27 golden cases |
+| engine/signals/row_classifier.py | classify_rows，行動清單分類，7 golden cases |
+| main.py process_stock_live wrapper | live/batch 共用同一 _process_stock engine |
+| main.py inline b_phase | 替換為 classify_b_phase，canonical Single Source of Truth |
 
-## 未完成
-- Phase 2 Step B：extract analyze_mistakes / analyze_winrate / classify_rows（UI pollution）
-- Phase 2 Step C：central analyze_stock(row)，統一 main.py / live_analyzer.py 內 inline b_phase
+## Phase 2 尚未完成
+- analyze_stock() 中央分析入口（視需求決定時機，非緊急）
+- trajectory_engine 磁碟缺失（既有環境問題，需確認）
 - Presentation Layer：ui/labels.py，VOLUME_SIGNAL_LABELS 移出 engine
+- signal constant 化：ATTACK、LAUNCH、PREPARE、TRUE_B 加入 constants 模組

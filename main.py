@@ -24,6 +24,7 @@ from typing import Optional
 
 import pandas as pd
 
+from engine.signals.b_phase import classify_b_phase
 from data_fetcher import merge_all, merge_all_local, get_stock_name
 from live_fetcher import merge_all_live
 from feature_engine import build_features
@@ -299,16 +300,12 @@ def _process_stock(
         except Exception:
             b_validity = "UNCERTAIN"
 
-        if a_days >= 5:
-            b_phase = "LATE"
-        elif b_quality >= 70 and 1 <= a_days <= 2:
-            b_phase = "LAUNCH"
-        elif b_quality >= 70 and a_days == 0:
-            b_phase = "MATURE"
-        elif b_quality >= 40:
-            b_phase = "BUILD"
-        else:
-            b_phase = "PREPARE"
+        # B phase 判定：統一走 engine，Single Source of Truth
+        # 原 inline 邏輯已移至 engine/signals/b_phase.py
+        b_phase = classify_b_phase({
+            "B_quality": b_quality,
+            "A_days": a_days,
+        })
 
         decision["B_quality"]   = b_quality
         decision["B_window_20"] = b_window_20
