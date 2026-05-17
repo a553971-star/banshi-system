@@ -70,5 +70,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.25,
     "note": ""
+  },
+  {
+    "stock_id": "南電",
+    "name": "南電",
+    "entry_price": 807.65,
+    "entry_date": "2026-05-06",
+    "shares": 0.02,
+    "note": ""
   }
 ]
