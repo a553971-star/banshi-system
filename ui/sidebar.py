@@ -142,7 +142,7 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
             _cache.pop(_live_id, None)
             _cache[_live_id] = {
                 "result": _result,
-                "name":   _result.get("name", _live_id),
+                "name":   _result.get("name") or _live_id,
                 "ts":     pd.Timestamp.now().strftime("%H:%M:%S"),
             }
             while len(_cache) > _MAX_CACHE:
