@@ -13,7 +13,8 @@ from pinned_store import load_pinned, save_pinned
 from engine.signals.volume_spike import get_volume_spike_tag, VOLUME_SIGNAL_LABELS
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_MAX_CACHE    = 10
+_MAX_CACHE        = 10
+MAX_QUERY_HISTORY = 30
 
 
 def _margin_radar_tag(row, _m5d_baseline=None):
@@ -102,10 +103,32 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
 
     if cache_key not in st.session_state:
         st.session_state[cache_key] = {}
+    history_key = f"query_history{key_suffix}"
+    if history_key not in st.session_state:
+        st.session_state[history_key] = []
 
     # ── Sidebar widgets ───────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown("### 🔬 即時個股查詢")
+        _history = st.session_state[history_key]
+        if _history:
+            _history_map = {
+                f"{h['stock_id']} {h['name']}": h["stock_id"]
+                for h in _history
+            }
+            _history_labels = [""] + list(_history_map.keys())
+            _selected_label = st.selectbox(
+                "歷史查詢",
+                options=_history_labels,
+                key=f"history_select{key_suffix}",
+                label_visibility="collapsed",
+            )
+            if _selected_label:
+                _selected_id = _history_map.get(_selected_label)
+                if _selected_id and st.button("↩ 載入", key=f"load_history{key_suffix}", use_container_width=True):
+                    st.session_state[trigger_key] = _selected_id
+                    st.session_state[input_key] = _selected_id
+                    st.rerun()
         with st.form(key=f"sidebar_query_form{key_suffix}"):
             _sb_input = st.text_input(
                 "股票代號或名稱",
@@ -147,6 +170,12 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
             }
             while len(_cache) > _MAX_CACHE:
                 _cache.pop(next(iter(_cache)))
+            # 更新查詢歷史
+            _name = _result.get("name") or _live_id
+            _hist = st.session_state[history_key]
+            _hist = [h for h in _hist if h["stock_id"] != _live_id]
+            _hist.insert(0, {"stock_id": _live_id, "name": _name})
+            st.session_state[history_key] = _hist[:MAX_QUERY_HISTORY]
             st.rerun()
         else:
             st.sidebar.error(f"查無資料：{_live_id}，請確認代號是否正確")
