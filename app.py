@@ -103,6 +103,43 @@ def load_foreign_ratio_map() -> dict:
         return {}
 
 
+def fetch_foreign_ratio_live(stock_id: str) -> str:
+    """
+    即時從 FinMind 抓單支股票外資持股比例。
+    僅在 shareholding_latest.csv 無資料時呼叫（cache-first fallback）。
+    """
+    try:
+        import datetime as _dt
+        from FinMind.data import DataLoader
+        _token = os.getenv("FINMIND_TOKEN", "")
+        if not _token:
+            return ""
+        _api = DataLoader()
+        _api.login_by_token(api_token=_token)
+        _today = _dt.date.today().strftime("%Y-%m-%d")
+        _raw = _api.taiwan_stock_shareholding(
+            stock_id=str(stock_id),
+            start_date=_today,
+            end_date=_today,
+        )
+        if _raw.empty:
+            _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
+            _raw = _api.taiwan_stock_shareholding(
+                stock_id=str(stock_id),
+                start_date=_start,
+                end_date=_today,
+            )
+        if _raw.empty:
+            return ""
+        _raw.columns = [c.lower() for c in _raw.columns]
+        _latest = _raw.sort_values("date").iloc[-1]
+        ratio = _latest.get("foreigninvestmentsharesratio", "")
+        return str(ratio) if ratio else ""
+    except Exception as e:
+        print(f"[FinMind fallback error] stock={stock_id} error={e}")
+        return ""
+
+
 def add_to_custom_watchlist(stock_id: str) -> None:
     pinned = load_pinned()
     pinned.add(str(stock_id))
@@ -1034,6 +1071,8 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     if _fp and int(_fp) > 0:
         _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
         _ratio = load_foreign_ratio_map().get(str(stock_id), "")
+        if not _ratio or str(_ratio).lower() == "nan":
+            _ratio = fetch_foreign_ratio_live(str(stock_id))
         _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
         st.metric("外資持股", _fp_label)
         if _level_icon:
