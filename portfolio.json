@@ -22,5 +22,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.31,
     "note": ""
+  },
+  {
+    "stock_id": "瑞昱",
+    "name": "瑞昱",
+    "entry_price": 540.0,
+    "entry_date": "2026-05-06",
+    "shares": 0.1,
+    "note": ""
   }
 ]
