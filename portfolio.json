@@ -6,5 +6,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.165,
     "note": ""
+  },
+  {
+    "stock_id": "華碩",
+    "name": "華碩",
+    "entry_price": 609.0,
+    "entry_date": "2026-05-06",
+    "shares": 0.14,
+    "note": ""
   }
 ]
