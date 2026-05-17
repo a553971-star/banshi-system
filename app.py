@@ -105,38 +105,35 @@ def load_foreign_ratio_map() -> dict:
 
 def fetch_foreign_ratio_live(stock_id: str) -> str:
     """
-    即時從 FinMind 抓單支股票外資持股比例。
+    即時從 FinMind REST API 抓單支股票外資持股比例。
+    不依賴 FinMind SDK，直接 HTTP 呼叫（Python 3.14 相容）。
     僅在 shareholding_latest.csv 無資料時呼叫（cache-first fallback）。
     """
     try:
         import datetime as _dt
-        from FinMind.data import DataLoader
+        import urllib.request, json as _json
         _token = os.getenv("FINMIND_TOKEN", "")
-        if not _token:
-            return ""
-        _api = DataLoader()
-        _api.login_by_token(api_token=_token)
-        _today = _dt.date.today().strftime("%Y-%m-%d")
-        _raw = _api.taiwan_stock_shareholding(
-            stock_id=str(stock_id),
-            start_date=_today,
-            end_date=_today,
+        _end   = _dt.date.today().strftime("%Y-%m-%d")
+        _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
+        _url = (
+            f"https://api.finmindtrade.com/api/v4/data"
+            f"?dataset=TaiwanStockShareholding"
+            f"&data_id={stock_id}"
+            f"&start_date={_start}"
+            f"&end_date={_end}"
         )
-        if _raw.empty:
-            _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
-            _raw = _api.taiwan_stock_shareholding(
-                stock_id=str(stock_id),
-                start_date=_start,
-                end_date=_today,
-            )
-        if _raw.empty:
+        if _token:
+            _url += f"&token={_token}"
+        with urllib.request.urlopen(_url, timeout=5) as _resp:
+            _raw = _json.loads(_resp.read())
+        _data = _raw.get("data", [])
+        if not isinstance(_data, list) or not _data:
             return ""
-        _raw.columns = [c.lower() for c in _raw.columns]
-        _latest = _raw.sort_values("date").iloc[-1]
-        ratio = _latest.get("foreigninvestmentsharesratio", "")
+        _latest = sorted(_data, key=lambda x: x.get("date", ""))[-1]
+        ratio = _latest.get("ForeignInvestmentSharesRatio", "")
         return str(ratio) if ratio else ""
     except Exception as e:
-        print(f"[FinMind fallback error] stock={stock_id} error={e}")
+        print(f"[FinMind REST fallback error] stock={stock_id} error={e}")
         return ""
 
 

@@ -347,43 +347,43 @@ def _process_stock(
                 # CSV 無資料，嘗試即時從 FinMind 抓
                 try:
                     import datetime as _dt
-                    from FinMind.data import DataLoader as _DL
+                    import urllib.request, json as _json
                     _fm_token = os.getenv("FINMIND_TOKEN", "")
+                    _end   = _dt.date.today().strftime("%Y-%m-%d")
+                    _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
+                    _url = (
+                        f"https://api.finmindtrade.com/api/v4/data"
+                        f"?dataset=TaiwanStockShareholding"
+                        f"&data_id={stock_id}"
+                        f"&start_date={_start}"
+                        f"&end_date={_end}"
+                    )
                     if _fm_token:
-                        _fm_api = _DL()
-                        _fm_api.login_by_token(api_token=_fm_token)
-                        _today = _dt.date.today().strftime("%Y-%m-%d")
-                        _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
-                        _fm_raw = _fm_api.taiwan_stock_shareholding(
-                            stock_id=stock_id,
-                            start_date=_start,
-                            end_date=_today,
-                        )
-                        if not _fm_raw.empty:
-                            _fm_raw.columns = [c.lower() for c in _fm_raw.columns]
-                            _fm_latest = _fm_raw.sort_values("date").iloc[-1]
-                            _f_shares = int(_fm_latest.get("foreigninvestmentshares", 0) or 0)
-                            _f_ratio  = float(_fm_latest.get("foreigninvestmentsharesratio", 0) or 0)
-                            _f_lots   = _f_shares // 1000
-                            decision["foreign_position"] = _f_lots
-                            # Live fallback only（not persisted to CSV）
-                            decision["foreign_ratio_live"] = _f_ratio
-                            if _f_lots > 50000:
-                                decision["foreign_level"] = "HEAVY"
-                            elif _f_lots > 10000:
-                                decision["foreign_level"] = "MEDIUM"
-                            elif _f_lots > 0:
-                                decision["foreign_level"] = "LIGHT"
-                            else:
-                                decision["foreign_level"] = "NONE"
-                        else:
-                            decision["foreign_position"] = None
-                            decision["foreign_level"]    = "NONE"
-                    else:
+                        _url += f"&token={_fm_token}"
+                    with urllib.request.urlopen(_url, timeout=5) as _resp:
+                        _raw = _json.loads(_resp.read())
+                    _data = _raw.get("data", [])
+                    if not isinstance(_data, list) or not _data:
                         decision["foreign_position"] = None
                         decision["foreign_level"]    = "NONE"
+                    else:
+                        _latest = sorted(_data, key=lambda x: x.get("date", ""))[-1]
+                        _f_shares = int(_latest.get("ForeignInvestmentShares", 0) or 0)
+                        _f_ratio  = float(_latest.get("ForeignInvestmentSharesRatio", 0) or 0)
+                        _f_lots   = _f_shares // 1000
+                        decision["foreign_position"] = _f_lots
+                        # Live fallback only（not persisted to CSV）
+                        decision["foreign_ratio_live"] = _f_ratio
+                        if _f_lots > 50000:
+                            decision["foreign_level"] = "HEAVY"
+                        elif _f_lots > 10000:
+                            decision["foreign_level"] = "MEDIUM"
+                        elif _f_lots > 0:
+                            decision["foreign_level"] = "LIGHT"
+                        else:
+                            decision["foreign_level"] = "NONE"
                 except Exception as _fm_exc:
-                    logger.warning("FinMind live fallback failed for %s: %s", stock_id, _fm_exc)
+                    logger.warning("FinMind REST fallback failed for %s: %s", stock_id, _fm_exc)
                     decision["foreign_position"] = None
                     decision["foreign_level"]    = "NONE"
         except Exception as exc:
