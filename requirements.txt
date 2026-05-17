@@ -1,3 +1,1 @@
-FinMind
-tqdm
 loguru
