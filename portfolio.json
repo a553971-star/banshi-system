@@ -14,5 +14,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.14,
     "note": ""
+  },
+  {
+    "stock_id": "英業達",
+    "name": "英業達",
+    "entry_price": 47.0,
+    "entry_date": "2026-05-06",
+    "shares": 0.31,
+    "note": ""
   }
 ]
