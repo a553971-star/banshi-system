@@ -78,5 +78,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.02,
     "note": ""
+  },
+  {
+    "stock_id": "天鈺",
+    "name": "天鈺",
+    "entry_price": 171.64,
+    "entry_date": "2026-05-06",
+    "shares": 0.175,
+    "note": ""
   }
 ]
