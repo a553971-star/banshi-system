@@ -3,10 +3,14 @@ pages/7_📊_本益比.py
 低本益比觀察區：PE < 14 × 磐石 CBA 結構過濾
 """
 import os
+import sys
 import pandas as pd
 import streamlit as st
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_PATH)
+from app import render_live_result_block
+from ui.sidebar import render_sidebar_query
 
 NEED_COLS = [
     "stock_id", "name", "C_days", "B_days", "A_days",
@@ -15,6 +19,7 @@ NEED_COLS = [
 ]
 
 st.set_page_config(page_title="低本益比觀察區", layout="wide")
+render_sidebar_query(key_suffix="_pe", render_result_fn=render_live_result_block)
 st.title("📊 低本益比觀察區")
 st.caption("本頁目的是找『市場低估但可能開始轉強』的股票，不是單純尋找便宜股票。便宜很多時候是有原因的。")
 st.warning("⚠️ 本頁不代表基本面轉強，僅代表目前市場給予較低估值。低 PE 不等於必漲，請搭配盤石 CBA 狀態綜合判斷。")
@@ -208,27 +213,6 @@ def _build_out(src_df: pd.DataFrame) -> pd.DataFrame:
         else:
             out[label] = ""
     return out
-
-
-# ── 個股查詢 ─────────────────────────────────────────────────────────────────
-st.divider()
-st.subheader("🔍 個股查詢")
-query_id = st.text_input("輸入股票代號", placeholder="例：2330", max_chars=6).strip()
-if query_id:
-    row = df[df["stock_id"] == query_id]
-    if row.empty:
-        st.warning(f"找不到 {query_id}，請確認代號或等 Actions 更新")
-    else:
-        r = row.iloc[0]
-        pe = _calc_pe(r)
-        conviction = _conviction(r)
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("股票", f"{r['stock_id']} {r.get('name', '')}")
-        col2.metric("EPS(TTM)", _fmt_eps(r.get("EPS_TTM")))
-        col3.metric("本益比 PE", _fmt_pe(pe))
-        col4.metric("評級", conviction)
-        st.caption(f"Flow: {r.get('flow_status', '-')}　Cost: {r.get('cost_level', '-')}　B_quality: {r.get('B_quality', '-')}　決策: {r.get('decision', '-')}")
-st.divider()
 
 
 # ── 一般股區塊 ────────────────────────────────────────────────────────────────
