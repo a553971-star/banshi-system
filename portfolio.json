@@ -46,5 +46,13 @@
     "entry_date": "2026-05-06",
     "shares": 0.03,
     "note": ""
+  },
+  {
+    "stock_id": "緯創",
+    "name": "緯創",
+    "entry_price": 139.12,
+    "entry_date": "2026-05-06",
+    "shares": 0.25,
+    "note": ""
   }
 ]
