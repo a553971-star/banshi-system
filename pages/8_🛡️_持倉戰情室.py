@@ -96,7 +96,7 @@ for pos in positions:
         except Exception:
             result = {}
 
-    close   = float(result.get("close") or 0)
+    close   = float(result.get("close") or result.get("current_price") or 0)
     entry   = float(pos.get("entry_price") or 0)
     pnl_pct = ((close - entry) / entry * 100) if entry > 0 and close > 0 else None
 
