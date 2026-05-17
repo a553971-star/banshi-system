@@ -106,14 +106,19 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
     # ── Sidebar widgets ───────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown("### 🔬 即時個股查詢")
-        _sb_input = st.text_input(
-            "股票代號或名稱",
-            placeholder="例：2330 或 台積電",
-            key=input_key,
-        )
-        if st.button("查詢", key=btn_key, type="primary", use_container_width=True):
-            if _sb_input.strip():
-                st.session_state[trigger_key] = _sb_input.strip()
+        with st.form(key=f"sidebar_query_form{key_suffix}"):
+            _sb_input = st.text_input(
+                "股票代號或名稱",
+                placeholder="例：2330 或 台積電",
+                key=input_key,
+            )
+            _submitted = st.form_submit_button(
+                "查詢",
+                type="primary",
+                use_container_width=True,
+            )
+        if _submitted and _sb_input.strip():
+            st.session_state[trigger_key] = _sb_input.strip()
         if st.button("🗑️ 清除所有查詢", key=clear_key, use_container_width=True):
             st.session_state[cache_key] = {}
             st.rerun()
