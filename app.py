@@ -1017,6 +1017,21 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     for line in exp_lines:
         st.caption(line)
 
+    # 外資持倉（獨立顯示，不依賴 institutional_state）
+    _fc_val  = result.get("foreign_cost")
+    _fp_val  = result.get("foreign_position")
+    _fpp_val = result.get("foreign_profit_pct")
+    _fr_val  = load_foreign_ratio_map().get(str(stock_id), "")
+    if not _fr_val or str(_fr_val).lower() == "nan":
+        _fr_val = str(result.get("foreign_ratio_live", "")) or fetch_foreign_ratio_live(str(stock_id))
+    if _fc_val or _fp_val:
+        st.markdown("#### 🏦 外資持倉")
+        fi1, fi2, fi3 = st.columns(3)
+        fi1.metric("外資成本", f"{float(_fc_val):.1f}" if _fc_val else "N/A")
+        _fp_disp = (f'{int(_fp_val):,}張' + (f'（{float(_fr_val):.1f}%）' if _fr_val and str(_fr_val) not in ("", "nan") else "")) if _fp_val else "N/A"
+        fi2.metric("持倉估計", _fp_disp)
+        fi3.metric("主力獲利%", f'{float(_fpp_val):.1f}%' if _fpp_val is not None else "N/A")
+
     inst_state = result.get("institutional_state")
     inst_text  = result.get("institutional_text")
     if inst_state and inst_state != "UNKNOWN":
@@ -1029,13 +1044,6 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
             "NEUTRAL":      "#6c757d",
         }
         color = color_map.get(inst_state, "#6c757d")
-        i1, i2, i3 = st.columns(3)
-        i1.metric("外資成本", result.get("foreign_cost") or "N/A")
-        _fp_val = result.get("foreign_position")
-        _fr_val = load_foreign_ratio_map().get(str(stock_id), "")
-        _fp_disp = (f'{int(_fp_val):,}張' + (f'（{float(_fr_val):.1f}%）' if _fr_val and _fr_val != "nan" else "")) if _fp_val else "N/A"
-        i2.metric("持倉估計", _fp_disp)
-        i3.metric("主力獲利%", f'{result.get("foreign_profit_pct"):.1f}%' if result.get("foreign_profit_pct") is not None else "N/A")
         st.markdown(f"""
 <div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
   <b style="color:{color};font-size:16px;">主力狀態：{inst_state}</b><br>
