@@ -947,8 +947,8 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
                     result["foreign_cost"] = _fc
                 if _fp and str(_fp) not in ("", "nan", "None"):
                     result["foreign_profit_pct"] = _fp
-        except Exception:
-            pass
+        except Exception as _e:
+            print(f"[foreign_cost fallback error] stock={stock_id} error={_e}")
 
     decision   = result.get("decision", "N/A")
     confidence = result.get("confidence", 0)
