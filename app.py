@@ -932,6 +932,24 @@ def get_latest_state_changes(state_log: pd.DataFrame) -> dict:
 # ── 即時分析結果渲染（共用）────────────────────────────────────────────────────
 
 def render_live_result_block(stock_id: str, result: dict) -> None:
+    # 若 foreign_cost 為空，嘗試從 latest_decisions_ai.csv 補
+    if not result.get("foreign_cost"):
+        try:
+            import pandas as _pd
+            _ai_csv = os.path.join(_DIR, "latest_decisions_ai.csv")
+            _ai_df  = _pd.read_csv(_ai_csv, dtype={"stock_id": str})
+            _ai_row = _ai_df[_ai_df["stock_id"] == str(stock_id)]
+            if not _ai_row.empty:
+                _fc = _ai_row.iloc[0].get("foreign_cost")
+                _fp = _ai_row.iloc[0].get("foreign_profit_pct")
+                if _fc and str(_fc) not in ("", "nan", "None"):
+                    result = dict(result)
+                    result["foreign_cost"] = _fc
+                if _fp and str(_fp) not in ("", "nan", "None"):
+                    result["foreign_profit_pct"] = _fp
+        except Exception:
+            pass
+
     decision   = result.get("decision", "N/A")
     confidence = result.get("confidence", 0)
     dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
