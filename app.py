@@ -1088,21 +1088,6 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
         if desc:
             st.caption(desc)
 
-    _fp = result.get("foreign_position")
-    _fl = result.get("foreign_level")
-    st.markdown("#### 📊 外資持倉")
-    if _fp and int(_fp) > 0:
-        _level_icon = {"HEAVY": "🔴", "MEDIUM": "🟠", "LIGHT": "🔵"}.get(_fl, "")
-        _ratio = load_foreign_ratio_map().get(str(stock_id), "")
-        if not _ratio or str(_ratio).lower() == "nan":
-            _ratio = str(result.get("foreign_ratio_live", "")) or fetch_foreign_ratio_live(str(stock_id))
-        _fp_label = f"{int(_fp):,}張" + (f"（{float(_ratio):.1f}%）" if _ratio and _ratio != "nan" else "")
-        st.metric("外資持股", _fp_label)
-        if _level_icon:
-            st.caption(f"{_level_icon} {_fl}")
-    else:
-        st.caption("外資持倉：-")
-
     with st.expander("📋 產生 AI 分析 Prompt"):
         name        = result.get("name", stock_id)
         signal_type = result.get("signal_type") or "-"
