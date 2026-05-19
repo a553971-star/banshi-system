@@ -959,143 +959,176 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     decision   = result.get("decision", "N/A")
     confidence = result.get("confidence", 0)
     dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
-    _dec_label = get_label(DECISION_LABELS, decision)
+    dec_label  = get_label(DECISION_LABELS, decision)
 
-    st.markdown(f"### {dec_color} {stock_id} {result.get('name','')}　**{decision}**　信心 {confidence}")
+    st.markdown(f"### {dec_color} {stock_id} {result.get('name','')}　**{dec_label}**　信心 {confidence}")
     st.caption(f"資料日期：{result.get('date', 'N/A')}")
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("C天", result.get("C_days", "N/A"))
-    c2.metric("B天", result.get("B_days", "N/A"))
-    c3.metric("A天", result.get("A_days", "N/A"))
-    c4.metric("Flow", get_label(FLOW_LABELS, result.get("flow_status")))
-    c5.metric("成本位", get_label(COST_LABELS, result.get("cost_level")))
+    def _logic_btn(key, label):
+        state_key = f"logic_{key}"
+        if state_key not in st.session_state:
+            st.session_state[state_key] = False
+        col_title, col_btn = st.columns([6, 1])
+        with col_title:
+            st.markdown(f"**{label}**")
+        with col_btn:
+            if st.button("❓", key=f"btn_{key}"):
+                st.session_state[state_key] = not st.session_state[state_key]
+        return st.session_state[state_key]
 
-    bw = result.get("B_window_20")
-    bq = result.get("B_quality")
-    if bw is not None or bq is not None:
-        bw1, bw2 = st.columns(2)
-        bw1.metric("B_window_20（近20日建倉密度）", bw if bw is not None else "N/A")
-        bw2.metric("B_quality（建倉強度）", bq if bq is not None else "N/A")
+    # ── CBA 結構 ──────────────────────────────────────────────────────────────
+    with st.container(border=True):
+        show = _logic_btn(f"cba_{stock_id}", "CBA 結構")
+        if show:
+            st.code(
+                "C: close < 30日 rolling 最低 → 觸發\n"
+                "   close >= ma20 × 0.98 連3天 → 完成，門檻 C_days >= 5\n"
+                "   → 底部止跌後開始整理，C天越多代表底部越扎實\n\n"
+                "B: ma20 ± 3% + volatility < 6，decay 不歸零\n"
+                "   B_quality = effective_b × 2 + B_window_20\n"
+                "   → 主力在均線附近安靜建倉，B_quality越高代表籌碼越集中\n\n"
+                "A: close > ma20 × 1.03 + vol >= 1.2 → 觸發\n"
+                "   close < ma20 → 立即 reset，vol < 0.5 連3天 → reset\n"
+                "   → A天 1-2 是最佳進場點，>= 5 追高風險高",
+                language=None
+            )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("C 天", result.get("C_days") or "—")
+        c2.metric("B 天", result.get("B_days") or "—")
+        c3.metric("A 天", result.get("A_days") or "—")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("B quality", result.get("B_quality") or "—")
+        c2.metric("B window 20", result.get("B_window_20") or "—")
+        c3.metric("B validity", get_label(B_VALIDITY_LABELS, result.get("B_validity")))
 
-    # EPS / PE 計算
-    _sid_r = str(result.get("stock_id", ""))
-    _eps_row = _eps_df[_eps_df["stock_id"] == _sid_r] if not _eps_df.empty else pd.DataFrame()
-    if not _eps_row.empty and pd.notna(_eps_row.iloc[0].get("EPS_TTM")) and float(_eps_row.iloc[0]["EPS_TTM"]) > 0:
-        _eps_val = float(_eps_row.iloc[0]["EPS_TTM"])
-        _close_val = float(result.get("current_price") or 0)
-        _pe_val = _close_val / _eps_val if _close_val > 0 else None
-        _eps_str = f"{_eps_val:.2f}"
-        if _pe_val is None:
-            _pe_str = "N/A"
-            _pe_tag = ""
-        elif _pe_val > 60:
-            _pe_str = f"{_pe_val:.1f}x"
-            _pe_tag = " 🔴HIGH"
-        elif _pe_val < 14:
-            _pe_str = f"{_pe_val:.1f}x"
-            _pe_tag = " 🟢LOW"
-        else:
-            _pe_str = f"{_pe_val:.1f}x"
-            _pe_tag = ""
-    else:
-        _eps_str = "N/A"
-        _pe_str = "N/A"
-        _pe_tag = ""
+    # ── 主力狀態 ──────────────────────────────────────────────────────────────
+    with st.container(border=True):
+        show = _logic_btn(f"flow_{stock_id}", "主力狀態")
+        if show:
+            st.code(
+                "DISTRIBUTION: vol >= 1.8 + margin > 0 + ret > 5%\n"
+                "   → 放量上漲但融資同步增加，主力趁高出貨的跡象\n\n"
+                "ACCUMULATING: 外資連買 >= 2 + margin <= 0 + ret < 5% + vol >= 0.8\n"
+                "   → 外資連續買入、融資未跟進，安靜建倉的特徵\n\n"
+                "SAFE: bias_ma20 -3% ~ +6%\n"
+                "NEUTRAL: +6% ~ +8%\n"
+                "HIGH_RISK: > +8%\n"
+                "   → 成本位置越高代表越貴，HIGH_RISK 追高風險大",
+                language=None
+            )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Flow", get_label(FLOW_LABELS, result.get("flow_status")))
+        c2.metric("成本位", get_label(COST_LABELS, result.get("cost_level")))
+        c3.metric("收盤", result.get("close") or result.get("current_price") or "—")
 
-    t1, t2, t3, t4, t5, t6, t7 = st.columns(7)
-    t1.metric("收盤", result.get("current_price") or "N/A")
-    t2.metric("EPS(TTM)", _eps_str)
-    t3.metric("本益比 PE", _pe_str + _pe_tag)
-    t4.metric("ADX", _safe_round(result.get("adx")))
-    t5.metric("K", _safe_round(result.get("kd_k")))
-    t6.metric("D", _safe_round(result.get("kd_d")))
-    t7.metric("ATR", _safe_round(result.get("atr")))
+    # ── 外資持倉 ──────────────────────────────────────────────────────────────
+    _fc_val  = result.get("foreign_cost")
+    _fp_val  = result.get("foreign_position")
+    _fpp_val = result.get("foreign_profit_pct")
+    _fl      = result.get("foreign_level", "")
+    _fr_val  = load_foreign_ratio_map().get(str(stock_id), "")
+    if not _fr_val or str(_fr_val).lower() == "nan":
+        _fr_val = str(result.get("foreign_ratio_live", "")) or fetch_foreign_ratio_live(str(stock_id))
 
-    reason = result.get("reason")
-    if isinstance(reason, list) and reason:
-        st.info("📋 " + " ／ ".join(reason))
-    elif isinstance(reason, str) and reason:
-        st.info("📋 " + reason)
+    with st.container(border=True):
+        show = _logic_btn(f"fi_{stock_id}", "外資持倉")
+        if show:
+            st.code(
+                "外資成本: calc_foreign_cost_pro() 60日加權平均買入成本\n"
+                "主力獲利%: (現價 - 外資成本) / 外資成本 × 100\n"
+                "   → 外資獲利越深代表籌碼越穩，不容易被震出\n\n"
+                "HEAVY: > 50,000張，MEDIUM: 10,000~50,000張，LIGHT: > 0張\n"
+                "   → 外資持倉越重，主力越不會輕易出貨",
+                language=None
+            )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("外資成本", f"{float(_fc_val):.1f}" if _fc_val else "—")
+        _fp_disp = (
+            f"{int(_fp_val):,}張" +
+            (f"（{float(_fr_val):.1f}%）" if _fr_val and str(_fr_val) not in ("", "nan") else "")
+        ) if _fp_val else "—"
+        c2.metric("持倉估計", _fp_disp)
+        c3.metric("主力獲利%", f"{float(_fpp_val):.1f}%" if _fpp_val is not None else "—")
+        if _fl:
+            st.caption(get_label(FOREIGN_LEVEL_LABELS, _fl))
 
+    # ── 融資動向 ──────────────────────────────────────────────────────────────
+    with st.container(border=True):
+        show = _logic_btn(f"margin_{stock_id}", "融資動向")
+        if show:
+            st.code(
+                "margin_change_5d: 5日融資餘額變化（張）\n"
+                "margin_change_pct: 5日融資增幅%\n"
+                "margin_consecutive_increase: 連續增加天數\n"
+                "   → 融資退潮（減少）是健康訊號，表示散戶降溫\n"
+                "   → 融資大火則要小心追高風險",
+                language=None
+            )
+        _m5d  = result.get("margin_change_5d")
+        _mpct = result.get("margin_change_pct")
+        _mci  = result.get("margin_consecutive_increase")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("5日增減", f"{int(float(_m5d)):+,}張" if _m5d is not None else "—")
+        c2.metric("增幅", f"{float(_mpct):+.1f}%" if _mpct is not None else "—")
+        c3.metric("連增天數", f"{int(float(_mci))} 天" if _mci is not None else "—")
+
+    # ── 技術指標 ──────────────────────────────────────────────────────────────
+    with st.container(border=True):
+        show = _logic_btn(f"tech_{stock_id}", "技術指標")
+        if show:
+            st.code(
+                "ADX > 25: 有趨勢，<= 25: 無趨勢盤整\n"
+                "KD K > 80: 過熱區，K < 20: 超賣區\n"
+                "ATR: 平均真實波幅（停損距離參考）\n"
+                "   → ADX 確認趨勢強度，KD 看超買超賣，ATR 衡量波動大小",
+                language=None
+            )
+        _adx = result.get("adx")
+        _k   = result.get("kd_k")
+        _d   = result.get("kd_d")
+        _atr = result.get("atr")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("ADX", f"{float(_adx):.1f}" if _adx else "—")
+        c2.metric("K / D", f"{float(_k):.1f} / {float(_d):.1f}" if _k and _d else "—")
+        c3.metric("ATR", f"{float(_atr):.1f}" if _atr else "—")
+
+    # ── 基本面 ────────────────────────────────────────────────────────────────
+    _eps = result.get("EPS_TTM")
+    _pe  = result.get("PE")
+    if _eps or _pe:
+        with st.container(border=True):
+            show = _logic_btn(f"fund_{stock_id}", "基本面")
+            if show:
+                st.code(
+                    "EPS TTM: 近四季每股盈餘合計\n"
+                    "PE = 收盤 / EPS_TTM\n"
+                    "LOW: PE < 14（一般股）/ PE < 15（AI股）\n"
+                    "   → PE越低代表市場給的估值越便宜\n"
+                    "   → TRUE_B + ACCUMULATING + PE < 14 = HIGH CONVICTION",
+                    language=None
+                )
+            c1, c2, c3 = st.columns(3)
+            c1.metric("EPS (TTM)", f"{float(_eps):.2f}" if _eps else "—")
+            c2.metric("本益比 PE", f"{float(_pe):.1f}x" if _pe else "—")
+            c3.metric("", "")
+
+    # ── 主力階段 / 建倉真偽 ──────────────────────────────────────────────────
+    b_phase    = result.get("B_phase")
+    b_validity = result.get("B_validity")
+    if b_phase or b_validity:
+        with st.container(border=True):
+            c1, c2 = st.columns(2)
+            if b_phase:
+                c1.markdown(f"**📍 主力階段**\n\n{get_label(B_PHASE_LABELS, b_phase)}")
+            if b_validity:
+                c2.markdown(f"**🔍 建倉真偽**\n\n{get_label(B_VALIDITY_LABELS, b_validity)}")
+
+    # ── 教練解讀（保留原有）────────────────────────────────────────────────────
     exp_lines, coach = explain_metrics(result)
     st.markdown("#### 🧠 教練解讀")
     st.success(coach)
     for line in exp_lines:
         st.caption(line)
-
-    # 外資持倉（獨立顯示，不依賴 institutional_state）
-    _fc_val  = result.get("foreign_cost")
-    _fp_val  = result.get("foreign_position")
-    _fpp_val = result.get("foreign_profit_pct")
-    _fr_val  = load_foreign_ratio_map().get(str(stock_id), "")
-    if not _fr_val or str(_fr_val).lower() == "nan":
-        _fr_val = str(result.get("foreign_ratio_live", "")) or fetch_foreign_ratio_live(str(stock_id))
-    if _fc_val or _fp_val:
-        st.markdown("#### 🏦 外資持倉")
-        fi1, fi2, fi3 = st.columns(3)
-        fi1.metric("外資成本", f"{float(_fc_val):.1f}" if _fc_val else "N/A")
-        _fp_disp = (f'{int(_fp_val):,}張' + (f'（{float(_fr_val):.1f}%）' if _fr_val and str(_fr_val) not in ("", "nan") else "")) if _fp_val else "N/A"
-        fi2.metric("持倉估計", _fp_disp)
-        fi3.metric("主力獲利%", f'{float(_fpp_val):.1f}%' if _fpp_val is not None else "N/A")
-
-    inst_state = result.get("institutional_state")
-    inst_text  = result.get("institutional_text")
-    if inst_state and inst_state != "UNKNOWN":
-        st.markdown("#### 🏦 主力分析")
-        color_map = {
-            "ACCUMULATION": "#28a745",
-            "SHAKEOUT":     "#ffc107",
-            "DISTRIBUTION": "#dc3545",
-            "EXTENDED":     "#fd7e14",
-            "NEUTRAL":      "#6c757d",
-        }
-        color = color_map.get(inst_state, "#6c757d")
-        st.markdown(f"""
-<div style="padding:10px;border-radius:8px;background:#1a1a2e;margin:8px 0;">
-  <b style="color:{color};font-size:16px;">主力狀態：{inst_state}</b><br>
-  <span style="color:#ccc;">{inst_text}</span>
-</div>
-""", unsafe_allow_html=True)
-
-    b_type = result.get("B_type")
-    b_text = result.get("B_text")
-    if b_type:
-        b_icon = {"STRONG_B": "🟢", "WEAK_B": "🔴", "NORMAL_B": "🟡"}.get(b_type, "⚪")
-        st.markdown("#### 🧱 結構品質")
-        st.markdown(f"**{b_icon} {b_type}**")
-        if b_text:
-            st.info(b_text)
-
-    b_phase = result.get("B_phase")
-    if b_phase:
-        phase_desc = {
-            "LAUNCH":  "盤石最佳進場點，剛突破，有量",
-            "MATURE":  "主力已在裡面，等待發動，最值得盯",
-            "BUILD":   "主力開始進場，結構成形中",
-            "PREPARE": "有人在看，但還沒形成優勢",
-            "LATE":    "已漲一段，不要追",
-        }
-        _phase_label = get_label(B_PHASE_LABELS, b_phase)
-        desc = phase_desc.get(b_phase, "")
-        st.markdown("#### 📍 主力階段")
-        st.markdown(f"**{_phase_label}**")
-        if desc:
-            st.caption(desc)
-
-    b_validity = result.get("B_validity")
-    if b_validity:
-        validity_desc = {
-            "TRUE_B":    "有人在做，結構可信",
-            "FAKE_B":    "只是盤整，外資在賣，不要碰",
-            "UNCERTAIN": "訊號不明確，繼續觀察",
-        }
-        _validity_label = get_label(B_VALIDITY_LABELS, b_validity)
-        desc = validity_desc.get(b_validity, "")
-        st.markdown("#### 🔍 建倉真偽")
-        st.markdown(f"**{_validity_label}**")
-        if desc:
-            st.caption(desc)
 
     with st.expander("📋 產生 AI 分析 Prompt"):
         name        = result.get("name", stock_id)
