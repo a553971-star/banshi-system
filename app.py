@@ -1041,14 +1041,14 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
                 "   → 外資持倉越重，主力越不會輕易出貨",
                 language=None
             )
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         c1.metric("外資成本", f"{float(_fc_val):.1f}" if _fc_val else "—")
+        c2.metric("主力獲利%", f"{float(_fpp_val):.1f}%" if _fpp_val is not None else "—")
         _fp_disp = (
             f"{int(_fp_val):,}張" +
             (f"（{float(_fr_val):.1f}%）" if _fr_val and str(_fr_val) not in ("", "nan") else "")
         ) if _fp_val else "—"
-        c2.metric("持倉估計", _fp_disp)
-        c3.metric("主力獲利%", f"{float(_fpp_val):.1f}%" if _fpp_val is not None else "—")
+        st.metric("持倉估計", _fp_disp)
         if _fl:
             st.caption(get_label(FOREIGN_LEVEL_LABELS, _fl))
 
