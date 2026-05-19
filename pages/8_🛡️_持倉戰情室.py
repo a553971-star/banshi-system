@@ -15,6 +15,10 @@ sys.path.insert(0, BASE_PATH)
 from portfolio_store import load_portfolio, add_position, remove_position
 from engine.position.health_score import get_position_health
 from engine.position.exit_signals import get_exit_alert, EXIT_CRITICAL, EXIT_WARNING
+from ui.labels import (
+    FLOW_LABELS, COST_LABELS, HEALTH_LABELS,
+    EXIT_LABELS, get_label,
+)
 from utils.config import load_params
 
 st.set_page_config(page_title="持倉戰情室", layout="wide")
@@ -24,24 +28,9 @@ st.caption("結構優先・主力優先・量價優先・損益不主導決策")
 params = load_params()
 
 # ── 語意標籤 ──────────────────────────────────────────────────────────────────
-_state_label = {
-    "HEALTHY":                "🟢 健康",
-    "SHAKEOUT":               "🟡 震盪",
-    "WEAKENING":              "🟠 轉弱",
-    "TREND_RISK":             "🔴 趨勢風險",
-    "DISTRIBUTION_BREAKDOWN": "🔴 派發破位",
-}
-_exit_label = {
-    "HOLD":     "🟢 繼續持有",
-    "WATCH":    "🟡 持續觀察",
-    "WARNING":  "🟠 開始減碼",
-    "CRITICAL": "🔴 立刻出場",
-}
-_flow_label = {
-    "ACCUMULATING": "🟢 吸籌",
-    "DISTRIBUTION": "🔴 出貨",
-    "NEUTRAL":      "🟠 中性",
-}
+_state_label = HEALTH_LABELS
+_exit_label  = EXIT_LABELS
+_flow_label  = FLOW_LABELS
 
 # ── 載入持倉 ──────────────────────────────────────────────────────────────────
 positions = load_portfolio()

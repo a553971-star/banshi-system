@@ -13,6 +13,12 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from pinned_store import load_pinned, save_pinned
+from ui.labels import (
+    FLOW_LABELS, COST_LABELS, B_PHASE_LABELS,
+    B_VALIDITY_LABELS, DECISION_LABELS,
+    HEALTH_LABELS, EXIT_LABELS,
+    FOREIGN_LEVEL_LABELS, get_label,
+)
 from engine.ui.ui_b_validity import rebuild_b_validity
 from engine.signals.battle_room import get_battle_room
 from engine.signals.b_phase import classify_b_phase
@@ -953,6 +959,7 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     decision   = result.get("decision", "N/A")
     confidence = result.get("confidence", 0)
     dec_color  = {"BUY": "🟢", "WAIT": "🟡", "IGNORE": "⚪", "SELL": "🔴"}.get(decision, "⚪")
+    _dec_label = get_label(DECISION_LABELS, decision)
 
     st.markdown(f"### {dec_color} {stock_id} {result.get('name','')}　**{decision}**　信心 {confidence}")
     st.caption(f"資料日期：{result.get('date', 'N/A')}")
@@ -961,8 +968,8 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
     c1.metric("C天", result.get("C_days", "N/A"))
     c2.metric("B天", result.get("B_days", "N/A"))
     c3.metric("A天", result.get("A_days", "N/A"))
-    c4.metric("Flow", result.get("flow_status") or "N/A")
-    c5.metric("成本位", result.get("cost_level") or "N/A")
+    c4.metric("Flow", get_label(FLOW_LABELS, result.get("flow_status")))
+    c5.metric("成本位", get_label(COST_LABELS, result.get("cost_level")))
 
     bw = result.get("B_window_20")
     bq = result.get("B_quality")
@@ -1062,29 +1069,31 @@ def render_live_result_block(stock_id: str, result: dict) -> None:
 
     b_phase = result.get("B_phase")
     if b_phase:
-        phase_map = {
-            "LAUNCH": ("🔴", "LAUNCH 發動初期", "盤石最佳進場點，剛突破，有量"),
-            "MATURE": ("🟠", "MATURE 成熟建倉", "主力已在裡面，等待發動，最值得盯"),
-            "BUILD":  ("🔵", "BUILD 穩定建倉",  "主力開始進場，結構成形中"),
-            "PREPARE":("🟡", "PREPARE 建倉中",  "有人在看，但還沒形成優勢"),
-            "LATE":   ("⚫", "LATE 太晚",       "已漲一段，不要追"),
+        phase_desc = {
+            "LAUNCH":  "盤石最佳進場點，剛突破，有量",
+            "MATURE":  "主力已在裡面，等待發動，最值得盯",
+            "BUILD":   "主力開始進場，結構成形中",
+            "PREPARE": "有人在看，但還沒形成優勢",
+            "LATE":    "已漲一段，不要追",
         }
-        icon, label, desc = phase_map.get(b_phase, ("⚪", f"UNKNOWN ({b_phase})", ""))
+        _phase_label = get_label(B_PHASE_LABELS, b_phase)
+        desc = phase_desc.get(b_phase, "")
         st.markdown("#### 📍 主力階段")
-        st.markdown(f"**{icon} {label}**")
+        st.markdown(f"**{_phase_label}**")
         if desc:
             st.caption(desc)
 
     b_validity = result.get("B_validity")
     if b_validity:
-        validity_map = {
-            "TRUE_B":    ("✅", "TRUE_B 真建倉",    "有人在做，結構可信"),
-            "FAKE_B":    ("❌", "FAKE_B 假整理",    "只是盤整，外資在賣，不要碰"),
-            "UNCERTAIN": ("❓", "UNCERTAIN 待確認", "訊號不明確，繼續觀察"),
+        validity_desc = {
+            "TRUE_B":    "有人在做，結構可信",
+            "FAKE_B":    "只是盤整，外資在賣，不要碰",
+            "UNCERTAIN": "訊號不明確，繼續觀察",
         }
-        icon, label, desc = validity_map.get(b_validity, ("⚪", b_validity, ""))
+        _validity_label = get_label(B_VALIDITY_LABELS, b_validity)
+        desc = validity_desc.get(b_validity, "")
         st.markdown("#### 🔍 建倉真偽")
-        st.markdown(f"**{icon} {label}**")
+        st.markdown(f"**{_validity_label}**")
         if desc:
             st.caption(desc)
 
