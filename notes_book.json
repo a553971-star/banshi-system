@@ -4,13 +4,6 @@
     "title": "等回檔",
     "stocks": [
       {
-        "stock_id": "日貿電",
-        "name": "日貿電",
-        "note": "",
-        "created_price": null,
-        "added_at": "2026-05-21"
-      },
-      {
         "stock_id": "6196",
         "name": "帆宣",
         "note": "",
