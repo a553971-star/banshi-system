@@ -9,6 +9,13 @@
         "note": "",
         "created_price": 142.0,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "2327",
+        "name": "國巨",
+        "note": "",
+        "created_price": 455.5,
+        "added_at": "2026-05-21"
       }
     ]
   },
