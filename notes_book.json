@@ -2,6 +2,14 @@
   {
     "id": "1779339875",
     "title": "等回檔",
-    "stocks": []
+    "stocks": [
+      {
+        "stock_id": "日貿電",
+        "name": "日貿電",
+        "note": "",
+        "created_price": null,
+        "added_at": "2026-05-21"
+      }
+    ]
   }
 ]
