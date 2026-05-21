@@ -64,6 +64,13 @@
         "note": "電容",
         "created_price": 263.0,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "2472",
+        "name": "立隆電",
+        "note": "電容",
+        "created_price": 217.0,
+        "added_at": "2026-05-21"
       }
     ]
   }
