@@ -4,13 +4,6 @@
     "title": "等回檔",
     "stocks": [
       {
-        "stock_id": "6196",
-        "name": "帆宣",
-        "note": "",
-        "created_price": 403.5,
-        "added_at": "2026-05-21"
-      },
-      {
         "stock_id": "3090",
         "name": "日電貿",
         "note": "",
