@@ -1415,6 +1415,12 @@ def render_war_room_body(
                     _name_lookup.update({k: v for k, v in zip(_uni["stock_id"].astype(str), _uni["name"].astype(str)) if v and v != "nan"})
             except Exception:
                 pass
+            try:
+                _sn = pd.read_csv(os.path.join(_DIR, "stock_names.csv"), dtype=str)
+                if "name" in _sn.columns:
+                    _name_lookup.update({k: v for k, v in zip(_sn["stock_id"].astype(str), _sn["name"].astype(str)) if v and v != "nan"})
+            except Exception:
+                pass
             for sid, (label, detail) in state_changes.items():
                 name = _name_lookup.get(str(sid), str(sid))
                 display = f"{sid} {name}" if name != str(sid) else str(sid)
