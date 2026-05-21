@@ -29,6 +29,13 @@
         "note": "目標650，被動龍頭",
         "created_price": 455.5,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "2492",
+        "name": "華新科",
+        "note": "被動老二",
+        "created_price": 206.0,
+        "added_at": "2026-05-21"
       }
     ]
   }
