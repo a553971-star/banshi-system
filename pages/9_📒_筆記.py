@@ -145,27 +145,22 @@ for sec in sections:
                 sprice    = st_item.get("created_price")
                 sadded_at = st_item.get("added_at", "")
 
-                with st.container(border=True):
-                    row1, row_del = st.columns([8, 1])
-                    with row1:
-                        price_str = f"　加入時 ${sprice:,.1f}" if sprice else ""
-                        name_part = f"**{sid}** {sname}" if sid != sname else f"**{sid}**"
-                        st.markdown(
-                            f"{name_part}　"
-                            f"<span style='color:gray;font-size:0.85em'>{sadded_at}{price_str}</span>",
-                            unsafe_allow_html=True,
-                        )
-                    with row_del:
-                        if st.button("✕", key=f"rm_{sec_id}_{sid}", help=f"移除 {sid}"):
-                            remove_stock(sec_id, sid)
-                            st.rerun()
+                price_str  = f"　${sprice:,.1f}" if sprice else ""
+                name_part  = f"{sid} {sname}" if sid != sname else sid
+                exp_label  = f"{name_part}　{sadded_at}{price_str}"
+
+                with st.expander(exp_label, expanded=False):
+                    if st.button("🗑️ 移除", key=f"rm_{sec_id}_{sid}", help=f"移除 {sid}"):
+                        remove_stock(sec_id, sid)
+                        st.rerun()
 
                     # 筆記編輯
                     with st.form(f"note_{sec_id}_{sid}", clear_on_submit=False):
-                        new_note = st.text_input(
-                            "筆記", value=snote,
-                            label_visibility="collapsed",
-                            placeholder="輸入筆記後按 Enter 儲存",
+                        new_note = st.text_area(
+                            "研究筆記",
+                            value=snote,
+                            height=220,
+                            placeholder="記錄觀察原因、進場條件、風險點...",
                         )
                         if st.form_submit_button("💾 儲存筆記"):
                             if new_note != snote:
