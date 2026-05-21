@@ -20,6 +20,7 @@ from notes_book_store import (
     update_note,
     remove_stock,
 )
+from ui.sidebar import _resolve_stock_id
 
 st.set_page_config(page_title="研究筆記本", layout="wide")
 st.title("📒 研究筆記本")
@@ -104,13 +105,14 @@ for sec in sections:
 
             if add_btn:
                 if inp_id.strip():
+                    resolved_id = _resolve_stock_id(inp_id.strip())
                     # 嘗試抓即時名稱與價格
-                    _name  = inp_id.strip()
+                    _name  = resolved_id
                     _price = None
                     try:
                         from utils.config import load_params
                         from main import process_stock_live
-                        _r = process_stock_live(inp_id.strip(), load_params())
+                        _r = process_stock_live(resolved_id, load_params())
                         if _r:
                             _name  = _r.get("name") or _name
                             _price = _r.get("close") or _r.get("current_price")
@@ -119,13 +121,13 @@ for sec in sections:
 
                     ok = add_stock(
                         section_id=sec_id,
-                        stock_id=inp_id.strip(),
+                        stock_id=resolved_id,
                         name=_name,
                         note=inp_note,
                         created_price=_price,
                     )
                     if ok:
-                        st.success(f"已加入 {_name}（{inp_id.strip()}）")
+                        st.success(f"已加入 {_name}（{resolved_id}）")
                         st.rerun()
                     else:
                         st.error("儲存失敗，請確認 GH_PAT 設定")
@@ -147,8 +149,9 @@ for sec in sections:
                     row1, row_del = st.columns([8, 1])
                     with row1:
                         price_str = f"　加入時 ${sprice:,.1f}" if sprice else ""
+                        name_part = f"**{sid}** {sname}" if sid != sname else f"**{sid}**"
                         st.markdown(
-                            f"**{sid}** {sname}　"
+                            f"{name_part}　"
                             f"<span style='color:gray;font-size:0.85em'>{sadded_at}{price_str}</span>",
                             unsafe_allow_html=True,
                         )
