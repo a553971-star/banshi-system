@@ -119,8 +119,13 @@ def delete_section(section_id: str) -> bool:
     return save_notes_book(sections)
 
 
-def add_stock(section_id: str, stock_id: str, name: str,
-              note: str = "", created_price: float = None) -> bool:
+def add_stock(
+    section_id: str,
+    stock_id: str,
+    name: str,
+    note: str = "",
+    created_price=None,
+) -> bool:
     import datetime
     sections = load_notes_book()
     for s in sections:
