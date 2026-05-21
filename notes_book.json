@@ -50,6 +50,13 @@
         "note": "保護元件，四月創新高",
         "created_price": 206.0,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "2478",
+        "name": "大毅",
+        "note": "保護元件",
+        "created_price": 83.5,
+        "added_at": "2026-05-21"
       }
     ]
   }
