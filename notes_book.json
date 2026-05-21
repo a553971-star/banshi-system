@@ -36,6 +36,13 @@
         "note": "被動老二",
         "created_price": 206.0,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "台慶科",
+        "name": "台慶科",
+        "note": "電感，四月營收七億創新高",
+        "created_price": null,
+        "added_at": "2026-05-21"
       }
     ]
   }
