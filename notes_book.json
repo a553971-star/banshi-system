@@ -57,6 +57,13 @@
         "note": "保護元件",
         "created_price": 83.5,
         "added_at": "2026-05-21"
+      },
+      {
+        "stock_id": "6449",
+        "name": "鈺邦",
+        "note": "電容",
+        "created_price": 263.0,
+        "added_at": "2026-05-21"
       }
     ]
   }
