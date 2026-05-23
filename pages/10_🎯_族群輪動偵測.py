@@ -47,6 +47,53 @@ status = _load_status()
 with col_age:
     st.caption(f"資料時間：`{status.get('generated_at', '—')}`　版本：`{status.get('version', '—')}`　資料截止：`{status.get('as_of_date', '—')}`")
 
+# ── 側邊欄：市值篩選（view-level，不污染原始資料） ─────────────────────────
+has_market_cap = bool(status.get("has_market_cap"))
+mc_meta = status.get("market_cap", {}) or {}
+
+with st.sidebar:
+    st.markdown("### 🎚️ 顯示設定")
+    if has_market_cap:
+        st.caption(
+            f"市值資料：`{mc_meta.get('as_of_date', '—')}`　"
+            f"涵蓋 {mc_meta.get('n_stocks', 0)} 檔　"
+            f"缺漏 {mc_meta.get('missing_count', 0)} 檔"
+        )
+    else:
+        st.caption("市值資料尚未產生（執行 `python3 utils/market_cap.py` 建立）")
+
+    show_foreign_only = st.checkbox(
+        "只看外資鎖定名單",
+        value=False,
+        disabled=not has_market_cap,
+        help="勾選後僅顯示外資配置標的" if has_market_cap else "等待 market_cap.json 生成",
+    )
+
+    tier_filter = st.multiselect(
+        "市值階層",
+        options=["mega", "large", "mid", "small"],
+        default=["mega", "large", "mid", "small"] if has_market_cap else [],
+        disabled=not has_market_cap,
+        help="mega ≥5000 億 / large 1000-5000 / mid 300-1000 / small <300",
+    )
+
+
+def _filter_members(members: list, tier_filter: list, foreign_only: bool) -> list:
+    """View-level filter：只用於渲染，不寫回 status。"""
+    if not members:
+        return []
+    out = []
+    for m in members:
+        if tier_filter and m.get("tier") not in tier_filter:
+            continue
+        if foreign_only and not m.get("foreign_focus"):
+            continue
+        out.append(m)
+    return out
+
+
+TIER_EMOJI = {"mega": "🐳", "large": "🐋", "mid": "🐟", "small": "🐠"}
+
 # ── 頁首三大狀態 ──────────────────────────────────────────────────────────
 integrity = status.get("data_integrity", {})
 regime    = status.get("market_regime", {})
@@ -143,6 +190,45 @@ if groups:
         st.dataframe(df, use_container_width=True)
 
     st.caption("📍 四象限解讀：左上潛伏（最佳買點）｜右上過熱（避免追高）｜右下退燒｜左下冷門")
+
+st.divider()
+
+# ── 區塊 B2：族群成員市值排行（v3.2 新增） ────────────────────────────────
+if has_market_cap:
+    st.subheader("💰 族群成員市值排行")
+    st.caption("⭐ = 外資鎖定名單　🐳 mega ≥ 5000 億　🐋 large 1000-5000　🐟 mid 300-1000　🐠 small < 300")
+
+    if not tier_filter:
+        st.info("請在側邊欄選擇至少一個市值階層")
+    else:
+        for g in groups:
+            members_with_cap = g.get("members_with_cap") or []
+            if not members_with_cap:
+                continue
+
+            filtered = _filter_members(members_with_cap, tier_filter, show_foreign_only)
+            if not filtered:
+                continue
+
+            with st.expander(
+                f"**{g['group_name']}**　"
+                f"總市值 {g.get('group_total_market_cap', 0):,.0f} 億　"
+                f"成員 {len(members_with_cap)} 檔（顯示 {len(filtered)} 檔）"
+            ):
+                cap_df = pd.DataFrame([
+                    {
+                        "代號":   m["code"],
+                        "名稱":   m["name"],
+                        "市值(億)": m["market_cap_billion"],
+                        "階層":   f"{TIER_EMOJI.get(m['tier'], '')} {m['tier']}",
+                        "層級":   m["stock_tier"],
+                        "外資鎖定": "⭐" if m["foreign_focus"] else "",
+                    }
+                    for m in filtered
+                ])
+                st.dataframe(cap_df, use_container_width=True, hide_index=True)
+else:
+    st.info("💰 市值排行尚未啟用 — 等待 `data/market_cap.json` 生成後自動顯示")
 
 st.divider()
 

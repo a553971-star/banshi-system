@@ -83,6 +83,24 @@ jobs:
           cd $GITHUB_WORKSPACE
           python3 analyze_ai.py
 
+      - name: Build market cap index
+        continue-on-error: true   # 市值是 enhancement，失敗不中斷後續 rotation
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir -p data
+          python3 -c "
+          from utils.market_cap import build_market_cap_index
+          try:
+              r = build_market_cap_index()
+              print(f'market_cap.json OK: {len(r[\"stocks\"])} stocks indexed, as_of={r[\"as_of_date\"]}')
+              if r['missing_stocks']:
+                  print(f'Missing: {len(r[\"missing_stocks\"])} stocks')
+                  for m in r['missing_stocks']:
+                      print(f'  - {m[\"code\"]}: {m[\"reason\"]}')
+          except Exception as e:
+              print(f'[ERROR] market_cap build failed: {e}')
+          "
+
       - name: Calculate rotation signals
         run: |
           cd $GITHUB_WORKSPACE
@@ -109,6 +127,7 @@ jobs:
           git add stock_names.csv 2>/dev/null || true
           git add banshi.db 2>/dev/null || true
           git add data/rotation_status.json 2>/dev/null || true
+          git add data/market_cap.json 2>/dev/null || true
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
           git pull --rebase || true
           git push

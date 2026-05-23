@@ -1,7 +1,7 @@
 """
-utils/rotation_detector.py — AI 族群輪動偵測模組 v3.1
+utils/rotation_detector.py — AI 族群輪動偵測模組 v3.2
 
-核心：雙分數系統 + 退潮偵測 + 生命週期 + 五大防呆
+核心：雙分數系統 + 退潮偵測 + 生命週期 + 五大防呆 + 市值階層（optional）
 
 防呆機制：
 1. 族群權重（解決成員重疊）
@@ -10,10 +10,17 @@ utils/rotation_detector.py — AI 族群輪動偵測模組 v3.1
 4. 大盤風險濾網（Phase 1 為 neutral 空殼）
 5. 資料一致性檢查（三表日期不同步拒絕發訊號）
 
+v3.2 新增：
+- market_cap.json optional 注入（不存在仍可正常運作）
+- 族群成員按市值排序（members_with_cap）
+- 外資鎖定成員清單（foreign_focus_members）
+- 族群總市值（group_total_market_cap）
+
 設計原則：重視「相對變化」，不追求絕對值精準。
+市值資料是 enhancement，rotation 訊號不依賴它。
 所有 score 在 return 前必須過 clamp()。
 
-Version: v3.1
+Version: v3.2
 """
 from __future__ import annotations
 
@@ -25,7 +32,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 # ── 模組常數 ───────────────────────────────────────────────────────────────
-VERSION = "v3.1"
+VERSION = "v3.2"
 
 ALGORITHM_CONFIG: Dict[str, Any] = {
     "heat_score_weights": {
@@ -60,6 +67,7 @@ BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DB  = os.path.join(BASE_DIR, "banshi.db")
 GROUPS_JSON = os.path.join(BASE_DIR, "config", "rotation_groups.json")
 DECISIONS_CSV = os.path.join(BASE_DIR, "latest_decisions.csv")
+MARKET_CAP_JSON = os.path.join(BASE_DIR, "data", "market_cap.json")
 
 
 # ── 工具函式 ───────────────────────────────────────────────────────────────
@@ -95,6 +103,27 @@ def estimate_turnover(close: Optional[float], volume: Optional[float]) -> float:
 def load_groups() -> List[Dict[str, Any]]:
     with open(GROUPS_JSON, "r", encoding="utf-8") as f:
         return json.load(f)["groups"]
+
+
+def load_market_cap_index() -> Optional[Dict[str, Any]]:
+    """
+    讀取 market_cap.json。失敗（檔不存在 / 壞檔）回傳 None。
+
+    重要：rotation 系統必須容忍 market_cap.json 缺席，因此這裡用 try/except
+    全部吃掉，呼叫端用「是否為 None」判斷。
+    """
+    try:
+        if not os.path.exists(MARKET_CAP_JSON):
+            return None
+        with open(MARKET_CAP_JSON, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # 基本健檢：要有 stocks 欄位
+        if not isinstance(data, dict) or "stocks" not in data:
+            return None
+        return data
+    except Exception as e:
+        print(f"[WARN] market_cap.json 讀取失敗，rotation 仍繼續：{e}")
+        return None
 
 
 # ── 資料一致性檢查 ─────────────────────────────────────────────────────────
@@ -679,13 +708,19 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
                 "signal_multiplier_applied": 0.0,
                 "note": integrity["warning"],
             },
-            "all_groups": [],
+            "has_market_cap": False,
+            "market_cap":     {"available": False},
+            "all_groups":     [],
         }
 
     regime = calc_market_regime(db_path)
     mult   = regime.get("signal_multiplier", 0.7)
 
     groups_cfg = load_groups()
+
+    # ⚠️ optional dependency：market_cap.json 不存在仍可正常運作
+    market_cap_index = load_market_cap_index()
+    has_market_cap   = market_cap_index is not None
 
     # Step 1: 先算所有族群指標，匯總 total_turnover 算 share
     raw_list = []
@@ -708,7 +743,7 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
         heat_adj  = clamp(heat["score"]  * mult)
         early_adj = clamp(early["score"] * mult)
 
-        all_groups.append({
+        grp_entry: Dict[str, Any] = {
             "group_id":             g["group_id"],
             "group_name":           g["group_name"],
             "upstream_level":       g["upstream_level"],
@@ -727,7 +762,18 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
             "early_components":     early["components"],
             "exhaustion":           exh,
             "lifecycle":            lifec,
-        })
+        }
+
+        # 市值注入（只有 market_cap_index 存在時才填）
+        if has_market_cap:
+            members_with_cap = market_cap_index.get("groups_sorted_by_cap", {}).get(g["group_id"], [])
+            foreign_focus_members = [m for m in members_with_cap if m.get("foreign_focus")]
+            group_total_cap = sum(m.get("market_cap_billion", 0.0) for m in members_with_cap)
+            grp_entry["members_with_cap"]       = members_with_cap
+            grp_entry["foreign_focus_members"]  = foreign_focus_members
+            grp_entry["group_total_market_cap"] = round(group_total_cap, 2)
+
+        all_groups.append(grp_entry)
 
     # Step 3: 識別 current_leader / next_candidates
     by_heat  = sorted(all_groups, key=lambda x: x["heat_score"], reverse=True)
@@ -763,6 +809,15 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
     else:
         probability = "none"
 
+    # market_cap meta（不放整個 index 進去，避免 JSON 肥大）
+    market_cap_meta: Dict[str, Any] = {
+        "available": has_market_cap,
+    }
+    if has_market_cap:
+        market_cap_meta["as_of_date"]    = market_cap_index.get("as_of_date")
+        market_cap_meta["n_stocks"]      = len(market_cap_index.get("stocks", {}))
+        market_cap_meta["missing_count"] = len(market_cap_index.get("missing_stocks", []))
+
     return {
         **base,
         "market_regime":   regime,
@@ -773,7 +828,9 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
             "signals_count":            signals_count,
             "signal_multiplier_applied": mult,
         },
-        "all_groups": all_groups,
+        "has_market_cap": has_market_cap,
+        "market_cap":     market_cap_meta,
+        "all_groups":     all_groups,
     }
 
 
