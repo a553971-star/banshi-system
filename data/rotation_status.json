@@ -1,5 +1,5 @@
 {
-  "version": "v3.1",
+  "version": "v3.2",
   "algorithm_config": {
     "heat_score_weights": {
       "weighted_5d_return": 0.3,
@@ -42,7 +42,7 @@
       "volume_multiplier": 4.0
     }
   },
-  "generated_at": "2026-05-23T08:44:58",
+  "generated_at": "2026-05-23T15:10:29",
   "data_integrity": {
     "all_synced": true,
     "latest_date": "2026-05-15",
@@ -111,7 +111,102 @@
       "second_return_5d": -2.449439408613817,
       "elastic_return_5d": 1.4543192110323169,
       "lifecycle_stage": "mid_late"
-    }
+    },
+    "members_with_cap": [
+      {
+        "code": "2317",
+        "name": "鴻海",
+        "market_cap_billion": 34452.04,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "6669",
+        "name": "緯穎",
+        "market_cap_billion": 8961.48,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3231",
+        "name": "緯創",
+        "market_cap_billion": 3898.34,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2376",
+        "name": "技嘉",
+        "market_cap_billion": 2066.74,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2356",
+        "name": "英業達",
+        "market_cap_billion": 1873.98,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "2382",
+        "name": "廣達",
+        "market_cap_billion": 1183.3,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3706",
+        "name": "神達",
+        "market_cap_billion": 884.49,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      }
+    ],
+    "foreign_focus_members": [
+      {
+        "code": "2317",
+        "name": "鴻海",
+        "market_cap_billion": 34452.04,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "6669",
+        "name": "緯穎",
+        "market_cap_billion": 8961.48,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3231",
+        "name": "緯創",
+        "market_cap_billion": 3898.34,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2382",
+        "name": "廣達",
+        "market_cap_billion": 1183.3,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      }
+    ],
+    "group_total_market_cap": 53320.37,
+    "heat_change_1d": null,
+    "early_change_1d": null
   },
   "next_candidates": [
     {
@@ -127,16 +222,16 @@
       "n_members": 5,
       "missing_members": [],
       "turnover_share": 0.24104130293725087,
-      "weighted_5d_return": -1.6800629451609606,
-      "heat_score": 35.68590475759575,
-      "heat_score_raw": 50.9798639394225,
+      "weighted_5d_return": -1.6412324206596856,
+      "heat_score": 35.698954988322086,
+      "heat_score_raw": 50.99850712617441,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 41.599685274195195,
+        "weighted_5d_return": 41.793837896701575,
         "turnover_share": 100.0,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 52.5398543810929,
-        "foreign_buy_concentration": 56.189802
+        "foreign_buy_concentration": 55.793775999999994
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -147,7 +242,7 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 65.48993196971125,
+        "score": 65.49925356308721,
         "triggers": [
           "foreign_flip_to_sell",
           "leader_high_bearish"
@@ -160,9 +255,80 @@
         "lag_diff": -5.350502119616605,
         "leaders_return_5d": -2.686661578074005,
         "second_return_5d": 2.6638405415426,
-        "elastic_return_5d": -58.69731800766284,
+        "elastic_return_5d": -57.22222222222222,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "3037",
+          "name": "欣興",
+          "market_cap_billion": 12454.57,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8046",
+          "name": "南電",
+          "market_cap_billion": 5069.7,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "4958",
+          "name": "臻鼎-KY",
+          "market_cap_billion": 3721.28,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3189",
+          "name": "景碩",
+          "market_cap_billion": 2167.56,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "3037",
+          "name": "欣興",
+          "market_cap_billion": 12454.57,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8046",
+          "name": "南電",
+          "market_cap_billion": 5069.7,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        }
+      ],
+      "group_total_market_cap": 24949.26,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "silicon_wafer",
@@ -176,16 +342,16 @@
       "n_members": 5,
       "missing_members": [],
       "turnover_share": 0.013201821088977505,
-      "weighted_5d_return": -33.425913861018756,
-      "heat_score": 4.504613985285531,
-      "heat_score_raw": 6.435162836122188,
+      "weighted_5d_return": -32.56531880102678,
+      "heat_score": 4.5824672852855315,
+      "heat_score_raw": 6.546381836122189,
       "heat_stage": "cold",
       "heat_components": {
         "weighted_5d_return": 0.0,
         "turnover_share": 6.600910544488753,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 0.0,
-        "foreign_buy_concentration": 47.849352
+        "foreign_buy_concentration": 48.961542
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -196,22 +362,76 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 43.217581418061094,
+        "score": 23.273190918061093,
         "triggers": [
-          "foreign_flip_to_sell",
           "leader_high_bearish"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -29.779418491471333,
-        "leaders_return_5d": -39.982435941971154,
+        "lag_diff": -28.798418118169046,
+        "leaders_return_5d": -39.00143556866887,
         "second_return_5d": -10.20301745049982,
-        "elastic_return_5d": -19.217081850533805,
+        "elastic_return_5d": -18.345323741007196,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "6488",
+          "name": "環球晶",
+          "market_cap_billion": 1848.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3532",
+          "name": "台勝科",
+          "market_cap_billion": 841.7,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "5483",
+          "name": "中美晶",
+          "market_cap_billion": 792.23,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3016",
+          "name": "嘉晶",
+          "market_cap_billion": 510.6,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "6182",
+          "name": "合晶",
+          "market_cap_billion": 451.95,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "leader"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "6488",
+          "name": "環球晶",
+          "market_cap_billion": 1848.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 4445.23,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "thermal",
@@ -227,16 +447,16 @@
         "6124"
       ],
       "turnover_share": 0.07611359194777825,
-      "weighted_5d_return": 0.6232011115228877,
-      "heat_score": 26.410064608504133,
-      "heat_score_raw": 37.728663726434476,
+      "weighted_5d_return": 0.917943032861133,
+      "heat_score": 26.74368606590929,
+      "heat_score_raw": 38.205265808441844,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 53.116005557614436,
+        "weighted_5d_return": 54.589715164305666,
         "turnover_share": 38.05679597388912,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 60.157708437852435,
-        "foreign_buy_concentration": 32.560068
+        "foreign_buy_concentration": 32.90496
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -247,7 +467,7 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 38.86433186321724,
+        "score": 39.102632904220926,
         "triggers": [
           "leader_high_bearish"
         ],
@@ -256,12 +476,83 @@
         "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": 6.8540900914098115,
-        "leaders_return_5d": 0.8138216350339721,
+        "lag_diff": 7.195546459556297,
+        "leaders_return_5d": 1.155278003180458,
         "second_return_5d": -6.0402684563758395,
         "elastic_return_5d": 0.5417243478209025,
         "lifecycle_stage": "early"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "3017",
+          "name": "奇鋐",
+          "market_cap_billion": 9132.6,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3324",
+          "name": "雙鴻",
+          "market_cap_billion": 1806.7,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8996",
+          "name": "高力",
+          "market_cap_billion": 676.0,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "2421",
+          "name": "建準",
+          "market_cap_billion": 457.8,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3483",
+          "name": "力致",
+          "market_cap_billion": 84.17,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "2402",
+          "name": "毅嘉",
+          "market_cap_billion": 41.53,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "3017",
+          "name": "奇鋐",
+          "market_cap_billion": 9132.6,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3324",
+          "name": "雙鴻",
+          "market_cap_billion": 1806.7,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 12198.8,
+      "heat_change_1d": null,
+      "early_change_1d": null
     }
   ],
   "rotation_signal": {
@@ -269,6 +560,14 @@
     "signals_count": 1,
     "signal_multiplier_applied": 0.7
   },
+  "has_market_cap": true,
+  "market_cap": {
+    "available": true,
+    "as_of_date": "2026-05-15",
+    "n_stocks": 46,
+    "missing_count": 1
+  },
+  "compare_with": null,
   "all_groups": [
     {
       "group_id": "abf_substrate",
@@ -283,16 +582,16 @@
       "n_members": 5,
       "missing_members": [],
       "turnover_share": 0.24104130293725087,
-      "weighted_5d_return": -1.6800629451609606,
-      "heat_score": 35.68590475759575,
-      "heat_score_raw": 50.9798639394225,
+      "weighted_5d_return": -1.6412324206596856,
+      "heat_score": 35.698954988322086,
+      "heat_score_raw": 50.99850712617441,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 41.599685274195195,
+        "weighted_5d_return": 41.793837896701575,
         "turnover_share": 100.0,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 52.5398543810929,
-        "foreign_buy_concentration": 56.189802
+        "foreign_buy_concentration": 55.793775999999994
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -303,7 +602,7 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 65.48993196971125,
+        "score": 65.49925356308721,
         "triggers": [
           "foreign_flip_to_sell",
           "leader_high_bearish"
@@ -316,9 +615,80 @@
         "lag_diff": -5.350502119616605,
         "leaders_return_5d": -2.686661578074005,
         "second_return_5d": 2.6638405415426,
-        "elastic_return_5d": -58.69731800766284,
+        "elastic_return_5d": -57.22222222222222,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "3037",
+          "name": "欣興",
+          "market_cap_billion": 12454.57,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8046",
+          "name": "南電",
+          "market_cap_billion": 5069.7,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "4958",
+          "name": "臻鼎-KY",
+          "market_cap_billion": 3721.28,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3189",
+          "name": "景碩",
+          "market_cap_billion": 2167.56,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "3037",
+          "name": "欣興",
+          "market_cap_billion": 12454.57,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8046",
+          "name": "南電",
+          "market_cap_billion": 5069.7,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        }
+      ],
+      "group_total_market_cap": 24949.26,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "silicon_wafer",
@@ -332,16 +702,16 @@
       "n_members": 5,
       "missing_members": [],
       "turnover_share": 0.013201821088977505,
-      "weighted_5d_return": -33.425913861018756,
-      "heat_score": 4.504613985285531,
-      "heat_score_raw": 6.435162836122188,
+      "weighted_5d_return": -32.56531880102678,
+      "heat_score": 4.5824672852855315,
+      "heat_score_raw": 6.546381836122189,
       "heat_stage": "cold",
       "heat_components": {
         "weighted_5d_return": 0.0,
         "turnover_share": 6.600910544488753,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 0.0,
-        "foreign_buy_concentration": 47.849352
+        "foreign_buy_concentration": 48.961542
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -352,22 +722,76 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 43.217581418061094,
+        "score": 23.273190918061093,
         "triggers": [
-          "foreign_flip_to_sell",
           "leader_high_bearish"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -29.779418491471333,
-        "leaders_return_5d": -39.982435941971154,
+        "lag_diff": -28.798418118169046,
+        "leaders_return_5d": -39.00143556866887,
         "second_return_5d": -10.20301745049982,
-        "elastic_return_5d": -19.217081850533805,
+        "elastic_return_5d": -18.345323741007196,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "6488",
+          "name": "環球晶",
+          "market_cap_billion": 1848.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3532",
+          "name": "台勝科",
+          "market_cap_billion": 841.7,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "5483",
+          "name": "中美晶",
+          "market_cap_billion": 792.23,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3016",
+          "name": "嘉晶",
+          "market_cap_billion": 510.6,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "6182",
+          "name": "合晶",
+          "market_cap_billion": 451.95,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "leader"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "6488",
+          "name": "環球晶",
+          "market_cap_billion": 1848.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 4445.23,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "thermal",
@@ -383,16 +807,16 @@
         "6124"
       ],
       "turnover_share": 0.07611359194777825,
-      "weighted_5d_return": 0.6232011115228877,
-      "heat_score": 26.410064608504133,
-      "heat_score_raw": 37.728663726434476,
+      "weighted_5d_return": 0.917943032861133,
+      "heat_score": 26.74368606590929,
+      "heat_score_raw": 38.205265808441844,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 53.116005557614436,
+        "weighted_5d_return": 54.589715164305666,
         "turnover_share": 38.05679597388912,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 60.157708437852435,
-        "foreign_buy_concentration": 32.560068
+        "foreign_buy_concentration": 32.90496
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -403,7 +827,7 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 38.86433186321724,
+        "score": 39.102632904220926,
         "triggers": [
           "leader_high_bearish"
         ],
@@ -412,12 +836,83 @@
         "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": 6.8540900914098115,
-        "leaders_return_5d": 0.8138216350339721,
+        "lag_diff": 7.195546459556297,
+        "leaders_return_5d": 1.155278003180458,
         "second_return_5d": -6.0402684563758395,
         "elastic_return_5d": 0.5417243478209025,
         "lifecycle_stage": "early"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "3017",
+          "name": "奇鋐",
+          "market_cap_billion": 9132.6,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3324",
+          "name": "雙鴻",
+          "market_cap_billion": 1806.7,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8996",
+          "name": "高力",
+          "market_cap_billion": 676.0,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "2421",
+          "name": "建準",
+          "market_cap_billion": 457.8,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3483",
+          "name": "力致",
+          "market_cap_billion": 84.17,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "2402",
+          "name": "毅嘉",
+          "market_cap_billion": 41.53,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "3017",
+          "name": "奇鋐",
+          "market_cap_billion": 9132.6,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3324",
+          "name": "雙鴻",
+          "market_cap_billion": 1806.7,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 12198.8,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "power",
@@ -466,7 +961,70 @@
         "second_return_5d": 0.3106176395409322,
         "elastic_return_5d": -3.620868374734607,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "2308",
+          "name": "台達電",
+          "market_cap_billion": 53908.5,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3653",
+          "name": "健策",
+          "market_cap_billion": 7449.75,
+          "tier": "mega",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "2301",
+          "name": "光寶科",
+          "market_cap_billion": 4805.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "6282",
+          "name": "康舒",
+          "market_cap_billion": 744.0,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "6412",
+          "name": "群電",
+          "market_cap_billion": 283.68,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "2308",
+          "name": "台達電",
+          "market_cap_billion": 53908.5,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "2301",
+          "name": "光寶科",
+          "market_cap_billion": 4805.75,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        }
+      ],
+      "group_total_market_cap": 67191.68,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "ccl_pcb",
@@ -480,16 +1038,16 @@
       "n_members": 9,
       "missing_members": [],
       "turnover_share": 0.12153336248546892,
-      "weighted_5d_return": -9.638968428836813,
-      "heat_score": 21.06488572869999,
-      "heat_score_raw": 30.092693898142844,
-      "heat_stage": "warming",
+      "weighted_5d_return": -10.130713150200204,
+      "heat_score": 20.661370478978643,
+      "heat_score_raw": 29.516243541398065,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 1.805157855815935,
+        "weighted_5d_return": 0.0,
         "turnover_share": 60.766681242734464,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 47.247166871429656,
-        "foreign_buy_concentration": 72.724012
+        "foreign_buy_concentration": 72.374982
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -500,7 +1058,7 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 35.04634694907142,
+        "score": 34.758121770699034,
         "triggers": [
           "leader_high_bearish"
         ],
@@ -509,12 +1067,107 @@
         "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -5.116189964498769,
-        "leaders_return_5d": -17.33030215729068,
+        "lag_diff": -4.733567159445155,
+        "leaders_return_5d": -16.947679352237067,
         "second_return_5d": -12.214112192791912,
-        "elastic_return_5d": -2.627127935326997,
+        "elastic_return_5d": -3.9629215559619686,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "2383",
+          "name": "台光電",
+          "market_cap_billion": 14860.3,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6213",
+          "name": "聯茂",
+          "market_cap_billion": 1001.88,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "8021",
+          "name": "尖點",
+          "market_cap_billion": 485.65,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "8358",
+          "name": "金居",
+          "market_cap_billion": 388.37,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "1815",
+          "name": "富喬",
+          "market_cap_billion": 371.0,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "6672",
+          "name": "騰輝電子-KY",
+          "market_cap_billion": 235.95,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "5475",
+          "name": "德宏",
+          "market_cap_billion": 161.1,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "5498",
+          "name": "凱崴",
+          "market_cap_billion": 50.15,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "2383",
+          "name": "台光電",
+          "market_cap_billion": 14860.3,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6274",
+          "name": "台燿",
+          "market_cap_billion": 1536.15,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 19090.55,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "optical_cpo",
@@ -529,16 +1182,16 @@
       "n_members": 10,
       "missing_members": [],
       "turnover_share": 0.1788840753365838,
-      "weighted_5d_return": -16.570183537093786,
-      "heat_score": 30.371527601121866,
-      "heat_score_raw": 43.38789657303124,
+      "weighted_5d_return": -16.840096093969613,
+      "heat_score": 30.367545161121864,
+      "heat_score_raw": 43.382207373031235,
       "heat_stage": "warming",
       "heat_components": {
         "weighted_5d_return": 0.0,
         "turnover_share": 89.4420376682919,
         "leader_confirmed_breakout": 0.0,
         "weighted_volume_expansion": 95.87064770638841,
-        "foreign_buy_concentration": 66.4679
+        "foreign_buy_concentration": 66.411008
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -549,19 +1202,122 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 21.69394828651562,
+        "score": 21.691103686515618,
         "triggers": [],
         "triggers_fired": 0,
         "risk_level": "low",
         "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -19.14390106781801,
-        "leaders_return_5d": -44.2245159755404,
-        "second_return_5d": -25.08061490772239,
-        "elastic_return_5d": -10.771486316663516,
+        "lag_diff": -15.876542721638486,
+        "leaders_return_5d": -42.42272438859053,
+        "second_return_5d": -26.546181666952045,
+        "elastic_return_5d": -10.785189259740088,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "2345",
+          "name": "智邦",
+          "market_cap_billion": 13852.65,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3665",
+          "name": "貿聯-KY",
+          "market_cap_billion": 2514.0,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3533",
+          "name": "嘉澤",
+          "market_cap_billion": 2330.0,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3081",
+          "name": "聯亞",
+          "market_cap_billion": 1130.5,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3163",
+          "name": "波若威",
+          "market_cap_billion": 517.6,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3596",
+          "name": "智易",
+          "market_cap_billion": 414.71,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "4979",
+          "name": "華星光",
+          "market_cap_billion": 393.25,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3363",
+          "name": "上詮",
+          "market_cap_billion": 380.76,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "8155",
+          "name": "博智",
+          "market_cap_billion": 209.5,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3380",
+          "name": "明泰",
+          "market_cap_billion": 77.5,
+          "tier": "small",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "2345",
+          "name": "智邦",
+          "market_cap_billion": 13852.65,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "3533",
+          "name": "嘉澤",
+          "market_cap_billion": 2330.0,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        }
+      ],
+      "group_total_market_cap": 21820.47,
+      "heat_change_1d": null,
+      "early_change_1d": null
     },
     {
       "group_id": "ai_server",
@@ -610,7 +1366,102 @@
         "second_return_5d": -2.449439408613817,
         "elastic_return_5d": 1.4543192110323169,
         "lifecycle_stage": "mid_late"
-      }
+      },
+      "members_with_cap": [
+        {
+          "code": "2317",
+          "name": "鴻海",
+          "market_cap_billion": 34452.04,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6669",
+          "name": "緯穎",
+          "market_cap_billion": 8961.48,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3231",
+          "name": "緯創",
+          "market_cap_billion": 3898.34,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "2376",
+          "name": "技嘉",
+          "market_cap_billion": 2066.74,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "second"
+        },
+        {
+          "code": "2356",
+          "name": "英業達",
+          "market_cap_billion": 1873.98,
+          "tier": "large",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        },
+        {
+          "code": "2382",
+          "name": "廣達",
+          "market_cap_billion": 1183.3,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "3706",
+          "name": "神達",
+          "market_cap_billion": 884.49,
+          "tier": "mid",
+          "foreign_focus": false,
+          "stock_tier": "elastic"
+        }
+      ],
+      "foreign_focus_members": [
+        {
+          "code": "2317",
+          "name": "鴻海",
+          "market_cap_billion": 34452.04,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        },
+        {
+          "code": "6669",
+          "name": "緯穎",
+          "market_cap_billion": 8961.48,
+          "tier": "mega",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "3231",
+          "name": "緯創",
+          "market_cap_billion": 3898.34,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "second"
+        },
+        {
+          "code": "2382",
+          "name": "廣達",
+          "market_cap_billion": 1183.3,
+          "tier": "large",
+          "foreign_focus": true,
+          "stock_tier": "leader"
+        }
+      ],
+      "group_total_market_cap": 53320.37,
+      "heat_change_1d": null,
+      "early_change_1d": null
     }
   ]
 }

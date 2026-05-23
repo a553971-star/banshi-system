@@ -1,0 +1,41 @@
+{
+  "as_of_date": "2026-05-15",
+  "generated_at": "2026-05-23T15:06:30",
+  "all_groups": [
+    {
+      "group_id": "abf_substrate",
+      "heat_score": 35.698954988322086,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "silicon_wafer",
+      "heat_score": 4.5824672852855315,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "thermal",
+      "heat_score": 26.74368606590929,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "power",
+      "heat_score": 27.897948261784325,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "ccl_pcb",
+      "heat_score": 20.661370478978643,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "optical_cpo",
+      "heat_score": 30.367545161121864,
+      "early_rotation_score": 0.0
+    },
+    {
+      "group_id": "ai_server",
+      "heat_score": 38.24902427861382,
+      "early_rotation_score": 5.999999999999999
+    }
+  ]
+}

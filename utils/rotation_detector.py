@@ -68,6 +68,7 @@ DEFAULT_DB  = os.path.join(BASE_DIR, "banshi.db")
 GROUPS_JSON = os.path.join(BASE_DIR, "config", "rotation_groups.json")
 DECISIONS_CSV = os.path.join(BASE_DIR, "latest_decisions.csv")
 MARKET_CAP_JSON = os.path.join(BASE_DIR, "data", "market_cap.json")
+HISTORY_DIR = os.path.join(BASE_DIR, "data", "rotation_history")
 
 
 # ── 工具函式 ───────────────────────────────────────────────────────────────
@@ -103,6 +104,62 @@ def estimate_turnover(close: Optional[float], volume: Optional[float]) -> float:
 def load_groups() -> List[Dict[str, Any]]:
     with open(GROUPS_JSON, "r", encoding="utf-8") as f:
         return json.load(f)["groups"]
+
+
+def load_recent_history(before_date: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    讀「最近一個歷史快照」。
+    若 before_date 給定，只挑日期 < before_date 的檔案中最新者。
+    失敗或無資料時回 None（rotation 不依賴它）。
+    """
+    try:
+        if not os.path.isdir(HISTORY_DIR):
+            return None
+        files = sorted(
+            f for f in os.listdir(HISTORY_DIR)
+            if f.endswith(".json")
+        )
+        if before_date:
+            files = [f for f in files if f.replace(".json", "") < before_date]
+        if not files:
+            return None
+        with open(os.path.join(HISTORY_DIR, files[-1]), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[WARN] load_recent_history failed: {e}")
+        return None
+
+
+def save_history_snapshot(status: Dict[str, Any]) -> None:
+    """
+    將今日 rotation 結果寫入歷史檔（精簡版，只保留 score）。
+    檔名以 as_of_date 為主，已存在則不覆蓋（首次寫入優先）。
+    失敗時靜默吃掉，不能影響主流程。
+    """
+    as_of = status.get("as_of_date")
+    if not as_of:
+        return
+    try:
+        os.makedirs(HISTORY_DIR, exist_ok=True)
+        path = os.path.join(HISTORY_DIR, f"{as_of}.json")
+        if os.path.exists(path):
+            return
+        snapshot = {
+            "as_of_date":   as_of,
+            "generated_at": status.get("generated_at"),
+            "all_groups": [
+                {
+                    "group_id":             g.get("group_id"),
+                    "heat_score":           g.get("heat_score"),
+                    "early_rotation_score": g.get("early_rotation_score"),
+                }
+                for g in (status.get("all_groups") or [])
+            ],
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(snapshot, f, ensure_ascii=False, indent=2, default=str)
+    except Exception as e:
+        print(f"[WARN] save_history_snapshot failed: {e}")
 
 
 def load_market_cap_index() -> Optional[Dict[str, Any]]:
@@ -775,6 +832,29 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
 
         all_groups.append(grp_entry)
 
+    # Step 2.5：1 日變化計算（optional dependency，無歷史檔仍可運作）
+    today_date = integrity.get("latest_date")
+    prev = load_recent_history(before_date=today_date)
+    prev_lookup: Dict[str, Dict[str, Any]] = {}
+    if prev:
+        for pg in prev.get("all_groups", []):
+            gid = pg.get("group_id")
+            if gid:
+                prev_lookup[gid] = pg
+    for g in all_groups:
+        pg = prev_lookup.get(g["group_id"])
+        if pg is not None:
+            try:
+                g["heat_change_1d"]  = float(g["heat_score"])  - float(pg.get("heat_score") or 0)
+                g["early_change_1d"] = float(g["early_rotation_score"]) - float(pg.get("early_rotation_score") or 0)
+            except (TypeError, ValueError):
+                g["heat_change_1d"]  = None
+                g["early_change_1d"] = None
+        else:
+            g["heat_change_1d"]  = None
+            g["early_change_1d"] = None
+    prev_as_of = prev.get("as_of_date") if prev else None
+
     # Step 3: 識別 current_leader / next_candidates
     by_heat  = sorted(all_groups, key=lambda x: x["heat_score"], reverse=True)
     by_early = sorted(all_groups, key=lambda x: x["early_rotation_score"], reverse=True)
@@ -818,7 +898,7 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
         market_cap_meta["n_stocks"]      = len(market_cap_index.get("stocks", {}))
         market_cap_meta["missing_count"] = len(market_cap_index.get("missing_stocks", []))
 
-    return {
+    result = {
         **base,
         "market_regime":   regime,
         "current_leader":  current_leader,
@@ -830,8 +910,14 @@ def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
         },
         "has_market_cap": has_market_cap,
         "market_cap":     market_cap_meta,
+        "compare_with":   prev_as_of,
         "all_groups":     all_groups,
     }
+
+    # 寫今日歷史快照（失敗不影響主流程）
+    save_history_snapshot(result)
+
+    return result
 
 
 if __name__ == "__main__":
