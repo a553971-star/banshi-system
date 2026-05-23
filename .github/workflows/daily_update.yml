@@ -83,6 +83,22 @@ jobs:
           cd $GITHUB_WORKSPACE
           python3 analyze_ai.py
 
+      - name: Calculate rotation signals
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir -p data
+          python3 -c "
+          from utils.rotation_detector import detect_rotation
+          import json
+          r = detect_rotation()
+          for g in r.get('all_groups') or []:
+              for k in ('leaders','second','elastic','members'):
+                  g.pop(k, None)
+          with open('data/rotation_status.json', 'w', encoding='utf-8') as f:
+              json.dump(r, f, ensure_ascii=False, indent=2, default=str)
+          print('rotation_status.json updated')
+          "
+
       - name: Commit results
         run: |
           git config user.name "banshi-bot"
@@ -92,6 +108,7 @@ jobs:
           git add latest_decisions_ai.csv 2>/dev/null || true
           git add stock_names.csv 2>/dev/null || true
           git add banshi.db 2>/dev/null || true
+          git add data/rotation_status.json 2>/dev/null || true
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
           git pull --rebase || true
           git push

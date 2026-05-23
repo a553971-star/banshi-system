@@ -1,0 +1,115 @@
+{
+  "groups": [
+    {
+      "group_id": "abf_substrate",
+      "group_name": "ABF載板",
+      "upstream_level": 1,
+      "cycle_bias": "early",
+      "theme_tags": ["GPU", "ASIC", "AI_infra"],
+      "members": [
+        {"code": "3037", "tier": "leader", "weight": 1.0},
+        {"code": "8046", "tier": "leader", "weight": 1.0},
+        {"code": "3189", "tier": "second", "weight": 1.0},
+        {"code": "4958", "tier": "second", "weight": 1.0},
+        {"code": "6274", "tier": "elastic", "weight": 0.5}
+      ]
+    },
+    {
+      "group_id": "silicon_wafer",
+      "group_name": "矽晶圓",
+      "upstream_level": 1,
+      "cycle_bias": "early",
+      "theme_tags": ["upstream", "wafer"],
+      "members": [
+        {"code": "6488", "tier": "leader", "weight": 1.0},
+        {"code": "6182", "tier": "leader", "weight": 1.0},
+        {"code": "3016", "tier": "second", "weight": 1.0},
+        {"code": "3532", "tier": "second", "weight": 1.0},
+        {"code": "5483", "tier": "elastic", "weight": 1.0}
+      ]
+    },
+    {
+      "group_id": "thermal",
+      "group_name": "散熱",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": ["GB300", "liquid_cooling"],
+      "members": [
+        {"code": "3017", "tier": "leader", "weight": 1.0},
+        {"code": "3324", "tier": "leader", "weight": 1.0},
+        {"code": "2421", "tier": "second", "weight": 1.0},
+        {"code": "3483", "tier": "second", "weight": 1.0},
+        {"code": "6124", "tier": "second", "weight": 1.0},
+        {"code": "8996", "tier": "elastic", "weight": 1.0},
+        {"code": "2402", "tier": "elastic", "weight": 1.0}
+      ]
+    },
+    {
+      "group_id": "power",
+      "group_name": "電源",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": ["HVDC", "power_rack"],
+      "members": [
+        {"code": "2308", "tier": "leader", "weight": 1.0},
+        {"code": "2301", "tier": "second", "weight": 1.0},
+        {"code": "6412", "tier": "second", "weight": 1.0},
+        {"code": "6282", "tier": "elastic", "weight": 1.0},
+        {"code": "3653", "tier": "elastic", "weight": 0.5}
+      ]
+    },
+    {
+      "group_id": "ccl_pcb",
+      "group_name": "CCL/PCB材料",
+      "upstream_level": 2,
+      "cycle_bias": "mid",
+      "theme_tags": ["CCL", "PCB_upstream"],
+      "members": [
+        {"code": "6274", "tier": "leader", "weight": 1.0},
+        {"code": "2383", "tier": "leader", "weight": 1.0},
+        {"code": "6213", "tier": "second", "weight": 1.0},
+        {"code": "6672", "tier": "second", "weight": 1.0},
+        {"code": "8358", "tier": "elastic", "weight": 1.0},
+        {"code": "8021", "tier": "elastic", "weight": 1.0},
+        {"code": "5498", "tier": "elastic", "weight": 1.0},
+        {"code": "1815", "tier": "elastic", "weight": 1.0},
+        {"code": "5475", "tier": "elastic", "weight": 1.0}
+      ]
+    },
+    {
+      "group_id": "optical_cpo",
+      "group_name": "光通訊/CPO/AEC",
+      "upstream_level": 4,
+      "cycle_bias": "late",
+      "theme_tags": ["CPO", "AEC", "800G"],
+      "members": [
+        {"code": "3363", "tier": "leader", "weight": 1.0},
+        {"code": "3081", "tier": "leader", "weight": 1.0},
+        {"code": "4979", "tier": "second", "weight": 1.0},
+        {"code": "3163", "tier": "second", "weight": 1.0},
+        {"code": "3533", "tier": "second", "weight": 1.0},
+        {"code": "8155", "tier": "elastic", "weight": 1.0},
+        {"code": "3665", "tier": "elastic", "weight": 1.0},
+        {"code": "2345", "tier": "elastic", "weight": 1.0},
+        {"code": "3596", "tier": "elastic", "weight": 1.0},
+        {"code": "3380", "tier": "elastic", "weight": 1.0}
+      ]
+    },
+    {
+      "group_id": "ai_server",
+      "group_name": "AI伺服器/ODM",
+      "upstream_level": 5,
+      "cycle_bias": "late",
+      "theme_tags": ["server", "ODM", "Rubin"],
+      "members": [
+        {"code": "2382", "tier": "leader", "weight": 1.0},
+        {"code": "2317", "tier": "leader", "weight": 1.0},
+        {"code": "6669", "tier": "second", "weight": 1.0},
+        {"code": "3231", "tier": "second", "weight": 1.0},
+        {"code": "2376", "tier": "second", "weight": 1.0},
+        {"code": "2356", "tier": "elastic", "weight": 1.0},
+        {"code": "3706", "tier": "elastic", "weight": 1.0}
+      ]
+    }
+  ]
+}
