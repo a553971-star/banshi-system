@@ -348,6 +348,8 @@ st.divider()
 # ── 區塊 B【主舞台】：族群檢視 ────────────────────────────────────────────
 st.subheader("🗺️ 族群檢視")
 st.caption("按 heat_score 由高到低排序，🥇🥈🥉 為當下最熱前三。預設摺起，點擊展開看龍頭。")
+if not status.get("compare_with"):
+    st.caption("💡 首日無前日對照，變化箭頭明日起顯示（這不是 bug，是設計）。")
 
 groups = status.get("all_groups", [])
 groups_by_heat = sorted(groups, key=lambda g: (g.get("heat_score") or 0), reverse=True)
