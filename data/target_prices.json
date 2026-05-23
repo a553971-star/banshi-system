@@ -1,0 +1,1956 @@
+{
+  "version": "v1.0",
+  "generated_at": "2026-05-23T19:26:45",
+  "as_of_date": null,
+  "disclaimer": "AI 題材可能造成估值體系重估，歷史 PE 區間僅供參考",
+  "config": {
+    "pe_filter_min": 5.0,
+    "pe_filter_max": 150.0,
+    "ttm_eps_floor": 0.5,
+    "min_valid_ratio": 0.6,
+    "lookback_years": 5
+  },
+  "stocks": {
+    "3037": {
+      "name": "欣興",
+      "current_close": 821,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 821.0,
+        "recent_high_60d": 911,
+        "recent_low_60d": 389,
+        "ma60": 641,
+        "distance_to_high_pct": 11.0,
+        "distance_to_low_pct": -52.6,
+        "distance_to_ma60_pct": -21.9,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "8046": {
+      "name": "南電",
+      "current_close": 786,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 786.0,
+        "recent_high_60d": 1005,
+        "recent_low_60d": 423,
+        "ma60": 682,
+        "distance_to_high_pct": 27.9,
+        "distance_to_low_pct": -46.2,
+        "distance_to_ma60_pct": -13.3,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3189": {
+      "name": "景碩",
+      "current_close": 486,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 486.0,
+        "recent_high_60d": 554,
+        "recent_low_60d": 264,
+        "ma60": 402,
+        "distance_to_high_pct": 14.0,
+        "distance_to_low_pct": -45.6,
+        "distance_to_ma60_pct": -17.2,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "4958": {
+      "name": "臻鼎-KY",
+      "current_close": 401,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 401.0,
+        "recent_high_60d": 470,
+        "recent_low_60d": 162,
+        "ma60": 285,
+        "distance_to_high_pct": 17.1,
+        "distance_to_low_pct": -59.5,
+        "distance_to_ma60_pct": -28.9,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6274": {
+      "name": "台燿",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6488": {
+      "name": "環球晶",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6182": {
+      "name": "合晶",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3016": {
+      "name": "嘉晶",
+      "current_close": 111,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 111.0,
+        "recent_high_60d": 128,
+        "recent_low_60d": 51,
+        "ma60": 74,
+        "distance_to_high_pct": 15.8,
+        "distance_to_low_pct": -54.1,
+        "distance_to_ma60_pct": -32.9,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3532": {
+      "name": "台勝科",
+      "current_close": 222,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 221.5,
+        "recent_high_60d": 268,
+        "recent_low_60d": 110,
+        "ma60": 171,
+        "distance_to_high_pct": 21.0,
+        "distance_to_low_pct": -50.1,
+        "distance_to_ma60_pct": -22.8,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "5483": {
+      "name": "中美晶",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3017": {
+      "name": "奇鋐",
+      "current_close": 2455,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 2455.0,
+        "recent_high_60d": 2945,
+        "recent_low_60d": 1520,
+        "ma60": 2223,
+        "distance_to_high_pct": 20.0,
+        "distance_to_low_pct": -38.1,
+        "distance_to_ma60_pct": -9.4,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3324": {
+      "name": "雙鴻",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2421": {
+      "name": "建準",
+      "current_close": 140,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 140.0,
+        "recent_high_60d": 156,
+        "recent_low_60d": 122,
+        "ma60": 142,
+        "distance_to_high_pct": 11.1,
+        "distance_to_low_pct": -12.5,
+        "distance_to_ma60_pct": 1.6,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3483": {
+      "name": "力致",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6124": {
+      "name": "業強",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "8996": {
+      "name": "高力",
+      "current_close": 1040,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 1040.0,
+        "recent_high_60d": 1250,
+        "recent_low_60d": 700,
+        "ma60": 990,
+        "distance_to_high_pct": 20.2,
+        "distance_to_low_pct": -32.7,
+        "distance_to_ma60_pct": -4.8,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2402": {
+      "name": "毅嘉",
+      "current_close": 64,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 63.9,
+        "recent_high_60d": 78,
+        "recent_low_60d": 47,
+        "ma60": 61,
+        "distance_to_high_pct": 21.6,
+        "distance_to_low_pct": -26.1,
+        "distance_to_ma60_pct": -4.8,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2308": {
+      "name": "台達電",
+      "current_close": 2075,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 2075.0,
+        "recent_high_60d": 2280,
+        "recent_low_60d": 1220,
+        "ma60": 1724,
+        "distance_to_high_pct": 9.9,
+        "distance_to_low_pct": -41.2,
+        "distance_to_ma60_pct": -16.9,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2301": {
+      "name": "光寶科",
+      "current_close": 204,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 204.5,
+        "recent_high_60d": 234,
+        "recent_low_60d": 140,
+        "ma60": 172,
+        "distance_to_high_pct": 14.7,
+        "distance_to_low_pct": -31.3,
+        "distance_to_ma60_pct": -15.7,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6412": {
+      "name": "群電",
+      "current_close": 88,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 88.1,
+        "recent_high_60d": 97,
+        "recent_low_60d": 72,
+        "ma60": 84,
+        "distance_to_high_pct": 10.2,
+        "distance_to_low_pct": -17.9,
+        "distance_to_ma60_pct": -5.0,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6282": {
+      "name": "康舒",
+      "current_close": 50,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 49.6,
+        "recent_high_60d": 56,
+        "recent_low_60d": 43,
+        "ma60": 49,
+        "distance_to_high_pct": 12.9,
+        "distance_to_low_pct": -13.9,
+        "distance_to_ma60_pct": -1.7,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3653": {
+      "name": "健策",
+      "current_close": 3465,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 3465.0,
+        "recent_high_60d": 5445,
+        "recent_low_60d": 2880,
+        "ma60": 3917,
+        "distance_to_high_pct": 57.1,
+        "distance_to_low_pct": -16.9,
+        "distance_to_ma60_pct": 13.0,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2383": {
+      "name": "台光電",
+      "current_close": 4615,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 4615.0,
+        "recent_high_60d": 4960,
+        "recent_low_60d": 2175,
+        "ma60": 3498,
+        "distance_to_high_pct": 7.5,
+        "distance_to_low_pct": -52.9,
+        "distance_to_ma60_pct": -24.2,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6213": {
+      "name": "聯茂",
+      "current_close": 253,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 253.0,
+        "recent_high_60d": 300,
+        "recent_low_60d": 115,
+        "ma60": 204,
+        "distance_to_high_pct": 18.8,
+        "distance_to_low_pct": -54.5,
+        "distance_to_ma60_pct": -19.3,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6672": {
+      "name": "騰輝電子-KY",
+      "current_close": 182,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 181.5,
+        "recent_high_60d": 226,
+        "recent_low_60d": 90,
+        "ma60": 151,
+        "distance_to_high_pct": 24.5,
+        "distance_to_low_pct": -50.6,
+        "distance_to_ma60_pct": -16.6,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "8358": {
+      "name": "金居",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "8021": {
+      "name": "尖點",
+      "current_close": 442,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 441.5,
+        "recent_high_60d": 490,
+        "recent_low_60d": 212,
+        "ma60": 327,
+        "distance_to_high_pct": 11.1,
+        "distance_to_low_pct": -52.1,
+        "distance_to_ma60_pct": -25.9,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "5498": {
+      "name": "凱崴",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "1815": {
+      "name": "富喬",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "5475": {
+      "name": "德宏",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3363": {
+      "name": "上詮",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3081": {
+      "name": "聯亞",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "4979": {
+      "name": "華星光",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3163": {
+      "name": "波若威",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3533": {
+      "name": "嘉澤",
+      "current_close": 2330,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 2330.0,
+        "recent_high_60d": 2850,
+        "recent_low_60d": 1495,
+        "ma60": 2200,
+        "distance_to_high_pct": 22.3,
+        "distance_to_low_pct": -35.8,
+        "distance_to_ma60_pct": -5.6,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "8155": {
+      "name": "博智",
+      "current_close": null,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": false,
+        "warning": "60 日 K 線資料不足"
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3665": {
+      "name": "貿聯-KY",
+      "current_close": 2095,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 2095.0,
+        "recent_high_60d": 2940,
+        "recent_low_60d": 1290,
+        "ma60": 2088,
+        "distance_to_high_pct": 40.3,
+        "distance_to_low_pct": -38.4,
+        "distance_to_ma60_pct": -0.3,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2345": {
+      "name": "智邦",
+      "current_close": 2505,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 2505.0,
+        "recent_high_60d": 2675,
+        "recent_low_60d": 1305,
+        "ma60": 1898,
+        "distance_to_high_pct": 6.8,
+        "distance_to_low_pct": -47.9,
+        "distance_to_ma60_pct": -24.2,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3596": {
+      "name": "智易",
+      "current_close": 184,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 183.5,
+        "recent_high_60d": 210,
+        "recent_low_60d": 152,
+        "ma60": 181,
+        "distance_to_high_pct": 14.4,
+        "distance_to_low_pct": -17.2,
+        "distance_to_ma60_pct": -1.5,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3380": {
+      "name": "明泰",
+      "current_close": 31,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 31.0,
+        "recent_high_60d": 42,
+        "recent_low_60d": 31,
+        "ma60": 35,
+        "distance_to_high_pct": 34.0,
+        "distance_to_low_pct": 0.0,
+        "distance_to_ma60_pct": 13.7,
+        "zone_label": "跌破下方支撐區",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2382": {
+      "name": "廣達",
+      "current_close": 306,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 306.0,
+        "recent_high_60d": 346,
+        "recent_low_60d": 278,
+        "ma60": 305,
+        "distance_to_high_pct": 13.2,
+        "distance_to_low_pct": -9.0,
+        "distance_to_ma60_pct": -0.2,
+        "zone_label": "接近下方支撐",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2317": {
+      "name": "鴻海",
+      "current_close": 248,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 248.5,
+        "recent_high_60d": 254,
+        "recent_low_60d": 188,
+        "ma60": 221,
+        "distance_to_high_pct": 2.0,
+        "distance_to_low_pct": -24.5,
+        "distance_to_ma60_pct": -11.1,
+        "zone_label": "突破上方壓力區",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "6669": {
+      "name": "緯穎",
+      "current_close": 5115,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 5115.0,
+        "recent_high_60d": 5790,
+        "recent_low_60d": 3300,
+        "ma60": 4242,
+        "distance_to_high_pct": 13.2,
+        "distance_to_low_pct": -35.5,
+        "distance_to_ma60_pct": -17.1,
+        "zone_label": "區間整理中",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3231": {
+      "name": "緯創",
+      "current_close": 136,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 135.5,
+        "recent_high_60d": 146,
+        "recent_low_60d": 122,
+        "ma60": 134,
+        "distance_to_high_pct": 8.1,
+        "distance_to_low_pct": -9.6,
+        "distance_to_ma60_pct": -0.8,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2376": {
+      "name": "技嘉",
+      "current_close": 326,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 326.5,
+        "recent_high_60d": 330,
+        "recent_low_60d": 214,
+        "ma60": 263,
+        "distance_to_high_pct": 1.2,
+        "distance_to_low_pct": -34.5,
+        "distance_to_ma60_pct": -19.5,
+        "zone_label": "突破上方壓力區",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "2356": {
+      "name": "英業達",
+      "current_close": 52,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 52.2,
+        "recent_high_60d": 54,
+        "recent_low_60d": 40,
+        "ma60": 46,
+        "distance_to_high_pct": 3.6,
+        "distance_to_low_pct": -23.3,
+        "distance_to_ma60_pct": -12.8,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    },
+    "3706": {
+      "name": "神達",
+      "current_close": 80,
+      "ttm_eps": null,
+      "eps_trend": {
+        "valid": false,
+        "trend": null,
+        "arrow": "?",
+        "label": "資料不足",
+        "recent_4q_eps": null,
+        "previous_4q_eps": null,
+        "change_pct": null,
+        "warning": "歷史季度 EPS 不足 8 季"
+      },
+      "valuation_band": {
+        "valid": false,
+        "warning": "歷史 EPS 資料不足",
+        "data_quality": "missing",
+        "ttm_eps_floor_warning": false
+      },
+      "consensus_fair": {
+        "valid": false,
+        "warning": "1 年 PE 序列不足"
+      },
+      "technical_zone": {
+        "valid": true,
+        "current_close": 79.9,
+        "recent_high_60d": 88,
+        "recent_low_60d": 74,
+        "ma60": 81,
+        "distance_to_high_pct": 9.9,
+        "distance_to_low_pct": -7.6,
+        "distance_to_ma60_pct": 1.8,
+        "zone_label": "接近上方壓力",
+        "sample_size": 60
+      },
+      "summary": {
+        "d_position": "無資料",
+        "overall_signal": "❓ 估值資料不足，無法判讀"
+      },
+      "warnings": [
+        "AI 題材重估風險"
+      ]
+    }
+  },
+  "missing_stocks": []
+}

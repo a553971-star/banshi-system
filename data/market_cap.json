@@ -1,0 +1,1004 @@
+{
+  "version": "v1.0",
+  "generated_at": "2026-05-23T07:15:05",
+  "as_of_date": "2026-05-15",
+  "stocks": {
+    "3037": {
+      "name": "欣興",
+      "close": 821.0,
+      "shares_outstanding": 1517000000,
+      "market_cap_billion": 12454.57,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "abf_substrate"
+      ]
+    },
+    "8046": {
+      "name": "南電",
+      "close": 786.0,
+      "shares_outstanding": 645000000,
+      "market_cap_billion": 5069.7,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "abf_substrate"
+      ]
+    },
+    "3189": {
+      "name": "景碩",
+      "close": 486.0,
+      "shares_outstanding": 446000000,
+      "market_cap_billion": 2167.56,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "abf_substrate"
+      ]
+    },
+    "4958": {
+      "name": "臻鼎-KY",
+      "close": 401.0,
+      "shares_outstanding": 928000000,
+      "market_cap_billion": 3721.28,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "abf_substrate"
+      ]
+    },
+    "6274": {
+      "name": "台燿",
+      "close": 539.0,
+      "shares_outstanding": 285000000,
+      "market_cap_billion": 1536.15,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "abf_substrate",
+        "ccl_pcb"
+      ]
+    },
+    "6488": {
+      "name": "環球晶",
+      "close": 425.0,
+      "shares_outstanding": 435000000,
+      "market_cap_billion": 1848.75,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "silicon_wafer"
+      ]
+    },
+    "6182": {
+      "name": "合晶",
+      "close": 34.5,
+      "shares_outstanding": 1310000000,
+      "market_cap_billion": 451.95,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "silicon_wafer"
+      ]
+    },
+    "3016": {
+      "name": "嘉晶",
+      "close": 111.0,
+      "shares_outstanding": 460000000,
+      "market_cap_billion": 510.6,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "silicon_wafer"
+      ]
+    },
+    "3532": {
+      "name": "台勝科",
+      "close": 221.5,
+      "shares_outstanding": 380000000,
+      "market_cap_billion": 841.7,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "silicon_wafer"
+      ]
+    },
+    "5483": {
+      "name": "中美晶",
+      "close": 113.5,
+      "shares_outstanding": 698000000,
+      "market_cap_billion": 792.23,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "silicon_wafer"
+      ]
+    },
+    "3017": {
+      "name": "奇鋐",
+      "close": 2455.0,
+      "shares_outstanding": 372000000,
+      "market_cap_billion": 9132.6,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "3324": {
+      "name": "雙鴻",
+      "close": 1015.0,
+      "shares_outstanding": 178000000,
+      "market_cap_billion": 1806.7,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "2421": {
+      "name": "建準",
+      "close": 140.0,
+      "shares_outstanding": 327000000,
+      "market_cap_billion": 457.8,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "3483": {
+      "name": "力致",
+      "close": 88.6,
+      "shares_outstanding": 95000000,
+      "market_cap_billion": 84.17,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "8996": {
+      "name": "高力",
+      "close": 1040.0,
+      "shares_outstanding": 65000000,
+      "market_cap_billion": 676.0,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "2402": {
+      "name": "毅嘉",
+      "close": 63.9,
+      "shares_outstanding": 65000000,
+      "market_cap_billion": 41.53,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "thermal"
+      ]
+    },
+    "2308": {
+      "name": "台達電",
+      "close": 2075.0,
+      "shares_outstanding": 2598000000,
+      "market_cap_billion": 53908.5,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "power"
+      ]
+    },
+    "2301": {
+      "name": "光寶科",
+      "close": 204.5,
+      "shares_outstanding": 2350000000,
+      "market_cap_billion": 4805.75,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "power"
+      ]
+    },
+    "6412": {
+      "name": "群電",
+      "close": 88.1,
+      "shares_outstanding": 322000000,
+      "market_cap_billion": 283.68,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "power"
+      ]
+    },
+    "6282": {
+      "name": "康舒",
+      "close": 49.6,
+      "shares_outstanding": 1500000000,
+      "market_cap_billion": 744.0,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "power"
+      ]
+    },
+    "3653": {
+      "name": "健策",
+      "close": 3465.0,
+      "shares_outstanding": 215000000,
+      "market_cap_billion": 7449.75,
+      "tier": "mega",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "power"
+      ]
+    },
+    "2383": {
+      "name": "台光電",
+      "close": 4615.0,
+      "shares_outstanding": 322000000,
+      "market_cap_billion": 14860.3,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "6213": {
+      "name": "聯茂",
+      "close": 253.0,
+      "shares_outstanding": 396000000,
+      "market_cap_billion": 1001.88,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "6672": {
+      "name": "騰輝電子-KY",
+      "close": 181.5,
+      "shares_outstanding": 130000000,
+      "market_cap_billion": 235.95,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "8358": {
+      "name": "金居",
+      "close": 273.5,
+      "shares_outstanding": 142000000,
+      "market_cap_billion": 388.37,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "8021": {
+      "name": "尖點",
+      "close": 441.5,
+      "shares_outstanding": 110000000,
+      "market_cap_billion": 485.65,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "5498": {
+      "name": "凱崴",
+      "close": 59.0,
+      "shares_outstanding": 85000000,
+      "market_cap_billion": 50.15,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "1815": {
+      "name": "富喬",
+      "close": 106.0,
+      "shares_outstanding": 350000000,
+      "market_cap_billion": 371.0,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "5475": {
+      "name": "德宏",
+      "close": 179.0,
+      "shares_outstanding": 90000000,
+      "market_cap_billion": 161.1,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "ccl_pcb"
+      ]
+    },
+    "3363": {
+      "name": "上詮",
+      "close": 501.0,
+      "shares_outstanding": 76000000,
+      "market_cap_billion": 380.76,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3081": {
+      "name": "聯亞",
+      "close": 1190.0,
+      "shares_outstanding": 95000000,
+      "market_cap_billion": 1130.5,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "4979": {
+      "name": "華星光",
+      "close": 357.5,
+      "shares_outstanding": 110000000,
+      "market_cap_billion": 393.25,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3163": {
+      "name": "波若威",
+      "close": 647.0,
+      "shares_outstanding": 80000000,
+      "market_cap_billion": 517.6,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3533": {
+      "name": "嘉澤",
+      "close": 2330.0,
+      "shares_outstanding": 100000000,
+      "market_cap_billion": 2330.0,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "8155": {
+      "name": "博智",
+      "close": 209.5,
+      "shares_outstanding": 100000000,
+      "market_cap_billion": 209.5,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-02-23",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3665": {
+      "name": "貿聯-KY",
+      "close": 2095.0,
+      "shares_outstanding": 120000000,
+      "market_cap_billion": 2514.0,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "2345": {
+      "name": "智邦",
+      "close": 2505.0,
+      "shares_outstanding": 553000000,
+      "market_cap_billion": 13852.65,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3596": {
+      "name": "智易",
+      "close": 183.5,
+      "shares_outstanding": 226000000,
+      "market_cap_billion": 414.71,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "3380": {
+      "name": "明泰",
+      "close": 31.0,
+      "shares_outstanding": 250000000,
+      "market_cap_billion": 77.5,
+      "tier": "small",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "optical_cpo"
+      ]
+    },
+    "2382": {
+      "name": "廣達",
+      "close": 306.0,
+      "shares_outstanding": 386700000,
+      "market_cap_billion": 1183.3,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "2317": {
+      "name": "鴻海",
+      "close": 248.5,
+      "shares_outstanding": 13864000000,
+      "market_cap_billion": 34452.04,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "6669": {
+      "name": "緯穎",
+      "close": 5115.0,
+      "shares_outstanding": 175200000,
+      "market_cap_billion": 8961.48,
+      "tier": "mega",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "3231": {
+      "name": "緯創",
+      "close": 135.5,
+      "shares_outstanding": 2877000000,
+      "market_cap_billion": 3898.34,
+      "tier": "large",
+      "foreign_focus": true,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "2376": {
+      "name": "技嘉",
+      "close": 326.5,
+      "shares_outstanding": 633000000,
+      "market_cap_billion": 2066.74,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "2356": {
+      "name": "英業達",
+      "close": 52.2,
+      "shares_outstanding": 3590000000,
+      "market_cap_billion": 1873.98,
+      "tier": "large",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    },
+    "3706": {
+      "name": "神達",
+      "close": 79.9,
+      "shares_outstanding": 1107000000,
+      "market_cap_billion": 884.49,
+      "tier": "mid",
+      "foreign_focus": false,
+      "float_ratio": null,
+      "as_of_date": "2026-05-15",
+      "groups": [
+        "ai_server"
+      ]
+    }
+  },
+  "groups_sorted_by_cap": {
+    "abf_substrate": [
+      {
+        "code": "3037",
+        "name": "欣興",
+        "market_cap_billion": 12454.57,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "8046",
+        "name": "南電",
+        "market_cap_billion": 5069.7,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "4958",
+        "name": "臻鼎-KY",
+        "market_cap_billion": 3721.28,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3189",
+        "name": "景碩",
+        "market_cap_billion": 2167.56,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "6274",
+        "name": "台燿",
+        "market_cap_billion": 1536.15,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "elastic"
+      }
+    ],
+    "silicon_wafer": [
+      {
+        "code": "6488",
+        "name": "環球晶",
+        "market_cap_billion": 1848.75,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3532",
+        "name": "台勝科",
+        "market_cap_billion": 841.7,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "5483",
+        "name": "中美晶",
+        "market_cap_billion": 792.23,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "3016",
+        "name": "嘉晶",
+        "market_cap_billion": 510.6,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "6182",
+        "name": "合晶",
+        "market_cap_billion": 451.95,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "leader"
+      }
+    ],
+    "thermal": [
+      {
+        "code": "3017",
+        "name": "奇鋐",
+        "market_cap_billion": 9132.6,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3324",
+        "name": "雙鴻",
+        "market_cap_billion": 1806.7,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "8996",
+        "name": "高力",
+        "market_cap_billion": 676.0,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "2421",
+        "name": "建準",
+        "market_cap_billion": 457.8,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3483",
+        "name": "力致",
+        "market_cap_billion": 84.17,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2402",
+        "name": "毅嘉",
+        "market_cap_billion": 41.53,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      }
+    ],
+    "power": [
+      {
+        "code": "2308",
+        "name": "台達電",
+        "market_cap_billion": 53908.5,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3653",
+        "name": "健策",
+        "market_cap_billion": 7449.75,
+        "tier": "mega",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "2301",
+        "name": "光寶科",
+        "market_cap_billion": 4805.75,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "6282",
+        "name": "康舒",
+        "market_cap_billion": 744.0,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "6412",
+        "name": "群電",
+        "market_cap_billion": 283.68,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      }
+    ],
+    "ccl_pcb": [
+      {
+        "code": "2383",
+        "name": "台光電",
+        "market_cap_billion": 14860.3,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "6274",
+        "name": "台燿",
+        "market_cap_billion": 1536.15,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "6213",
+        "name": "聯茂",
+        "market_cap_billion": 1001.88,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "8021",
+        "name": "尖點",
+        "market_cap_billion": 485.65,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "8358",
+        "name": "金居",
+        "market_cap_billion": 388.37,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "1815",
+        "name": "富喬",
+        "market_cap_billion": 371.0,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "6672",
+        "name": "騰輝電子-KY",
+        "market_cap_billion": 235.95,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "5475",
+        "name": "德宏",
+        "market_cap_billion": 161.1,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "5498",
+        "name": "凱崴",
+        "market_cap_billion": 50.15,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      }
+    ],
+    "optical_cpo": [
+      {
+        "code": "2345",
+        "name": "智邦",
+        "market_cap_billion": 13852.65,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "3665",
+        "name": "貿聯-KY",
+        "market_cap_billion": 2514.0,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "3533",
+        "name": "嘉澤",
+        "market_cap_billion": 2330.0,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3081",
+        "name": "聯亞",
+        "market_cap_billion": 1130.5,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3163",
+        "name": "波若威",
+        "market_cap_billion": 517.6,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3596",
+        "name": "智易",
+        "market_cap_billion": 414.71,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "4979",
+        "name": "華星光",
+        "market_cap_billion": 393.25,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3363",
+        "name": "上詮",
+        "market_cap_billion": 380.76,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "8155",
+        "name": "博智",
+        "market_cap_billion": 209.5,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "3380",
+        "name": "明泰",
+        "market_cap_billion": 77.5,
+        "tier": "small",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      }
+    ],
+    "ai_server": [
+      {
+        "code": "2317",
+        "name": "鴻海",
+        "market_cap_billion": 34452.04,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "6669",
+        "name": "緯穎",
+        "market_cap_billion": 8961.48,
+        "tier": "mega",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "3231",
+        "name": "緯創",
+        "market_cap_billion": 3898.34,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2376",
+        "name": "技嘉",
+        "market_cap_billion": 2066.74,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "second"
+      },
+      {
+        "code": "2356",
+        "name": "英業達",
+        "market_cap_billion": 1873.98,
+        "tier": "large",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      },
+      {
+        "code": "2382",
+        "name": "廣達",
+        "market_cap_billion": 1183.3,
+        "tier": "large",
+        "foreign_focus": true,
+        "stock_tier": "leader"
+      },
+      {
+        "code": "3706",
+        "name": "神達",
+        "market_cap_billion": 884.49,
+        "tier": "mid",
+        "foreign_focus": false,
+        "stock_tier": "elastic"
+      }
+    ]
+  },
+  "missing_stocks": [
+    {
+      "code": "6124",
+      "reason": "no price data for 6124"
+    }
+  ]
+}
