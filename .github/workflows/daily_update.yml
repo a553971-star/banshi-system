@@ -117,6 +117,46 @@ jobs:
           print('rotation_status.json updated')
           "
 
+      - name: Fetch quarterly EPS history (週六)
+        continue-on-error: true   # 估值層是 enhancement，失敗不影響後續
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [ "$(date +%u)" = "6" ]; then
+            python3 -c "
+            from utils.eps_history import fetch_eps_history
+            try:
+                r = fetch_eps_history()
+                print(f'eps_history OK: {r[\"ok_stocks\"]}/{r[\"total_stocks\"]} stocks, {r[\"total_quarters_written\"]} quarters')
+                if r['missing_stocks']:
+                    print(f'Missing: {len(r[\"missing_stocks\"])} stocks')
+                    for m in r['missing_stocks'][:10]:
+                        print(f'  - {m[\"code\"]}: {m[\"reason\"]}')
+            except Exception as e:
+                print(f'[ERROR] eps_history fetch failed: {e}')
+            "
+          else
+            echo "週一到週五跳過 eps_history fetch"
+          fi
+
+      - name: Build target prices
+        continue-on-error: true   # 估值層是 enhancement，失敗不影響後續
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir -p data
+          python3 -c "
+          from utils.target_price import build_target_prices
+          try:
+              r = build_target_prices()
+              total = len(r['stocks'])
+              valid = sum(1 for s in r['stocks'].values() if s['valuation_band'].get('valid'))
+              print(f'target_prices.json OK: {valid}/{total} stocks with valid valuation_band')
+              print(f'as_of={r[\"as_of_date\"]}, missing={len(r[\"missing_stocks\"])}')
+          except Exception as e:
+              print(f'[ERROR] target_price build failed: {e}')
+          "
+
       - name: Commit results
         run: |
           git config user.name "banshi-bot"
@@ -128,6 +168,7 @@ jobs:
           git add banshi.db 2>/dev/null || true
           git add data/rotation_status.json 2>/dev/null || true
           git add data/market_cap.json 2>/dev/null || true
+          git add data/target_prices.json 2>/dev/null || true
           git commit -m "daily update $(date '+%Y-%m-%d')" || echo "no changes"
           git pull --rebase || true
           git push
