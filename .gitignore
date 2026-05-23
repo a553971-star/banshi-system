@@ -1,2 +1,6 @@
 # banshi.db
 pinned.json
+
+# Python
+__pycache__/
+*.pyc
