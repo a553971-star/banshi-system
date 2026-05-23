@@ -6,6 +6,7 @@ pages/10_🎯_族群輪動偵測.py
 import json
 import os
 import sys
+from datetime import datetime, timedelta
 
 import pandas as pd
 import streamlit as st
@@ -21,6 +22,49 @@ st.set_page_config(page_title="族群輪動偵測", layout="wide")
 st.title("🎯 AI 族群輪動偵測")
 st.caption("族群層級的資金流地圖｜判斷下一棒會輪到哪個族群")
 st.caption("👉 個股分析請至 **pages/5 AI 戰情室**；本頁不做個股訊號")
+
+# ── 觀察期提醒 ────────────────────────────────────────────────────────────
+OBSERVATION_START  = datetime(2026, 5, 23)
+HEALTH_CHECK_DATE  = OBSERVATION_START + timedelta(days=21)
+CHECKLIST_PATH     = os.path.join(BASE_PATH, "notes", "health_check_checklist.md")
+
+_today     = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+_days_left = (HEALTH_CHECK_DATE - _today).days
+_days_into = (_today - OBSERVATION_START).days
+
+
+def _load_checklist() -> str:
+    if os.path.exists(CHECKLIST_PATH):
+        try:
+            with open(CHECKLIST_PATH, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            pass
+    return "（檢查清單尚未建立：`notes/health_check_checklist.md`）"
+
+
+if _days_left > 0:
+    st.info(
+        f"🔍 **觀察期進行中**　第 **{_days_into}** 天 / 共 21 天　"
+        f"距離健檢日 `{HEALTH_CHECK_DATE.strftime('%Y-%m-%d')}` 還有 **{_days_left}** 天"
+    )
+    with st.expander("📋 觀察期該做什麼 / 不該做什麼"):
+        st.markdown(_load_checklist())
+elif _days_left == 0:
+    st.success(
+        f"✅ **今天是觀察期健檢日**（{HEALTH_CHECK_DATE.strftime('%Y-%m-%d')}）—— "
+        "請依下方檢查清單回顧 21 天的訊號表現,決定是否進入下一階段"
+    )
+    with st.expander("📋 健檢清單（建議展開）", expanded=True):
+        st.markdown(_load_checklist())
+else:
+    overdue_days = -_days_left
+    st.warning(
+        f"⏰ **健檢日已過期 {overdue_days} 天**（原訂 `{HEALTH_CHECK_DATE.strftime('%Y-%m-%d')}`）—— "
+        "請儘早完成系統健檢"
+    )
+    with st.expander("📋 健檢清單"):
+        st.markdown(_load_checklist())
 
 DATA_PATH = os.path.join(BASE_PATH, "data", "rotation_status.json")
 
