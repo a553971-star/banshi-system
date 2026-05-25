@@ -205,8 +205,9 @@ def _roc_date(date_iso: str) -> str:
 def _fetch_tpex_price(date_iso: str, universe_set: set) -> pd.DataFrame:
     """抓 TPEx 當日股價（OpenAPI JSON）"""
     try:
+        date_param = date_iso.replace("-", "")  # YYYYMMDD
         r = requests.get(
-            "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+            f"https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes?date={date_param}",
             timeout=15
         )
         try:
