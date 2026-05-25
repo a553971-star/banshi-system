@@ -4,3 +4,6 @@ pinned.json
 # Python
 __pycache__/
 *.pyc
+
+# Backups
+*.backup-*
