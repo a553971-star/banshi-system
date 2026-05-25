@@ -352,6 +352,8 @@ def main():
         _tpex_price = _tpex_price[~_tpex_price["stock_id"].isin(_existing_price)]
         df_price = pd.concat([df_price, _tpex_price], ignore_index=True)
     print(f"  股價（含TPEx {len(_tpex_price)} 筆）：共 {len(df_price)} 筆")
+    if not df_price.empty:
+        df_price["date"] = end_date
 
     # 2. 法人（TWSE）
     text = _twse_fetch(date_str, "institutional")
@@ -366,6 +368,8 @@ def main():
         _tpex_inst = _tpex_inst[~_tpex_inst["stock_id"].isin(_existing_inst)]
         df_inst = pd.concat([df_inst, _tpex_inst], ignore_index=True)
     print(f"  法人（含TPEx {len(_tpex_inst)} 筆）：共 {len(df_inst)} 筆")
+    if not df_inst.empty:
+        df_inst["date"] = end_date
 
     # 3. 融資（TWSE）
     text = _twse_fetch(date_str, "margin")
@@ -380,6 +384,8 @@ def main():
         _tpex_margin = _tpex_margin[~_tpex_margin["stock_id"].isin(_existing_margin)]
         df_margin = pd.concat([df_margin, _tpex_margin], ignore_index=True)
     print(f"  融資（含TPEx {len(_tpex_margin)} 筆）：共 {len(df_margin)} 筆")
+    if not df_margin.empty:
+        df_margin["date"] = end_date
 
     # 4. 外資持股（FinMind，週一/週六才跑）
     from FinMind.data import DataLoader
@@ -415,9 +421,29 @@ def main():
         print("  外資持股：跳過（非週一/週六，沿用 shareholding_latest.csv）")
 
     # 5. 寫入 SQLite（防重複）
+    _had_data = not df_price.empty or not df_inst.empty or not df_margin.empty
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     setup_tables(cursor)
+
+    # 清除 NULL 日期殘留（先前 date 欄位未寫入的 bug 遺留）
+    for _t in ["price_history", "institutional_history", "margin_history"]:
+        res = cursor.execute(f"DELETE FROM {_t} WHERE date IS NULL")
+        if res.rowcount > 0:
+            print(f"  🧹 清除 NULL 日期殘留：{_t} {res.rowcount} 筆")
+
+    # 診斷：寫入前各表最新日期
+    _before_max: dict = {}
+    for _t in ["price_history", "institutional_history", "margin_history"]:
+        row = cursor.execute(f"SELECT MAX(date) FROM {_t}").fetchone()
+        _before_max[_t] = row[0]
+    print(
+        f"  DB 最新日期（寫入前）："
+        f"price={_before_max['price_history']}, "
+        f"inst={_before_max['institutional_history']}, "
+        f"margin={_before_max['margin_history']}"
+    )
 
     def upsert_df(df, table):
         if df.empty:
@@ -444,8 +470,25 @@ def main():
         cursor.execute(f"DELETE FROM {table} WHERE date < ?", (cutoff,))
 
     conn.commit()
+
+    # 診斷：寫入後各表最新日期
+    _write_ok = True
+    for _t in ["price_history", "institutional_history", "margin_history"]:
+        row = cursor.execute(f"SELECT MAX(date) FROM {_t}").fetchone()
+        _after_max = row[0]
+        arrow = "✅" if _after_max == end_date else "⚠️"
+        print(f"  {arrow} {_t}: {_before_max[_t]} → {_after_max}（目標 {end_date}）")
+        if _after_max != end_date:
+            _write_ok = False
+
     conn.close()
     print(f"寫入完成（保留 {cutoff} 之後的資料）")
+
+    if _had_data and not _write_ok:
+        print(f"❌ 資料已抓到但 DB max date 未到達 {end_date}，請檢查寫入邏輯", flush=True)
+        sys.exit(1)
+    elif not _had_data:
+        print(f"⚠️ 今日（{end_date}）無可寫入資料（可能為非交易日或 API 空回傳）")
 
     # Export 外資持股最新一筆到 CSV（供 main.py 讀取，避免 Actions SQLite 重置問題）
     if not df_sh.empty:
