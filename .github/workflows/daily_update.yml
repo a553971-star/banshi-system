@@ -55,6 +55,13 @@ jobs:
             echo "週一到週五跳過 fetch_eps"
           fi
 
+      - name: Backfill missing dates
+        continue-on-error: true
+        run: |
+          cd $GITHUB_WORKSPACE
+          pip install pandas requests -q
+          python3 backfill_db.py
+
       - name: Update daily data
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
