@@ -146,6 +146,15 @@ def render_sidebar_query(key_suffix: str = "", render_result_fn=None) -> None:
             st.session_state[cache_key] = {}
             st.rerun()
 
+        st.divider()
+        st.markdown("### 📊 宏觀環境")
+        st.link_button(
+            "📊 宏觀風險監控",
+            url="https://a553971-star.github.io/macro-monitor/",
+            help="點開查看 HY OAS、VIX、MOVE 等核心指標",
+            use_container_width=True,
+        )
+
     # ── Trigger query ─────────────────────────────────────────────────────────
     _trigger = st.session_state.pop(trigger_key, None)
     if _trigger:
