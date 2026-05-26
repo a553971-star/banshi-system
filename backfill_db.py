@@ -1,3 +1,4 @@
+from typing import Optional
 """
 backfill_db.py — 補回指定日期範圍內缺漏的 price/institutional/margin 歷史資料
 
@@ -228,7 +229,7 @@ def _trading_days_between(start: str, end: str) -> list[str]:
     return [d.strftime("%Y-%m-%d") for d in rng]
 
 
-def _db_max_date(table: str) -> str | None:
+def _db_max_date(table: str) -> Optional[str]:
     try:
         conn = sqlite3.connect(DB_PATH)
         row = conn.execute(f"SELECT MAX(date) FROM {table} WHERE date IS NOT NULL").fetchone()
@@ -250,7 +251,7 @@ def _dates_missing_in_db(trading_days: list[str]) -> list[str]:
     return [d for d in trading_days if d not in existing]
 
 
-def backfill(start_date: str | None = None, end_date: str | None = None) -> None:
+def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None) -> None:
     universe_df  = pd.read_csv(os.path.join(BASE_PATH, "universe.csv"), dtype=str)
     universe_set = {str(x).zfill(4) for x in universe_df["stock_id"].tolist()}
 
