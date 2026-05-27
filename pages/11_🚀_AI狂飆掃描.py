@@ -28,7 +28,7 @@ from ui.sidebar import render_sidebar_query
 DB_PATH             = os.path.join(BASE_PATH, "banshi.db")
 AI_CSV              = os.path.join(BASE_PATH, "ai_supply_chain.csv")
 STOCK_NAMES_CSV     = os.path.join(BASE_PATH, "stock_names.csv")
-MIN_HISTORY_DAYS    = 80
+MIN_HISTORY_DAYS    = 40
 FETCH_DAYS          = 160
 
 SCORE_DONCHIAN      = 35
