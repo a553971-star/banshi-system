@@ -439,7 +439,7 @@ _disabled_cols = ["排名", "代碼", "名稱", "信號強度", "總分", "收�
 st.data_editor(
     table_top,
     key="scan_table_editor_top",
-    use_container_width=True,
+    width="stretch",
     hide_index=True,
     column_config=_column_config,
     disabled=_disabled_cols,
@@ -450,7 +450,7 @@ if len(table_rest) > 0:
         st.data_editor(
             table_rest,
             key="scan_table_editor_rest",
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config=_column_config,
             disabled=_disabled_cols,
@@ -480,7 +480,7 @@ with st.expander("📊 指標實際數字（點開看詳細）", expanded=False)
     ])
     st.dataframe(
         details_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "收盤價":       st.column_config.NumberColumn(format="%.1f"),
