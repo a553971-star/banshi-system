@@ -322,39 +322,71 @@ table_data = pd.DataFrame([
     for i, r in enumerate(visible)
 ])
 
-st.markdown(f"**顯示 {len(visible)} 檔（門檻 ≥{threshold} 分）**")
+# 分數降序、切前 10 與其餘
+sorted_table = table_data.sort_values("總分", ascending=False).reset_index(drop=True)
+table_top    = sorted_table.iloc[:10].reset_index(drop=True)
+table_rest   = sorted_table.iloc[10:].reset_index(drop=True)
+
+st.markdown(f"**顯示 {len(sorted_table)} 檔（門檻 ≥{threshold} 分）**")
+
+
+def _collect_picks(editor_key: str, df: pd.DataFrame) -> set:
+    """從 data_editor 的 session_state 推出該表當前實際勾選的代碼集合。
+
+    streamlit data_editor 的 edited_rows 只記錄「相對於初始 df 的改動」，
+    所以要以初始 df 的 加入追蹤 為起點，再用 edited_rows 覆蓋。
+    """
+    picks: set = set()
+    if df.empty:
+        return picks
+    edited_state = st.session_state.get(editor_key) or {}
+    edited_rows  = edited_state.get("edited_rows") or {}
+    for i, row in df.iterrows():
+        is_pinned = bool(row["加入追蹤"])
+        if i in edited_rows and "加入追蹤" in edited_rows[i]:
+            is_pinned = bool(edited_rows[i]["加入追蹤"])
+        if is_pinned:
+            picks.add(row["代碼"])
+    return picks
+
 
 if st.button("📌 將勾選的股票加入追蹤清單"):
-    edited = st.session_state.get("scan_table_editor")
-    if edited is not None and "added_rows" in edited:
-        # data_editor 回傳 edited_rows，格式是 {row_idx: {col: val}}
-        pinned_add = set()
-        for row_idx, changes in (edited.get("edited_rows") or {}).items():
-            if changes.get("加入追蹤"):
-                pinned_add.add(table_data.iloc[int(row_idx)]["代碼"])
-        # 也納入原本就勾選的列
-        for i, row in table_data.iterrows():
-            if row["加入追蹤"]:
-                pinned_add.add(row["代碼"])
-        if pinned_add:
-            new_pinned = pinned_now | pinned_add
-            save_pinned(new_pinned)
-            st.success(f"已將 {len(pinned_add)} 檔加入追蹤清單：{', '.join(sorted(pinned_add))}")
-        else:
-            st.warning("沒有任何勾選。請在表格中勾選「加入追蹤」後再按此按鈕。")
+    picks = (
+        _collect_picks("scan_table_editor_top",  table_top)
+        | _collect_picks("scan_table_editor_rest", table_rest)
+    )
+    if picks:
+        new_pinned = pinned_now | picks
+        save_pinned(new_pinned)
+        st.success(f"已將 {len(picks)} 檔加入追蹤清單:{', '.join(sorted(picks))}")
+    else:
+        st.warning("沒有任何勾選。請在表格中勾選「加入追蹤」後再按此按鈕。")
+
+_column_config = {
+    "加入追蹤": st.column_config.CheckboxColumn(default=False),
+    "總分":    st.column_config.NumberColumn(format="%d"),
+    "收盤價":  st.column_config.NumberColumn(format="%.1f"),
+    "爆量倍數": st.column_config.NumberColumn(format="%.2f"),
+}
+_disabled_cols = ["排名", "代碼", "名稱", "信號強度", "總分", "收盤價",
+                  "爆量倍數", "唐奇安", "爆量", "ADX", "均線", "布林"]
 
 st.data_editor(
-    table_data,
-    key="scan_table_editor",
+    table_top,
+    key="scan_table_editor_top",
     use_container_width=True,
-    height=int(min(len(table_data), 60) * 35 + 50),
     hide_index=True,
-    column_config={
-        "加入追蹤": st.column_config.CheckboxColumn(default=False),
-        "總分":    st.column_config.NumberColumn(format="%d"),
-        "收盤價":  st.column_config.NumberColumn(format="%.1f"),
-        "爆量倍數": st.column_config.NumberColumn(format="%.2f"),
-    },
-    disabled=["排名", "代碼", "名稱", "信號強度", "總分", "收盤價",
-              "爆量倍數", "唐奇安", "爆量", "ADX", "均線", "布林"],
+    column_config=_column_config,
+    disabled=_disabled_cols,
 )
+
+if len(table_rest) > 0:
+    with st.expander(f"📂 展開其餘 {len(table_rest)} 檔（11~{len(sorted_table)}名）"):
+        st.data_editor(
+            table_rest,
+            key="scan_table_editor_rest",
+            use_container_width=True,
+            hide_index=True,
+            column_config=_column_config,
+            disabled=_disabled_cols,
+        )
