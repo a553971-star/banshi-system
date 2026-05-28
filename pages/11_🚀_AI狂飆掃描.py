@@ -134,6 +134,34 @@ def _calc_adx(df: pd.DataFrame, period: int = 14) -> float:
     return float(adx[-1])
 
 
+def _atr14(df: pd.DataFrame, period: int = 14) -> float:
+    """Wilder 平滑 ATR(period)。資料不足 period+1 筆回傳 nan。
+
+    TR_i = max(H_i - L_i, |H_i - C_{i-1}|, |L_i - C_{i-1}|)
+    首值 ATR_period = mean(TR[1..period])
+    遞推 ATR_i = (ATR_{i-1} * (period - 1) + TR_i) / period
+    """
+    high  = df["high"].values.astype(float)
+    low   = df["low"].values.astype(float)
+    close = df["close"].values.astype(float)
+    n = len(close)
+    if n < period + 1:
+        return float("nan")
+
+    tr = np.zeros(n)
+    for i in range(1, n):
+        tr[i] = max(
+            high[i] - low[i],
+            abs(high[i] - close[i - 1]),
+            abs(low[i]  - close[i - 1]),
+        )
+
+    atr = float(tr[1:period + 1].mean())
+    for i in range(period + 1, n):
+        atr = (atr * (period - 1) + tr[i]) / period
+    return atr
+
+
 def _score_stock(df: pd.DataFrame) -> dict:
     """計算單檔當日 5 指標分數。回傳 dict 含各指標 bool 和 details。"""
     close  = df["close"].values.astype(float)
@@ -185,6 +213,17 @@ def _score_stock(df: pd.DataFrame) -> dict:
         + (SCORE_BOLL    if boll_ok     else 0)
     )
 
+    # ── 背景資訊（不參與 score，純顯示）：ATR(14) + 2/3×ATR 停損 + 停損距離% ──
+    atr_val    = _atr14(df)
+    last_close = float(close[-1])
+    if not np.isnan(atr_val) and atr_val > 0 and last_close > 0:
+        atr14_out     = round(atr_val, 1)
+        stop_2atr_out = round(last_close - 2 * atr_val, 1)
+        stop_3atr_out = round(last_close - 3 * atr_val, 1)
+        stop_pct_out  = round(2 * atr_val / last_close * 100, 1)
+    else:
+        atr14_out = stop_2atr_out = stop_3atr_out = stop_pct_out = None
+
     return {
         "score":        score,
         "close":        round(float(close[-1]), 2),
@@ -195,6 +234,10 @@ def _score_stock(df: pd.DataFrame) -> dict:
         "adx_ok":       adx_ok,
         "ma_ok":        ma_ok,
         "boll_ok":      boll_ok,
+        "atr14":        atr14_out,
+        "stop_2atr":    stop_2atr_out,
+        "stop_3atr":    stop_3atr_out,
+        "stop_pct":     stop_pct_out,
     }
 
 
@@ -318,6 +361,10 @@ table_data = pd.DataFrame([
         "均線":   _bool_icon(r["ma_ok"]),
         "布林":   _bool_icon(r["boll_ok"]),
         "加入追蹤": r["stock_id"] in pinned_now,
+        "ATR(14)":    r.get("atr14"),
+        "2×ATR 停損": r.get("stop_2atr"),
+        "3×ATR 停損": r.get("stop_3atr"),
+        "停損距離%":  r.get("stop_pct"),
     }
     for i, r in enumerate(visible)
 ])
@@ -363,13 +410,18 @@ if st.button("📌 將勾選的股票加入追蹤清單"):
         st.warning("沒有任何勾選。請在表格中勾選「加入追蹤」後再按此按鈕。")
 
 _column_config = {
-    "加入追蹤": st.column_config.CheckboxColumn(default=False),
-    "總分":    st.column_config.NumberColumn(format="%d"),
-    "收盤價":  st.column_config.NumberColumn(format="%.1f"),
-    "爆量倍數": st.column_config.NumberColumn(format="%.2f"),
+    "加入追蹤":    st.column_config.CheckboxColumn(default=False),
+    "總分":        st.column_config.NumberColumn(format="%d"),
+    "收盤價":      st.column_config.NumberColumn(format="%.1f"),
+    "爆量倍數":    st.column_config.NumberColumn(format="%.2f"),
+    "ATR(14)":     st.column_config.NumberColumn(format="%.1f"),
+    "2×ATR 停損":  st.column_config.NumberColumn(format="%.1f"),
+    "3×ATR 停損":  st.column_config.NumberColumn(format="%.1f"),
+    "停損距離%":   st.column_config.NumberColumn(format="%.1f"),
 }
 _disabled_cols = ["排名", "代碼", "名稱", "信號強度", "總分", "收盤價",
-                  "爆量倍數", "唐奇安", "爆量", "ADX", "均線", "布林"]
+                  "爆量倍數", "唐奇安", "爆量", "ADX", "均線", "布林",
+                  "ATR(14)", "2×ATR 停損", "3×ATR 停損", "停損距離%"]
 
 st.data_editor(
     table_top,
