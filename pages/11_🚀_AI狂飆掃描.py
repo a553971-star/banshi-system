@@ -347,6 +347,7 @@ st.data_editor(
     table_data,
     key="scan_table_editor",
     use_container_width=True,
+    height=int(min(len(table_data), 60) * 35 + 50),
     hide_index=True,
     column_config={
         "加入追蹤": st.column_config.CheckboxColumn(default=False),
