@@ -170,10 +170,14 @@ def _score_stock(df: pd.DataFrame) -> dict:
     n = len(close)
 
     # ── 1. 唐奇安 20 日突破（今日 close >= 過去 20 日最高 high）────────────
-    donchian_ok  = False
+    donchian_ok    = False
+    donchian_high  = None
+    donch_break_pct = None
     if n >= 21:
-        donchian_high = high[-21:-1].max()   # 前 20 日（不含今日）
+        donchian_high = float(high[-21:-1].max())   # 前 20 日（不含今日）
         donchian_ok   = bool(close[-1] >= donchian_high)
+        if donchian_high > 0:
+            donch_break_pct = round((close[-1] - donchian_high) / donchian_high * 100, 2)
 
     # ── 2. 爆量（今日 volume >= 前 20 日均量 × 3）─────────────────────────
     volume_ok    = False
@@ -190,19 +194,20 @@ def _score_stock(df: pd.DataFrame) -> dict:
 
     # ── 4. 均線多頭 close > MA5 > MA10 > MA20 ─────────────────────────────
     ma_ok = False
+    ma5 = ma10 = ma20 = None
     if n >= 20:
-        ma5  = close[-5:].mean()
-        ma10 = close[-10:].mean()
-        ma20 = close[-20:].mean()
+        ma5  = float(close[-5:].mean())
+        ma10 = float(close[-10:].mean())
+        ma20 = float(close[-20:].mean())
         ma_ok = bool(close[-1] > ma5 > ma10 > ma20)
 
     # ── 5. 貼近布林上軌（close >= 上軌 × 0.98）────────────────────────────
-    boll_ok   = False
-    boll_upper = float("nan")
+    boll_ok    = False
+    boll_upper = None
     if n >= 20:
         ma20_c     = close[-20:].mean()
         std20      = close[-20:].std(ddof=1)
-        boll_upper = ma20_c + 2 * std20
+        boll_upper = float(ma20_c + 2 * std20)
         boll_ok    = bool(close[-1] >= boll_upper * BOLL_NEAR_RATIO)
 
     score = (
@@ -225,19 +230,27 @@ def _score_stock(df: pd.DataFrame) -> dict:
         atr14_out = stop_2atr_out = stop_3atr_out = stop_pct_out = None
 
     return {
-        "score":        score,
-        "close":        round(float(close[-1]), 2),
-        "volume_ratio": round(volume_ratio, 2),
-        "adx":          round(adx_val, 1),
-        "donchian_ok":  donchian_ok,
-        "volume_ok":    volume_ok,
-        "adx_ok":       adx_ok,
-        "ma_ok":        ma_ok,
-        "boll_ok":      boll_ok,
-        "atr14":        atr14_out,
-        "stop_2atr":    stop_2atr_out,
-        "stop_3atr":    stop_3atr_out,
-        "stop_pct":     stop_pct_out,
+        "score":           score,
+        "close":           round(float(close[-1]), 2),
+        "volume_ratio":    round(volume_ratio, 2),
+        "adx":             round(adx_val, 1),
+        "donchian_ok":     donchian_ok,
+        "volume_ok":       volume_ok,
+        "adx_ok":          adx_ok,
+        "ma_ok":           ma_ok,
+        "boll_ok":         boll_ok,
+        # ── 給「指標實際數字」展開區的中間值（不影響選股）──────────────
+        "donchian_high":   round(donchian_high, 2) if donchian_high is not None else None,
+        "donch_break_pct": donch_break_pct,
+        "ma5":             round(ma5, 1)  if ma5  is not None else None,
+        "ma10":            round(ma10, 1) if ma10 is not None else None,
+        "ma20":            round(ma20, 1) if ma20 is not None else None,
+        "boll_upper":      round(boll_upper, 1) if boll_upper is not None else None,
+        # ── ATR 風控群組 ────────────────────────────────────────────────
+        "atr14":           atr14_out,
+        "stop_2atr":       stop_2atr_out,
+        "stop_3atr":       stop_3atr_out,
+        "stop_pct":        stop_pct_out,
     }
 
 
@@ -442,3 +455,46 @@ if len(table_rest) > 0:
             column_config=_column_config,
             disabled=_disabled_cols,
         )
+
+# ── 📊 指標實際數字（唯讀，純背景，不參與選股）──────────────────────────
+with st.expander("📊 指標實際數字（點開看詳細）", expanded=False):
+    details_df = pd.DataFrame([
+        {
+            "代碼":         r["stock_id"],
+            "名稱":         r["name"],
+            "收盤價":       r["close"],
+            "唐奇安上軌":   r.get("donchian_high"),
+            "突破幅度%":    r.get("donch_break_pct"),
+            "爆量倍數":     r["volume_ratio"],
+            "ADX值":        r["adx"],
+            "MA5":          r.get("ma5"),
+            "MA10":         r.get("ma10"),
+            "MA20":         r.get("ma20"),
+            "布林上軌":     r.get("boll_upper"),
+            "ATR(14)":      r.get("atr14"),
+            "2×ATR 停損":   r.get("stop_2atr"),
+            "3×ATR 停損":   r.get("stop_3atr"),
+            "停損距離%":    r.get("stop_pct"),
+        }
+        for r in visible  # 後端已按 score 降序，與主表格一致
+    ])
+    st.dataframe(
+        details_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "收盤價":       st.column_config.NumberColumn(format="%.1f"),
+            "唐奇安上軌":   st.column_config.NumberColumn(format="%.1f"),
+            "突破幅度%":    st.column_config.NumberColumn(format="%.2f"),
+            "爆量倍數":     st.column_config.NumberColumn(format="%.2f"),
+            "ADX值":        st.column_config.NumberColumn(format="%.1f"),
+            "MA5":          st.column_config.NumberColumn(format="%.1f"),
+            "MA10":         st.column_config.NumberColumn(format="%.1f"),
+            "MA20":         st.column_config.NumberColumn(format="%.1f"),
+            "布林上軌":     st.column_config.NumberColumn(format="%.1f"),
+            "ATR(14)":      st.column_config.NumberColumn(format="%.1f"),
+            "2×ATR 停損":   st.column_config.NumberColumn(format="%.1f"),
+            "3×ATR 停損":   st.column_config.NumberColumn(format="%.1f"),
+            "停損距離%":    st.column_config.NumberColumn(format="%.1f"),
+        },
+    )
