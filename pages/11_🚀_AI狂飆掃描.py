@@ -179,14 +179,19 @@ def _score_stock(df: pd.DataFrame) -> dict:
         if donchian_high > 0:
             donch_break_pct = round((close[-1] - donchian_high) / donchian_high * 100, 2)
 
-    # ── 2. 爆量（今日 volume >= 前 20 日均量 × 3）─────────────────────────
-    volume_ok    = False
-    volume_ratio = 0.0
+    # ── 2. 爆量（今日 volume >= 前 20 日均量 × 3）＋方向性判斷 ────────────
+    volume_ratio  = 0.0
+    vol_direction = "normal"   # 'bull' | 'bear' | 'normal'
+    price_change  = 0.0        # (today_close - yesterday_close) / yesterday_close
+    if n >= 2:
+        price_change = (close[-1] - close[-2]) / close[-2] if close[-2] != 0 else 0.0
     if n >= 21:
-        ma20_vol     = volume[-21:-1].mean()
+        ma20_vol = volume[-21:-1].mean()
         if ma20_vol > 0:
             volume_ratio = volume[-1] / ma20_vol
-            volume_ok    = bool(volume_ratio >= VOL_RATIO_THRESHOLD)
+            if volume_ratio >= VOL_RATIO_THRESHOLD:
+                vol_direction = "bull" if price_change > 0 else "bear"
+    volume_ok = (vol_direction == "bull")
 
     # ── 3. ADX(14) > 25 ────────────────────────────────────────────────────
     adx_val = _calc_adx(df)
@@ -210,9 +215,14 @@ def _score_stock(df: pd.DataFrame) -> dict:
         boll_upper = float(ma20_c + 2 * std20)
         boll_ok    = bool(close[-1] >= boll_upper * BOLL_NEAR_RATIO)
 
+    vol_score = (
+        SCORE_VOLUME  if vol_direction == "bull" else
+        -15           if vol_direction == "bear" else
+        0
+    )
     score = (
         (SCORE_DONCHIAN if donchian_ok  else 0)
-        + (SCORE_VOLUME  if volume_ok   else 0)
+        + vol_score
         + (SCORE_ADX     if adx_ok      else 0)
         + (SCORE_MA      if ma_ok       else 0)
         + (SCORE_BOLL    if boll_ok     else 0)
@@ -233,6 +243,8 @@ def _score_stock(df: pd.DataFrame) -> dict:
         "score":           score,
         "close":           round(float(close[-1]), 2),
         "volume_ratio":    round(volume_ratio, 2),
+        "vol_direction":   vol_direction,
+        "price_change_pct": round(price_change * 100, 1),
         "adx":             round(adx_val, 1),
         "donchian_ok":     donchian_ok,
         "volume_ok":       volume_ok,
@@ -367,9 +379,17 @@ table_data = pd.DataFrame([
         "信號強度": _signal_label(r["score"]),
         "總分":   r["score"],
         "收盤價":  r["close"],
-        "爆量倍數": r["volume_ratio"],
+        "爆量倍數": (
+            f"↑{r['volume_ratio']:.2f}x" if r.get("vol_direction") == "bull" else
+            f"↓{r['volume_ratio']:.2f}x" if r.get("vol_direction") == "bear" else
+            f"{r['volume_ratio']:.2f}x"
+        ),
         "唐奇安":  _bool_icon(r["donchian_ok"]),
-        "爆量":   _bool_icon(r["volume_ok"]),
+        "爆量":   (
+            "✅" if r.get("vol_direction") == "bull" else
+            "⚠️" if r.get("vol_direction") == "bear" else
+            "❌"
+        ),
         "ADX":    _bool_icon(r["adx_ok"]),
         "均線":   _bool_icon(r["ma_ok"]),
         "布林":   _bool_icon(r["boll_ok"]),
@@ -426,7 +446,7 @@ _column_config = {
     "加入追蹤":    st.column_config.CheckboxColumn(default=False),
     "總分":        st.column_config.NumberColumn(format="%d"),
     "收盤價":      st.column_config.NumberColumn(format="%.1f"),
-    "爆量倍數":    st.column_config.NumberColumn(format="%.2f"),
+    "爆量倍數":    st.column_config.TextColumn(),
     "ATR(14)":     st.column_config.NumberColumn(format="%.1f"),
     "2×ATR 停損":  st.column_config.NumberColumn(format="%.1f"),
     "3×ATR 停損":  st.column_config.NumberColumn(format="%.1f"),
@@ -465,7 +485,15 @@ with st.expander("📊 指標實際數字（點開看詳細）", expanded=False)
             "收盤價":       r["close"],
             "唐奇安上軌":   r.get("donchian_high"),
             "突破幅度%":    r.get("donch_break_pct"),
-            "爆量倍數":     r["volume_ratio"],
+            "爆量倍數":     (
+                f"↑{r['volume_ratio']:.2f}x" if r.get("vol_direction") == "bull" else
+                f"↓{r['volume_ratio']:.2f}x" if r.get("vol_direction") == "bear" else
+                f"{r['volume_ratio']:.2f}x"
+            ),
+            "漲跌%":        (
+                f"+{r['price_change_pct']:.1f}%" if r.get("price_change_pct", 0) > 0 else
+                f"{r['price_change_pct']:.1f}%"
+            ),
             "ADX值":        r["adx"],
             "MA5":          r.get("ma5"),
             "MA10":         r.get("ma10"),
@@ -486,7 +514,8 @@ with st.expander("📊 指標實際數字（點開看詳細）", expanded=False)
             "收盤價":       st.column_config.NumberColumn(format="%.1f"),
             "唐奇安上軌":   st.column_config.NumberColumn(format="%.1f"),
             "突破幅度%":    st.column_config.NumberColumn(format="%.2f"),
-            "爆量倍數":     st.column_config.NumberColumn(format="%.2f"),
+            "爆量倍數":     st.column_config.TextColumn(),
+            "漲跌%":        st.column_config.TextColumn(),
             "ADX值":        st.column_config.NumberColumn(format="%.1f"),
             "MA5":          st.column_config.NumberColumn(format="%.1f"),
             "MA10":         st.column_config.NumberColumn(format="%.1f"),
