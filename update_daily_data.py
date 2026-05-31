@@ -318,6 +318,81 @@ def _fetch_tpex_margin(date_iso: str, universe_set: set) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def update_ai_supplement(date_str: str) -> None:
+    """補抓 ai_supply_chain.csv 裡不在 universe 的股票股價。
+
+    - date_str：YYYY-MM-DD
+    - 先試 TWSE，再試 TPEx，合併後 INSERT OR IGNORE 寫入 price_history
+    - 自己開新連線，不依賴 main() 的 conn（main 結束時已 close）
+    """
+    import pandas as pd
+
+    ai_csv  = os.path.join(BASE_PATH, "ai_supply_chain.csv")
+    uni_csv = os.path.join(BASE_PATH, "universe.csv")
+
+    if not os.path.exists(ai_csv) or not os.path.exists(uni_csv):
+        return
+
+    ai_set  = set(pd.read_csv(ai_csv,  dtype=str)["stock_id"].str.zfill(4).dropna())
+    uni_set = set(pd.read_csv(uni_csv, dtype=str)["stock_id"].str.zfill(4).dropna())
+    ai_only = ai_set - uni_set
+
+    if not ai_only:
+        return
+
+    date_nodash = date_str.replace("-", "")   # TWSE 用 YYYYMMDD
+    frames: list[pd.DataFrame] = []
+
+    # ── TWSE ──────────────────────────────────────────────────────────────────
+    try:
+        text_twse = _twse_fetch(date_nodash, "price")
+        if text_twse:
+            df_twse = _parse_price(text_twse, ai_only)
+            if not df_twse.empty:
+                frames.append(df_twse)
+    except Exception as e:
+        print(f"  AI補抓 TWSE 失敗：{e}")
+
+    # ── TPEx ──────────────────────────────────────────────────────────────────
+    try:
+        df_tpex = _fetch_tpex_price(date_str, ai_only)
+        if not df_tpex.empty:
+            frames.append(df_tpex)
+    except Exception as e:
+        print(f"  AI補抓 TPEx 失敗：{e}")
+
+    if not frames:
+        print(f"  AI補抓股價：0 筆（TWSE + TPEx 均無回傳）")
+        return
+
+    df_all = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["stock_id"])
+    df_all = df_all[df_all["stock_id"].isin(ai_only)]
+
+    twse_n = len(frames[0]) if frames else 0
+    tpex_n = len(frames[1]) if len(frames) > 1 else 0
+
+    conn2   = sqlite3.connect(DB_PATH)
+    cursor2 = conn2.cursor()
+    written = 0
+    for _, row in df_all.iterrows():
+        try:
+            cursor2.execute(
+                """INSERT OR IGNORE INTO price_history
+                   (stock_id, date, open, high, low, close, volume)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (row["stock_id"], date_str,
+                 row.get("open"), row.get("high"), row.get("low"),
+                 row.get("close"), row.get("volume")),
+            )
+            written += 1
+        except Exception:
+            pass
+    conn2.commit()
+    conn2.close()
+
+    print(f"  AI補抓股價：TWSE {twse_n} 筆 + TPEx {tpex_n} 筆，共 {written} 檔寫入")
+
+
 def main():
     import pandas as pd
     end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
@@ -501,6 +576,9 @@ def main():
         sh_csv_path = os.path.join(BASE_PATH, "shareholding_latest.csv")
         latest_sh.to_csv(sh_csv_path, index=False)
         print(f"  shareholding_latest.csv 已輸出：{len(latest_sh)} 支")
+
+    # ── AI 供應鏈補抓（不在 universe 的 AI 概念股）────────────────────────────
+    update_ai_supplement(end_date)
 
 
 if __name__ == "__main__":
