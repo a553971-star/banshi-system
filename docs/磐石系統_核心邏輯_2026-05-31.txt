@@ -1,0 +1,4051 @@
+=== 磐石決策系統 核心邏輯原始碼 ===
+定錨日期：2026-05-31
+包含：main / feature_engine / trajectory_engine / flow_engine
+      decision_inspector / exporter / good_company / institutional_engine
+      b_ranker / backtester / utils/rotation_detector
+      engine/signals/* / engine/position/* / engine/ui/*
+
+================================================
+FILE: ./main.py
+================================================
+"""
+main.py — 磐石決策系統 Phase 2
+Entry point. Orchestrates daily decision pipeline.
+
+Pipeline (per stock):
+    merge_all() → build_features() → compute_trajectory()
+    → classify_flow() → classify_cost()
+    → format_panstone_signal()
+    → format_decision_snapshot() → export CSV
+
+Usage:
+    python main.py [--date YYYY-MM-DD] [--params params.json]
+    python main.py --backtest --start YYYY-MM-DD --end YYYY-MM-DD
+"""
+
+import argparse
+import json
+import logging
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+import pandas as pd
+
+from engine.signals.b_phase import classify_b_phase
+from data_fetcher import merge_all, merge_all_local, get_stock_name
+from live_fetcher import merge_all_live
+from feature_engine import build_features
+from trajectory_engine import compute_trajectory, get_latest_trajectory
+from flow_engine import classify_flow, classify_cost
+from decision_inspector import check_data_integrity, format_panstone_signal
+from good_company import is_good_company, get_company_name, load_company_list
+from institutional_engine import calc_b_validity
+from exporter import (
+    format_data_snapshot,
+    format_decision_snapshot,
+    export_latest_decisions,
+    append_state_log,
+)
+from backtester import run_backtest
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+_DEFAULT_PARAMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "params.json")
+_DEFAULT_DB     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db")
+_LOOKBACK_DAYS  = 150
+
+# 載入 stock_names.csv 作為名稱補充來源（只載入一次）
+_sn_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stock_names.csv")
+_sn_map: dict = {}
+if os.path.exists(_sn_path):
+    try:
+        _sn_df = pd.read_csv(_sn_path, dtype=str)
+        _sn_map = dict(zip(_sn_df["stock_id"], _sn_df["name"]))
+    except Exception:
+        pass
+
+
+def load_params(path: str = _DEFAULT_PARAMS) -> dict:
+    """Load all decision thresholds from a JSON config file.
+
+    Returns a default params dict if the file is missing or unreadable.
+    No hardcoded numbers exist in any logic function — all come from here.
+    Never raises.
+    """
+    defaults = {
+        "companies_path":  os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv"),
+        "db_path":         os.path.join(os.path.dirname(os.path.abspath(__file__)), "banshi.db"),
+
+        # Trajectory thresholds
+        "c_safe_threshold":    0.98,
+        "c_end_consecutive":   3,
+        "b_lower":             0.97,
+        "b_upper":             1.03,
+        "b_vol_threshold":     6.0,
+        "a_entry_ma_mult":     1.03,
+        "a_entry_vol_ratio":   1.2,
+        "a_reset_vol_low":     0.5,
+        "a_reset_vol_consec":  3,
+
+        # Decision Gate
+        "min_c_days":          5,
+        "min_b_days":          3,
+
+        # Flow classification
+        "dist_vol_ratio":      1.8,
+        "dist_margin_change":  0,
+        "dist_return_10d":     5.0,
+        "accum_foreign_consec": 2,
+        "accum_margin_change": 0,
+        "accum_return_10d":    5.0,
+        "accum_vol_ratio":     0.8,
+
+        # Cost classification
+        "cost_safe_lower":     -0.03,
+        "cost_safe_upper":      0.06,
+        "cost_high_risk":       0.08,
+
+        # False-breakout guard
+        "false_breakout_a_days":    2,
+        "false_breakout_vol_ratio": 1.2,
+
+        # Fast-breakout signal
+        "fast_breakout_c_days_min":           10,
+        "fast_breakout_volume_ratio_min":      1.6,
+        "fast_breakout_volatility_prev_max":   5.0,
+        "fast_breakout_return_10d_max":        8.0,
+        "fast_breakout_a_days_max":            2,
+        "fast_breakout_confidence_penalty":   10,
+
+        # Confidence scoring
+        "conf_accum":                    20,
+        "conf_a_days":                   20,
+        "conf_safe":                     15,
+        "conf_foreign_streak":           15,
+        "conf_vol_ratio":                10,
+        "conf_c_days":                   10,
+        "conf_b_days":                   10,
+        "conf_false_breakout":          -30,
+        "conf_foreign_streak_threshold":  3,
+        "conf_vol_ratio_threshold":       1.5,
+        "conf_c_days_threshold":          8,
+        "conf_b_days_threshold":          7,
+
+        # Exit conditions (backtester)
+        "exit_stop_loss":        -0.06,
+        "exit_profit_bias":       0.08,
+        "exit_profit_a_min":      3,
+        "exit_time_stop":         20,
+        "exit_trend_exhaustion":  10,
+
+        # Personal reminder nudges
+        "nudge_pnl_threshold":  10.0,
+        "nudge_cost_threshold":  5.0,
+    }
+    try:
+        p = Path(path)
+        if not p.exists():
+            logger.warning("params.json not found at %s — using defaults", path)
+            return defaults
+        with p.open(encoding="utf-8") as f:
+            loaded = json.load(f)
+        defaults.update(loaded)   # loaded values override defaults
+        return defaults
+    except Exception as exc:
+        logger.error("load_params failed (%s): %s — using defaults", path, exc)
+        return defaults
+
+
+def process_stock_live(
+    stock_id: str,
+    params: dict,
+    print_snapshot: bool = False,
+):
+    """
+    即時單股分析入口（Live Analysis Entry Point）。
+
+    薄 wrapper，填入 live 查詢所需的預設參數後呼叫 _process_stock。
+
+    NOTE:
+    Live analysis and batch analysis now share the same
+    underlying _process_stock engine.
+    live_analyzer.py 已廢棄，即時查詢統一走此入口。
+
+    來源：原 live_analyzer.py process_stock_live（已刪除）
+    """
+    return _process_stock(
+        stock_id=stock_id,
+        date=datetime.today().strftime("%Y-%m-%d"),
+        params=params,
+        prev_states={},
+        print_snapshot=print_snapshot,
+    )
+
+
+def _process_stock(
+    stock_id: str,
+    date: str,
+    params: dict,
+    prev_states: dict,
+    print_snapshot: bool = True,
+) -> Optional[dict]:
+    """Run the full decision pipeline for one stock on one date.
+
+    Returns a decision dict, or None on unrecoverable data failure.
+    Never raises.
+    """
+    try:
+        db_path = params.get("db_path", _DEFAULT_DB)
+        co_path = params.get("companies_path", os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv"))
+
+        target    = pd.to_datetime(date)
+        start_dt  = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        name      = get_company_name(stock_id, co_path) or get_stock_name(stock_id, db_path) or _sn_map.get(str(stock_id)) or stock_id
+
+        # ── Data → Features → Trajectory ────────────────────────────────
+        df_raw = merge_all_local(stock_id, start_dt, date, db_path)
+        if df_raw.empty:
+            df_raw = merge_all(stock_id, start_dt, date, db_path)  # fallback
+        if df_raw.empty:
+            df_raw = merge_all_live(stock_id, start_dt, date)  # FinMind API fallback
+        if df_raw.empty:
+            logger.warning("%s: no data available for %s", stock_id, date)
+            return None
+
+        df_feat = build_features(df_raw)
+        df_traj = compute_trajectory(df_feat, params)
+
+        # ── Print data snapshot ───────────────────────────────────────────
+        if print_snapshot:
+            print(format_data_snapshot(stock_id, name, df_feat))
+            print()
+
+        traj_info    = get_latest_trajectory(df_traj)
+        last         = df_traj.iloc[-1]
+
+        def _g(col):
+            v = last.get(col) if hasattr(last, "get") else (
+                last[col] if col in df_traj.columns else None
+            )
+            return None if (v is not None and v != v) else v
+
+        # ── Classify flow & cost ──────────────────────────────────────────
+        flow_status = classify_flow(
+            _g("foreign_consecutive_buy"),
+            _g("margin_change_5d"),
+            _g("return_10d"),
+            _g("volume_ratio"),
+            params,
+        )
+        cost_result = classify_cost(_g("bias_ma20"), params)
+
+        # ── Assemble input dicts ──────────────────────────────────────────
+        integrity_ok = check_data_integrity(df_feat)
+        good_co      = is_good_company(stock_id, co_path)
+
+        trajectory = {
+            "stock_id":        stock_id,
+            "name":            name,
+            "date":            traj_info["date"] or date,
+            "C_days":          traj_info["C_days"],
+            "B_days":          traj_info["B_days"],
+            "A_days":          traj_info["A_days"],
+            "integrity_ok":    integrity_ok,
+            "is_good_company": good_co,
+        }
+        flow_dict = {
+            "flow_status":             flow_status,
+            "volume_ratio":            _g("volume_ratio"),
+            "foreign_consecutive_buy": _g("foreign_consecutive_buy"),
+            "margin_change_5d":        _g("margin_change_5d"),
+            "return_10d":              _g("return_10d"),
+            "daily_return_pct":        _g("daily_return_pct"),
+            "bias_ma20":               _g("bias_ma20"),
+            "volatility_5d_prev":      _g("volatility_5d_prev"),
+        }
+
+        # ── Decision Gate ─────────────────────────────────────────────────
+        decision = format_panstone_signal(
+            trajectory=trajectory,
+            flow=flow_dict,
+            cost=cost_result,
+            params=params,
+            current_date=date,
+            current_price=_g("close"),
+        )
+
+        # ── Attach observational indicators (no decision impact) ─────────
+        for col in ("adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower"):
+            decision[col] = _g(col)
+        decision["volume_ratio"] = _g("volume_ratio")
+
+        # ── B_quality / B_window_20 / B_validity / B_phase ───────────────
+        try:
+            b_quality = int(float(_g("B_quality") or 0))
+        except Exception:
+            b_quality = 0
+
+        try:
+            b_window_20 = int(float(_g("B_window_20") or 0))
+        except Exception:
+            b_window_20 = 0
+
+        try:
+            a_days = int(float(_g("A_days") or 0))
+        except Exception:
+            a_days = 0
+
+        try:
+            b_validity = calc_b_validity(df_feat, b_quality)
+            if not isinstance(b_validity, str):
+                b_validity = "UNCERTAIN"
+        except Exception:
+            b_validity = "UNCERTAIN"
+
+        # B phase 判定：統一走 engine，Single Source of Truth
+        # 原 inline 邏輯已移至 engine/signals/b_phase.py
+        b_phase = classify_b_phase({
+            "B_quality": b_quality,
+            "A_days": a_days,
+        })
+
+        decision["B_quality"]   = b_quality
+        decision["B_window_20"] = b_window_20
+        decision["B_validity"]  = b_validity
+        decision["B_phase"]     = b_phase
+
+        # ── Print decision snapshot ───────────────────────────────────────
+        if print_snapshot:
+            print(format_decision_snapshot(decision))
+            print()
+
+        # ── Foreign cost / profit from institutional engine ───────────────
+        try:
+            from institutional_engine import calc_foreign_cost_pro
+            _f_cost, _f_pos_inst, _f_profit = calc_foreign_cost_pro(df_feat)
+            decision["foreign_cost"]       = _f_cost
+            decision["foreign_profit_pct"] = _f_profit
+        except Exception:
+            decision.setdefault("foreign_cost", None)
+            decision.setdefault("foreign_profit_pct", None)
+
+        # ── Foreign shareholding from shareholding_latest.csv ────────────
+        try:
+            _sh_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shareholding_latest.csv")
+            _sh_df  = pd.read_csv(_sh_csv, dtype={"stock_id": str})
+            _sh_row = _sh_df[_sh_df["stock_id"] == stock_id]
+            if not _sh_row.empty and _sh_row.iloc[0].get("foreign_shares"):
+                _f_lots = int(_sh_row.iloc[0]["foreign_shares"]) // 1000
+                decision["foreign_position"] = _f_lots
+                if _f_lots > 50000:
+                    decision["foreign_level"] = "HEAVY"
+                elif _f_lots > 10000:
+                    decision["foreign_level"] = "MEDIUM"
+                elif _f_lots > 0:
+                    decision["foreign_level"] = "LIGHT"
+                else:
+                    decision["foreign_level"] = "NONE"
+            else:
+                # CSV 無資料，嘗試即時從 FinMind 抓
+                try:
+                    import datetime as _dt
+                    import urllib.request, json as _json
+                    _fm_token = os.getenv("FINMIND_TOKEN", "")
+                    _end   = _dt.date.today().strftime("%Y-%m-%d")
+                    _start = (_dt.date.today() - _dt.timedelta(days=7)).strftime("%Y-%m-%d")
+                    _url = (
+                        f"https://api.finmindtrade.com/api/v4/data"
+                        f"?dataset=TaiwanStockShareholding"
+                        f"&data_id={stock_id}"
+                        f"&start_date={_start}"
+                        f"&end_date={_end}"
+                    )
+                    if _fm_token:
+                        _url += f"&token={_fm_token}"
+                    with urllib.request.urlopen(_url, timeout=5) as _resp:
+                        _raw = _json.loads(_resp.read())
+                    _data = _raw.get("data", [])
+                    if not isinstance(_data, list) or not _data:
+                        decision["foreign_position"] = None
+                        decision["foreign_level"]    = "NONE"
+                    else:
+                        _latest = sorted(_data, key=lambda x: x.get("date", ""))[-1]
+                        _f_shares = int(_latest.get("ForeignInvestmentShares", 0) or 0)
+                        _f_ratio  = float(_latest.get("ForeignInvestmentSharesRatio", 0) or 0)
+                        _f_lots   = _f_shares // 1000
+                        decision["foreign_position"] = _f_lots
+                        # Live fallback only（not persisted to CSV）
+                        decision["foreign_ratio_live"] = _f_ratio
+                        if _f_lots > 50000:
+                            decision["foreign_level"] = "HEAVY"
+                        elif _f_lots > 10000:
+                            decision["foreign_level"] = "MEDIUM"
+                        elif _f_lots > 0:
+                            decision["foreign_level"] = "LIGHT"
+                        else:
+                            decision["foreign_level"] = "NONE"
+                except Exception as _fm_exc:
+                    logger.warning("FinMind REST fallback failed for %s: %s", stock_id, _fm_exc)
+                    decision["foreign_position"] = None
+                    decision["foreign_level"]    = "NONE"
+        except Exception as exc:
+            logger.warning("shareholding lookup failed for %s: %s", stock_id, exc)
+            decision.setdefault("foreign_position", None)
+            decision.setdefault("foreign_level", "NONE")
+
+        # ── State log ────────────────────────────────────────────────────
+        prev = prev_states.get(stock_id)
+        append_state_log(decision, prev)
+        prev_states[stock_id] = decision.get("state")
+
+        return decision
+
+    except Exception as exc:
+        logger.error("_process_stock(%s, %s) failed: %s", stock_id, date, exc)
+        return None
+
+
+def run_daily(
+    stock_ids: list,
+    date: str,
+    params: dict,
+    prev_states: dict = None,
+    print_snapshots: bool = True,
+) -> list:
+    """Run the full decision pipeline for all stocks on a given date.
+
+    Returns a list of decision dicts (one per stock that produced a result).
+    """
+    if prev_states is None:
+        prev_states = {}
+
+    results = []
+    for sid in stock_ids:
+        d = _process_stock(sid, date, params, prev_states, print_snapshots)
+        if d is not None:
+            results.append(d)
+
+    export_latest_decisions(results)
+    logger.info("run_daily complete: %d stocks processed for %s", len(results), date)
+    return results
+
+
+def main() -> None:
+    """Command-line entry point."""
+    parser = argparse.ArgumentParser(description="磐石決策系統")
+    parser.add_argument("--date",    default=datetime.today().strftime("%Y-%m-%d"),
+                        help="Target date (YYYY-MM-DD). Default: today.")
+    parser.add_argument("--params",  default=_DEFAULT_PARAMS,
+                        help="Path to params.json.")
+    parser.add_argument("--stocks",  nargs="*",
+                        help="Stock IDs to process. Default: all in companies.csv.")
+    parser.add_argument("--backtest", action="store_true",
+                        help="Run backtester instead of daily pipeline.")
+    parser.add_argument("--start",   default=None, help="Backtest start date.")
+    parser.add_argument("--end",     default=None, help="Backtest end date.")
+    parser.add_argument("--quiet",   action="store_true",
+                        help="Suppress snapshot output (CSV only).")
+    args = parser.parse_args()
+
+    params = load_params(args.params)
+
+    # Determine stock list
+    if args.stocks:
+        stock_ids = args.stocks
+    else:
+        companies = load_company_list(params.get("companies_path", os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")))
+        stock_ids = list(companies.keys())
+
+        co_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")
+        if os.path.exists(co_path):
+            import pandas as _cpd
+            _c = _cpd.read_csv(co_path, header=None, dtype=str)
+            stock_ids = [s for s in _c.iloc[:, 0].tolist() if str(s).strip()]
+            print(f"使用 companies.csv：{len(stock_ids)} 支股票")
+
+    if not stock_ids:
+        print("No stocks to process. Add entries to companies.csv.")
+        sys.exit(0)
+
+    if args.backtest:
+        start = args.start or "2024-01-01"
+        end   = args.end   or args.date
+        print(f"Running backtest: {start} → {end} | {len(stock_ids)} stocks")
+        trades_df = run_backtest(stock_ids, start, end, params)
+        if not trades_df.empty:
+            print(trades_df.to_string(index=False))
+        else:
+            print("No trades generated.")
+    else:
+        print(f"Running daily pipeline: {args.date} | {len(stock_ids)} stocks\n")
+        run_daily(
+            stock_ids,
+            args.date,
+            params,
+            print_snapshots=not args.quiet,
+        )
+
+
+if __name__ == "__main__":
+    main()
+
+================================================
+FILE: ./feature_engine.py
+================================================
+"""
+feature_engine.py — 磐石決策系統 Phase 1
+Computes all derived feature columns from raw OHLCV + institutional data.
+
+Rules enforced:
+- All outputs use None (never NaN, never 0) for missing values.
+- A single-column failure sets that column to None; others are unaffected.
+- build_features() is a pure function: input DataFrame is never mutated.
+- All compute_* functions return pd.Series with dtype=object (None-safe).
+"""
+
+import logging
+from typing import Optional
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+# ── Internal helper ──────────────────────────────────────────────────────────
+
+def _to_none(series: pd.Series) -> pd.Series:
+    """Convert NaN/NA → None in a Series, return object dtype.
+
+    Downstream consumers receive None, never NaN.
+    """
+    na_mask = pd.isna(series)
+    result = series.astype(object)
+    result[na_mask] = None
+    return result
+
+
+def _numeric(series: pd.Series) -> pd.Series:
+    """Coerce a (potentially object-dtype) Series to float64 for calculation.
+
+    None and non-numeric values become NaN.
+    """
+    return pd.to_numeric(series, errors="coerce")
+
+
+# ── Individual compute functions ─────────────────────────────────────────────
+
+def compute_ma(series: pd.Series, window: int) -> pd.Series:
+    """Rolling mean of `series` over `window` days.
+
+    Returns None where fewer than `window` valid (non-None) values exist.
+    """
+    try:
+        result = _numeric(series).rolling(window=window, min_periods=window).mean()
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_ma(window=%d) failed: %s", window, exc)
+        return pd.Series([None] * len(series), index=series.index, dtype=object)
+
+
+def compute_bias(close: pd.Series, ma: pd.Series) -> pd.Series:
+    """(close / ma) - 1.
+
+    Returns None where either close or ma is None.
+    Result is a ratio (e.g. 0.025 means +2.5%).
+    """
+    try:
+        c = _numeric(close)
+        m = _numeric(ma)
+        result = (c / m) - 1.0
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_bias failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_volume_ratio(volume: pd.Series) -> pd.Series:
+    """volume / MA20(volume).
+
+    Returns None where volume is None, MA20 window < 20 valid values,
+    or MA20(volume) == 0.
+    """
+    try:
+        v = _numeric(volume)
+        ma20_vol = v.rolling(window=20, min_periods=20).mean()
+        # Avoid division by zero: replace 0 with NaN before dividing
+        ma20_vol_safe = ma20_vol.where(ma20_vol != 0.0, other=float("nan"))
+        result = v / ma20_vol_safe
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_volume_ratio failed: %s", exc)
+        return pd.Series([None] * len(volume), index=volume.index, dtype=object)
+
+
+def compute_return_nd(close: pd.Series, n: int) -> pd.Series:
+    """(close / close.shift(n)) - 1 as percentage.
+
+    Returns None where fewer than n valid prior rows exist.
+    Example: 3.2 means +3.2%.
+    """
+    try:
+        c = _numeric(close)
+        shifted = c.shift(n)
+        # shifted NaN where insufficient history; 0 denominator guarded
+        shifted_safe = shifted.where(shifted != 0.0, other=float("nan"))
+        result = ((c / shifted_safe) - 1.0) * 100.0
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_return_nd(n=%d) failed: %s", n, exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_margin_change_nd(margin_balance: pd.Series, n: int) -> pd.Series:
+    """margin_balance[t] - margin_balance[t-n].
+
+    Returns None where either endpoint is None or insufficient rows.
+    """
+    try:
+        mb = _numeric(margin_balance)
+        result = mb - mb.shift(n)
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_margin_change_nd(n=%d) failed: %s", n, exc)
+        return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
+
+
+def compute_margin_consecutive_increase(margin_balance: pd.Series) -> pd.Series:
+    """Streak of consecutive days where margin_balance increased (diff > 0).
+
+    NaN diff (e.g. first row) resets streak to 0 and outputs 0 — never None.
+    """
+    try:
+        mb = _numeric(margin_balance)
+        streak = 0
+        results = []
+        for val in (mb - mb.shift(1)):
+            if val is None or (val != val):
+                streak = 0
+                results.append(0)
+            elif val > 0:
+                streak += 1
+                results.append(streak)
+            else:
+                streak = 0
+                results.append(0)
+        return pd.Series(results, index=margin_balance.index, dtype=object)
+    except Exception as exc:
+        logger.error("compute_margin_consecutive_increase failed: %s", exc)
+        return pd.Series([0] * len(margin_balance), index=margin_balance.index, dtype=object)
+
+
+def compute_margin_change_pct(margin_balance: pd.Series, n: int = 5) -> pd.Series:
+    """(margin_balance[t] - margin_balance[t-n]) / margin_balance[t-n] * 100.
+
+    Returns None where base is zero or None.
+    """
+    try:
+        mb = _numeric(margin_balance)
+        base = mb.shift(n)
+        pct = (mb - base) / base.where(base != 0) * 100
+        return _to_none(pct)
+    except Exception as exc:
+        logger.error("compute_margin_change_pct(n=%d) failed: %s", n, exc)
+        return pd.Series([None] * len(margin_balance), index=margin_balance.index, dtype=object)
+
+
+def compute_foreign_consecutive_buy(foreign_net: pd.Series) -> pd.Series:
+    """Streak of consecutive days with foreign_net > 0.
+
+    Rules (v1.7):
+    - foreign_net > 0  → streak + 1, output streak value.
+    - foreign_net <= 0 → streak resets to 0, output 0.
+    - foreign_net is None → streak resets to 0, output None.
+    """
+    streak = 0
+    result = []
+    try:
+        for val in foreign_net:
+            is_null = (val is None) or (isinstance(val, float) and pd.isna(val))
+            if is_null:
+                streak = 0        # force reset on None (v1.7 rule 4)
+                result.append(None)
+            elif float(val) > 0:
+                streak += 1
+                result.append(streak)
+            else:
+                streak = 0
+                result.append(0)
+    except Exception as exc:
+        logger.error("compute_foreign_consecutive_buy failed: %s", exc)
+        return pd.Series([None] * len(foreign_net), index=foreign_net.index, dtype=object)
+    return pd.Series(result, index=foreign_net.index, dtype=object)
+
+
+def compute_is_new_low(close: pd.Series) -> pd.Series:
+    """True if close strictly below the minimum of the prior 59 days.
+
+    Formula: reference = close.shift(1).rolling(20, min_periods=20).min()
+             is_new_low = close < reference  (strict less-than)
+
+    Returns None where reference or close is None (window < 60 valid rows).
+    A flat bottom does NOT trigger is_new_low — only a genuine downward break.
+    """
+    try:
+        c = _numeric(close)
+        reference = c.shift(1).rolling(window=30, min_periods=30).min()
+        result = []
+        for c_val, r_val in zip(c, reference):
+            if pd.isna(c_val) or pd.isna(r_val):
+                result.append(None)
+            else:
+                result.append(bool(c_val < r_val))
+        return pd.Series(result, index=close.index, dtype=object)
+    except Exception as exc:
+        logger.error("compute_is_new_low failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_volatility_5d(close: pd.Series) -> pd.Series:
+    """Standard deviation of the 5 most-recent daily returns, as percentage.
+
+    daily_return[t] = (close[t] / close[t-1]) - 1
+    Returns None where fewer than 5 valid return pairs exist.
+    Example: 3.5 means 3.5%.
+    """
+    try:
+        c = _numeric(close)
+        daily_ret = c.pct_change() * 100.0  # first row → NaN
+        result = daily_ret.rolling(window=5, min_periods=5).std()
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_volatility_5d failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_volatility_5d_prev(close: pd.Series) -> pd.Series:
+    """Standard deviation of the 5 daily returns ending the day before yesterday.
+
+    daily_return[t] = (close[t] / close[t-1]) - 1
+    volatility_5d_prev[t] = std of returns[t-5 .. t-1]  (shifted by 1)
+    Returns None where fewer than 5 valid return pairs exist.
+    """
+    try:
+        c = _numeric(close)
+        daily_ret = c.pct_change() * 100.0
+        result = daily_ret.shift(1).rolling(window=5, min_periods=5).std()
+        return _to_none(result)
+    except Exception as exc:
+        logger.error("compute_volatility_5d_prev failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+# ── Observational indicators (no decision impact) ────────────────────────────
+
+def compute_adx(
+    high: pd.Series, low: pd.Series, close: pd.Series, window: int = 14
+) -> pd.Series:
+    """Average Directional Index. Returns None where data insufficient."""
+    try:
+        h = _numeric(high)
+        l = _numeric(low)
+        c = _numeric(close)
+        prev_c = c.shift(1)
+        tr = pd.concat([
+            h - l,
+            (h - prev_c).abs(),
+            (l - prev_c).abs(),
+        ], axis=1).max(axis=1)
+        up   = h - h.shift(1)
+        down = l.shift(1) - l
+        pos_dm = up.where((up > down) & (up > 0), 0.0)
+        neg_dm = down.where((down > up) & (down > 0), 0.0)
+        atr_s   = tr.ewm(alpha=1 / window, min_periods=window, adjust=False).mean()
+        pos_di  = 100 * pos_dm.ewm(alpha=1 / window, min_periods=window, adjust=False).mean() / atr_s
+        neg_di  = 100 * neg_dm.ewm(alpha=1 / window, min_periods=window, adjust=False).mean() / atr_s
+        dx      = (100 * (pos_di - neg_di).abs() / (pos_di + neg_di).replace(0, float("nan")))
+        adx     = dx.ewm(alpha=1 / window, min_periods=window, adjust=False).mean()
+        return _to_none(adx.round(2))
+    except Exception as exc:
+        logger.error("compute_adx failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_atr(
+    high: pd.Series, low: pd.Series, close: pd.Series, window: int = 14
+) -> pd.Series:
+    """Average True Range. Returns None where data insufficient."""
+    try:
+        h = _numeric(high)
+        l = _numeric(low)
+        c = _numeric(close)
+        prev_c = c.shift(1)
+        tr = pd.concat([
+            h - l,
+            (h - prev_c).abs(),
+            (l - prev_c).abs(),
+        ], axis=1).max(axis=1)
+        atr = tr.ewm(alpha=1 / window, min_periods=window, adjust=False).mean()
+        return _to_none(atr.round(4))
+    except Exception as exc:
+        logger.error("compute_atr failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_vwap(
+    high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series
+) -> pd.Series:
+    """Cumulative VWAP from the first row of the series. Returns None where data insufficient."""
+    try:
+        h = _numeric(high)
+        l = _numeric(low)
+        c = _numeric(close)
+        v = _numeric(volume)
+        typical = (h + l + c) / 3.0
+        cum_vol = v.cumsum()
+        vwap = (typical * v).cumsum() / cum_vol.replace(0, float("nan"))
+        return _to_none(vwap.round(4))
+    except Exception as exc:
+        logger.error("compute_vwap failed: %s", exc)
+        return pd.Series([None] * len(close), index=close.index, dtype=object)
+
+
+def compute_kd(
+    close: pd.Series, window: int = 9
+) -> tuple[pd.Series, pd.Series]:
+    """KD (Stochastic). Returns (K, D) — None where data insufficient."""
+    try:
+        c = _numeric(close)
+        low_n  = c.rolling(window=window, min_periods=window).min()
+        high_n = c.rolling(window=window, min_periods=window).max()
+        rsv    = 100 * (c - low_n) / (high_n - low_n).replace(0, float("nan"))
+        k      = rsv.ewm(alpha=1 / 3, adjust=False).mean()
+        d      = k.ewm(alpha=1 / 3, adjust=False).mean()
+        return _to_none(k.round(2)), _to_none(d.round(2))
+    except Exception as exc:
+        logger.error("compute_kd failed: %s", exc)
+        nan_s = pd.Series([None] * len(close), index=close.index, dtype=object)
+        return nan_s, nan_s.copy()
+
+
+def compute_bollinger_bands(
+    close: pd.Series, window: int = 20, std: int = 2
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Bollinger Bands. Returns (upper, middle, lower) — None where data insufficient."""
+    try:
+        c      = _numeric(close)
+        middle = c.rolling(window=window, min_periods=window).mean()
+        sigma  = c.rolling(window=window, min_periods=window).std()
+        upper  = middle + std * sigma
+        lower  = middle - std * sigma
+        return _to_none(upper.round(4)), _to_none(middle.round(4)), _to_none(lower.round(4))
+    except Exception as exc:
+        logger.error("compute_bollinger_bands failed: %s", exc)
+        nan_s = pd.Series([None] * len(close), index=close.index, dtype=object)
+        return nan_s, nan_s.copy(), nan_s.copy()
+
+
+# ── Master builder ────────────────────────────────────────────────────────────
+
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute all feature columns and return a new DataFrame.
+
+    Input: raw merged DataFrame from data_fetcher.merge_all().
+    Output: new DataFrame with all original columns plus:
+            ma20, ma60, ma120, bias_ma20, bias_ma60,
+            volume_ratio, return_10d, daily_return_pct, margin_change_5d,
+            foreign_consecutive_buy, is_new_low, volatility_5d.
+
+    Pure function — input is never mutated.
+    A single-column failure sets that column to None; others proceed normally.
+    No NaN in any output column.
+    """
+    result = df.copy()
+
+    # Convert all raw columns from NaN → None for consistency downstream
+    raw_cols = [
+        "open", "high", "low", "close", "volume",
+        "foreign_buy", "foreign_sell", "foreign_net",
+        "investment_buy", "investment_sell", "investment_net",
+        "dealer_net", "margin_balance", "short_balance",
+    ]
+    for col in raw_cols:
+        if col in result.columns:
+            try:
+                result[col] = _to_none(result[col])
+            except Exception as exc:
+                logger.error("Failed to clean raw column %s: %s", col, exc)
+
+    # Moving averages
+    result["ma20"] = compute_ma(df["close"], 20)
+    result["ma60"] = compute_ma(df["close"], 60)
+    result["ma120"] = compute_ma(df["close"], 120)
+
+    # Bias (deviation from MA)
+    result["bias_ma20"] = compute_bias(df["close"], result["ma20"])
+    result["bias_ma60"] = compute_bias(df["close"], result["ma60"])
+
+    # Volume ratio
+    result["volume_ratio"] = compute_volume_ratio(df["volume"])
+
+    # Returns
+    result["return_10d"] = compute_return_nd(df["close"], 10)
+    result["daily_return_pct"] = compute_return_nd(df["close"], 1)
+
+    # Margin change
+    if "margin_balance" in df.columns:
+        result["margin_change_5d"] = compute_margin_change_nd(df["margin_balance"], 5)
+        result["margin_consecutive_increase"] = compute_margin_consecutive_increase(df["margin_balance"])
+        result["margin_change_pct"] = compute_margin_change_pct(df["margin_balance"], 5)
+    else:
+        result["margin_change_5d"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+        result["margin_consecutive_increase"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+        result["margin_change_pct"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+
+    # Institutional streak
+    if "foreign_net" in df.columns:
+        result["foreign_consecutive_buy"] = compute_foreign_consecutive_buy(df["foreign_net"])
+    else:
+        result["foreign_consecutive_buy"] = pd.Series(
+            [None] * len(df), index=df.index, dtype=object
+        )
+
+    # New low flag
+    result["is_new_low"] = compute_is_new_low(df["close"])
+
+    # Volatility
+    result["volatility_5d"]      = compute_volatility_5d(df["close"])
+    result["volatility_5d_prev"] = compute_volatility_5d_prev(df["close"])
+
+    # Observational indicators — no decision impact
+    result["adx"] = compute_adx(df["high"], df["low"], df["close"])
+    result["atr"] = compute_atr(df["high"], df["low"], df["close"])
+    result["vwap"] = compute_vwap(df["high"], df["low"], df["close"], df["volume"])
+    result["kd_k"], result["kd_d"] = compute_kd(df["close"])
+    result["bb_upper"], result["bb_middle"], result["bb_lower"] = compute_bollinger_bands(df["close"])
+
+    return result
+
+================================================
+FILE: ./trajectory_engine.py
+================================================
+"""
+trajectory_engine.py — 磐石決策系統 Phase 2
+Strict row-by-row state machine for C / B / A segment computation.
+
+Rules (v1.7):
+- No lookahead. Each row is processed using only data up to that row.
+- All thresholds read from params dict — no hardcoded numbers.
+- Pure function: input DataFrame never mutated; state is local to the call.
+- Output columns: C_days (int|None), B_days (int|None), A_days (int|None).
+
+Segment semantics:
+  C_days = None  : no C segment has ever started.
+  C_days = int   : days elapsed in current (or completed+frozen) C segment.
+  B_days = None  : C not yet complete.
+  B_days = 0     : C complete, but B conditions not met / reset.
+  B_days = int   : consecutive days in B band.
+  A_days = None  : B has never reached >= 3.
+  A_days = 0     : B eligible, but A not yet triggered / reset.
+  A_days = int   : days in active A segment (1-based, never resets unless condition).
+"""
+
+import logging
+from typing import Optional
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+# Sentinel used to check "missing" for both None and float NaN
+_MISSING = object()
+
+
+def _val(v) -> Optional[float]:
+    """Return None if v is None or NaN, else return float(v)."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+        return None if (f != f) else f   # NaN check: NaN != NaN
+    except (TypeError, ValueError):
+        return None
+
+
+def compute_trajectory(df: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute C/B/A segment day-counters row by row.
+
+    Adds columns C_days, B_days, A_days to a copy of the input DataFrame.
+    Pure function — input is never modified.
+    All thresholds come from params.
+
+    Trajectory rules:
+    ── C segment ────────────────────────────────────────────────────────
+    Starts  : is_new_low == True → C_days = 1, resets B and A to 0.
+    Active  : C_days increments each day.
+    Ends    : 3 consecutive days where close >= ma20 * c_safe_threshold
+              AND is_new_low == False.  C_days frozen at completion value.
+    Restart : Any new is_new_low resets C_days = 1, B_days = 0, A_days = 0.
+
+    ── B segment (requires C complete) ──────────────────────────────────
+    Active  : close ∈ [ma20*b_lower, ma20*b_upper] AND volatility_5d < b_vol.
+    Break   : any single day failing condition → B_days = 0 (never None).
+    Pre-C   : B_days = None.
+
+    ── A segment (requires B_days >= 3 ever reached) ────────────────────
+    Entry   : close > ma20 * a_entry_ma AND volume_ratio >= a_entry_vol.
+    Active  : A_days increments every day.
+    Reset 1 : close < ma20  → A_days = 0 immediately.
+    Reset 2 : volume_ratio < a_reset_vol_low for a_reset_vol_consec consecutive days.
+    None    : volume_ratio is None → does NOT trigger either reset.
+    Pre-B   : A_days = None.
+    """
+    # ── Load thresholds from params ──────────────────────────────────────
+    c_safe   = params.get("c_safe_threshold", 0.98)
+    c_end_n  = int(params.get("c_end_consecutive", 3))
+    b_lo     = params.get("b_lower", 0.97)
+    b_hi     = params.get("b_upper", 1.03)
+    b_vol    = params.get("b_vol_threshold", 6.0)
+    a_ma_m   = params.get("a_entry_ma_mult", 1.03)
+    a_vol_e  = params.get("a_entry_vol_ratio", 1.2)
+    a_vol_lo = params.get("a_reset_vol_low", 0.5)
+    a_vol_cn = int(params.get("a_reset_vol_consec", 3))
+
+    # ── Extract column values (object lists — may contain None) ──────────
+    n = len(df)
+    close_v  = df["close"].tolist()      if "close"       in df.columns else [None] * n
+    ma20_v   = df["ma20"].tolist()       if "ma20"        in df.columns else [None] * n
+    vol5d_v  = df["volatility_5d"].tolist() if "volatility_5d" in df.columns else [None] * n
+    volr_v   = df["volume_ratio"].tolist()  if "volume_ratio"  in df.columns else [None] * n
+    is_nl_v  = df["is_new_low"].tolist() if "is_new_low"   in df.columns else [None] * n
+
+    # ── Output arrays ────────────────────────────────────────────────────
+    c_out        = [None] * n
+    b_out        = [None] * n
+    a_out        = [None] * n
+    b_window_out = [None] * n
+    b_quality_out= [None] * n
+    b_cond_history = []
+
+    # ── State variables (local — no global state) ────────────────────────
+    c_state   = "none"    # "none" | "active" | "complete"
+    c_days    = 0
+    c_frozen  = None      # frozen value once complete
+    c_end_cnt = 0         # consecutive safe days toward C completion
+
+    b_days    = 0
+    b_eligible = False    # True once b_days >= 3 (ever); survives B resets
+
+    a_state   = "watching"  # "watching" | "active"
+    a_days    = 0
+    a_low_cnt = 0           # consecutive low-volume days
+
+    for i in range(n):
+        close  = _val(close_v[i])
+        ma20   = _val(ma20_v[i])
+        vol5d  = _val(vol5d_v[i])
+        volr   = _val(volr_v[i])
+        is_nl  = is_nl_v[i]  # True | False | None
+
+        # ── STEP 1: New low — highest priority, resets everything ────────
+        if is_nl is True:
+            c_state   = "active"
+            c_days    = 1
+            c_end_cnt = 0
+            c_frozen  = None
+            b_days    = 0
+            b_eligible = False
+            b_cond_history = []   # 清空歷史，避免跨段污染
+            a_state   = "watching"
+            a_days    = 0
+            a_low_cnt = 0
+            c_out[i]  = 1
+            b_out[i]  = 0   # explicit reset per spec (not None)
+            a_out[i]  = 0   # explicit reset per spec (not None)
+            continue
+
+        # ── STEP 2: C segment processing ────────────────────────────────
+        if c_state == "active":
+            c_days += 1
+            # Accumulate consecutive safe days (both conditions must hold)
+            if close is not None and ma20 is not None and is_nl is False:
+                if close >= ma20 * c_safe:
+                    c_end_cnt += 1
+                    if c_end_cnt >= c_end_n:
+                        c_state  = "complete"
+                        c_frozen = c_days
+                else:
+                    c_end_cnt = 0
+            else:
+                # is_nl is None or price data missing → reset safe streak
+                c_end_cnt = 0
+            c_out[i] = c_days
+
+        elif c_state == "complete":
+            c_out[i] = c_frozen   # frozen; never changes
+
+        else:
+            c_out[i] = None       # no C segment yet
+
+        # ── STEP 3: B segment (only when C complete) ─────────────────────
+        if c_state == "complete":
+            b_cond = False
+            if close is not None and ma20 is not None and vol5d is not None:
+                lo = ma20 * b_lo
+                hi = ma20 * b_hi
+                if lo <= close <= hi and vol5d < b_vol:
+                    b_cond = True
+
+            if b_cond:
+                b_days += 1
+                if b_days >= 3:
+                    b_eligible = True
+            else:
+                b_days = max(0, b_days - 1)   # 衰減不歸零
+
+            b_out[i] = b_days
+
+            # B_window_20：只在 C 完成後才記錄，避免 Pre-C 污染
+            b_cond_history.append(1 if b_cond else 0)
+            if len(b_cond_history) > 20:
+                b_cond_history.pop(0)
+            b_window_20 = sum(b_cond_history)
+            b_window_out[i] = b_window_20
+
+            # B_quality：b_days 邊際效益遞減，避免長整理股票爆表
+            if b_days <= 20:
+                effective_b = b_days
+            elif b_days <= 40:
+                effective_b = 20 + (b_days - 20) * 0.5
+            else:
+                effective_b = 30  # 上限，40天以上不再加分
+
+            if b_days >= 2:
+                bq = int(effective_b * 2 + b_window_20)
+            else:
+                bq = int(b_window_20 * 0.5)
+            b_quality_out[i] = bq
+        else:
+            b_out[i]      = None
+            b_window_out[i] = None
+            b_quality_out[i] = None
+
+        # ── STEP 4: A segment (only when b_eligible) ─────────────────────
+        if not b_eligible:
+            a_out[i] = None
+            continue
+
+        if a_state == "active":
+            # Check reset conditions before incrementing
+            reset = False
+
+            # Condition 1: close < ma20 (immediate reset)
+            # Only trigger if both values are available (None → no trigger)
+            if close is not None and ma20 is not None:
+                if close < ma20:
+                    reset = True
+
+            # Condition 2: volume_ratio < threshold for N consecutive days
+            # None input → do NOT modify counter, do NOT trigger (v1.7 rule 5)
+            if volr is not None:
+                if volr < a_vol_lo:
+                    a_low_cnt += 1
+                    if a_low_cnt >= a_vol_cn:
+                        reset = True
+                else:
+                    a_low_cnt = 0
+            # volr is None → counter unchanged, no trigger
+
+            if reset:
+                a_days    = 0
+                a_state   = "watching"
+                a_low_cnt = 0
+                a_out[i]  = 0
+            else:
+                a_days   += 1
+                a_out[i]  = a_days
+
+        else:  # a_state == "watching"
+            # Check entry trigger
+            triggered = False
+            if close is not None and ma20 is not None and volr is not None:
+                if close > ma20 * a_ma_m and volr >= a_vol_e:
+                    triggered = True
+
+            if triggered:
+                a_state   = "active"
+                a_days    = 1
+                a_low_cnt = 0
+                a_out[i]  = 1
+            else:
+                a_out[i] = 0   # eligible but not yet triggered
+
+    # ── Assemble result ──────────────────────────────────────────────────
+    result = df.copy()
+    result["C_days"]     = pd.Series(c_out,         index=df.index, dtype=object)
+    result["B_days"]     = pd.Series(b_out,         index=df.index, dtype=object)
+    result["A_days"]     = pd.Series(a_out,         index=df.index, dtype=object)
+    result["B_window_20"]= pd.Series(b_window_out,  index=df.index, dtype=object)
+    result["B_quality"]  = pd.Series(b_quality_out, index=df.index, dtype=object)
+    return result
+
+
+def get_latest_trajectory(df: pd.DataFrame) -> dict:
+    """Return C/B/A day-counts from the last row of a trajectory DataFrame.
+
+    Pure function. Returns None for all fields if DataFrame is empty.
+    """
+    if df.empty:
+        return {"C_days": None, "B_days": None, "A_days": None, "date": None}
+    try:
+        last = df.iloc[-1]
+        date_val = last.get("date", None)
+        date_str = (
+            date_val.strftime("%Y-%m-%d")
+            if hasattr(date_val, "strftime")
+            else str(date_val) if date_val is not None else None
+        )
+        return {
+            "C_days": last.get("C_days", None),
+            "B_days": last.get("B_days", None),
+            "A_days": last.get("A_days", None),
+            "date":   date_str,
+        }
+    except Exception as exc:
+        logger.error("get_latest_trajectory failed: %s", exc)
+        return {"C_days": None, "B_days": None, "A_days": None, "date": None}
+
+================================================
+FILE: ./flow_engine.py
+================================================
+"""
+flow_engine.py — 磐石決策系統 Phase 2
+Market flow and cost-level classification.
+
+Rules:
+- All functions pure and None-safe.
+- Any None input → return None (not NEUTRAL).
+- DISTRIBUTION is checked before ACCUMULATING (mutually exclusive).
+- All thresholds from params dict — no hardcoded numbers.
+"""
+
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+def classify_flow(
+    foreign_consecutive_buy: Optional[int],
+    margin_change_5d: Optional[int],
+    return_10d: Optional[float],
+    volume_ratio: Optional[float],
+    params: dict,
+) -> Optional[str]:
+    """Classify current market flow as DISTRIBUTION, ACCUMULATING, or NEUTRAL.
+
+    Priority: DISTRIBUTION is evaluated first. If its conditions pass, returns
+    immediately without checking ACCUMULATING (mutually exclusive).
+
+    Returns:
+        "DISTRIBUTION"  — high-volume sell-off with rising margin and strong return.
+        "ACCUMULATING"  — quiet accumulation with foreign buying and stable price.
+        "NEUTRAL"       — neither condition set fully met.
+        None            — any required input is None.
+
+    All threshold keys read from params.
+    """
+    try:
+        # Any None → cannot classify
+        inputs = [foreign_consecutive_buy, margin_change_5d, return_10d, volume_ratio]
+        if any(v is None for v in inputs):
+            return None
+
+        # ── DISTRIBUTION (check first) ────────────────────────────────────
+        d_vol   = params.get("dist_vol_ratio", 1.8)
+        d_mgn   = params.get("dist_margin_change", 0)   # margin_change_5d > 0
+        d_ret   = params.get("dist_return_10d", 5.0)
+
+        if (
+            float(volume_ratio) >= d_vol
+            and float(margin_change_5d) > d_mgn
+            and float(return_10d) > d_ret
+        ):
+            return "DISTRIBUTION"
+
+        # ── ACCUMULATING (check second) ───────────────────────────────────
+        a_fgn = params.get("accum_foreign_consec", 2)
+        a_mgn = params.get("accum_margin_change", 0)    # margin_change_5d <= 0
+        a_ret = params.get("accum_return_10d", 5.0)
+        a_vol = params.get("accum_vol_ratio", 0.8)
+
+        if (
+            int(foreign_consecutive_buy) >= a_fgn
+            and float(margin_change_5d) <= a_mgn
+            and float(return_10d) < a_ret
+            and float(volume_ratio) >= a_vol
+        ):
+            return "ACCUMULATING"
+
+        return "NEUTRAL"
+
+    except Exception as exc:
+        logger.error("classify_flow failed: %s", exc)
+        return None
+
+
+def classify_cost(bias_ma20: Optional[float], params: dict) -> dict:
+    """Classify entry risk based on deviation from MA20.
+
+    Returns a dict:
+        {
+            "cost_level":        "SAFE" | "HIGH_RISK" | "NEUTRAL" | None,
+            "deviation_percent": float (bias_ma20 * 100) | None,
+        }
+
+    Levels:
+        SAFE      : bias_ma20 ∈ [cost_safe_lower, cost_safe_upper]  (inclusive)
+        HIGH_RISK : bias_ma20 > cost_high_risk
+        NEUTRAL   : between SAFE upper and HIGH_RISK threshold
+        None      : bias_ma20 is None
+
+    All thresholds from params.
+    """
+    try:
+        if bias_ma20 is None:
+            return {"cost_level": None, "deviation_percent": None}
+
+        safe_lo = params.get("cost_safe_lower", -0.03)   # -3%
+        safe_hi = params.get("cost_safe_upper",  0.06)   #  +6%
+        high_rk = params.get("cost_high_risk",   0.08)   #  +8%
+
+        b = float(bias_ma20)
+        dev_pct = round(b * 100.0, 2)
+
+        if b > high_rk:
+            level = "HIGH_RISK"
+        elif safe_lo <= b <= safe_hi:
+            level = "SAFE"
+        else:
+            level = "NEUTRAL"
+
+        return {"cost_level": level, "deviation_percent": dev_pct}
+
+    except Exception as exc:
+        logger.error("classify_cost failed: %s", exc)
+        return {"cost_level": None, "deviation_percent": None}
+
+================================================
+FILE: ./decision_inspector.py
+================================================
+"""
+decision_inspector.py — 磐石決策系統 Phase 2
+Decision Gate v1.5 + confidence scoring + personal reminder rules.
+
+Architecture:
+- format_panstone_signal() receives pre-computed dicts.
+  It does NOT compute indicators. Clean separation from feature/trajectory/flow layers.
+- All thresholds from params dict — no hardcoded numbers anywhere.
+- Pure function: same inputs → same output, always.
+- Never raises. Any exception → returns IGNORE dict with error logged.
+
+Risk vs risk_flag separation (v1.7 rule 6):
+- risk       : "LOW" | "MEDIUM" | "N/A"  — set by Decision Gate.
+- risk_flag  : "HIGH_RISK" | None        — set by personal reminder Rule B only.
+               Never modifies decision / state / confidence.
+
+Confidence definition:
+  Additive scoring of condition hit-completeness, clamped to [0, 100].
+  Case A BUY (all bonus conditions active) → 100.
+"""
+
+import logging
+from typing import Optional
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+# ── Guard ─────────────────────────────────────────────────────────────────────
+
+def is_false_breakout(
+    A_days: Optional[int],
+    volume_ratio: Optional[float],
+) -> bool:
+    """Return True if the A-segment entry looks like a false breakout.
+
+    Conservative rules (v1.7 rule 3):
+    - A_days is None OR volume_ratio is None → True  (force WAIT, insufficient data).
+    - A_days <= 2 AND volume_ratio < 1.2          → True  (volume not confirmed).
+    - Otherwise                                   → False.
+
+    Pure function.
+    """
+    if A_days is None or volume_ratio is None:
+        return True
+    try:
+        return int(A_days) <= 2 and float(volume_ratio) < 1.2
+    except (TypeError, ValueError):
+        return True
+
+
+# ── Integrity check ───────────────────────────────────────────────────────────
+
+def check_data_integrity(df: pd.DataFrame) -> bool:
+    """Return True if the DataFrame has enough valid data for a decision.
+
+    Conditions for True:
+    1. len(df) >= 20
+    2. Price columns: last row must be non-None/non-NaN
+       [close, ma20, bias_ma20, volume_ratio, return_10d]
+    3. Institutional columns: history must have at least one valid value
+       (last row allowed to be NaN due to T+1 data lag, but can't be all-missing)
+       [margin_change_5d, foreign_consecutive_buy]
+
+    Pure function.
+    """
+    try:
+        if len(df) < 20:
+            return False
+
+        def _is_null(val):
+            if val is None:
+                return True
+            try:
+                return bool(pd.isna(val))
+            except TypeError:
+                return False
+
+        # Price columns: strict — last row must be valid
+        price_cols = ["close", "ma20", "bias_ma20", "volume_ratio", "return_10d"]
+        last = df.iloc[-1]
+        for col in price_cols:
+            val = last.get(col) if hasattr(last, "get") else (
+                last[col] if col in df.columns else None
+            )
+            if _is_null(val):
+                return False
+
+        # Institutional columns: lenient — history must have values (not all NaN)
+        inst_cols = ["margin_change_5d", "foreign_consecutive_buy"]
+        for col in inst_cols:
+            if col not in df.columns:
+                return False
+            if df[col].dropna().empty:
+                return False
+
+        return True
+    except Exception as exc:
+        logger.error("check_data_integrity failed: %s", exc)
+        return False
+
+
+# ── Confidence scoring ────────────────────────────────────────────────────────
+
+def compute_confidence(decision_dict: dict, params: dict) -> int:
+    """Additive confidence score clamped to [0, 100].
+
+    Scoring table:
+      +20  flow_status == "ACCUMULATING"
+      +20  A_days in [1, 2, 3]
+      +15  cost_level == "SAFE"
+      +15  foreign_streak >= conf_foreign_streak_threshold  (default 3)
+      +10  volume_ratio >= conf_vol_ratio_threshold         (default 1.5)
+      +10  C_days >= conf_c_days_threshold                  (default 8)
+      +10  B_days >= conf_b_days_threshold                  (default 7)
+      -30  is_false_breakout == True
+
+    All thresholds from params. Pure function.
+    Case A (all conditions active) → 100.
+    """
+    try:
+        score = 0
+
+        pts_accum = int(params.get("conf_accum",  20))
+        pts_a     = int(params.get("conf_a_days", 20))
+        pts_safe  = int(params.get("conf_safe",   15))
+        pts_fgn   = int(params.get("conf_foreign_streak", 15))
+        pts_vol   = int(params.get("conf_vol_ratio",  10))
+        pts_c     = int(params.get("conf_c_days",     10))
+        pts_b     = int(params.get("conf_b_days",     10))
+        pts_fb    = int(params.get("conf_false_breakout", -30))
+
+        thr_fgn = int(params.get("conf_foreign_streak_threshold", 3))
+        thr_vol = float(params.get("conf_vol_ratio_threshold", 1.5))
+        thr_c   = int(params.get("conf_c_days_threshold", 8))
+        thr_b   = int(params.get("conf_b_days_threshold", 7))
+
+        flow_status   = decision_dict.get("flow_status")
+        a_days        = decision_dict.get("A_days")
+        cost_level    = decision_dict.get("cost_level")
+        foreign_str   = decision_dict.get("foreign_streak")
+        volume_ratio  = decision_dict.get("volume_ratio")
+        c_days        = decision_dict.get("C_days")
+        b_days        = decision_dict.get("B_days")
+        false_brk     = decision_dict.get("false_breakout", False)
+
+        if flow_status == "ACCUMULATING":
+            score += pts_accum
+
+        if a_days is not None and int(a_days) in (1, 2, 3):
+            score += pts_a
+
+        if cost_level == "SAFE":
+            score += pts_safe
+
+        if foreign_str is not None and int(foreign_str) >= thr_fgn:
+            score += pts_fgn
+
+        if volume_ratio is not None and float(volume_ratio) >= thr_vol:
+            score += pts_vol
+
+        if c_days is not None and int(c_days) >= thr_c:
+            score += pts_c
+
+        if b_days is not None and int(b_days) >= thr_b:
+            score += pts_b
+
+        if false_brk:
+            score += pts_fb  # negative value
+
+        return max(0, min(100, score))
+
+    except Exception as exc:
+        logger.error("compute_confidence failed: %s", exc)
+        return 0
+
+
+# ── Decision Gate ─────────────────────────────────────────────────────────────
+
+def format_panstone_signal(
+    trajectory: dict,
+    flow: dict,
+    cost: dict,
+    params: dict,
+    current_date: str = None,
+    current_price: float = None,
+    pnl_percent: float = None,
+) -> dict:
+    """Run Decision Gate v1.5 and return a fully populated decision dict.
+
+    Input dicts (all pre-computed — no indicator recalculation here):
+      trajectory: {stock_id, name, date, C_days, B_days, A_days,
+                   integrity_ok, is_good_company}
+      flow:       {flow_status, volume_ratio, foreign_consecutive_buy,
+                   margin_change_5d, return_10d, bias_ma20}
+      cost:       {cost_level, deviation_percent}
+      params:     all thresholds
+
+    Decision Gate (6 steps, strict order, stop at first match):
+      1. Data integrity fail  → IGNORE
+      2. Not good company     → IGNORE
+      3. Trajectory immature  → IGNORE
+      4. Distribution flow    → IGNORE
+      5. BUY conditions all met (no false breakout) → BUY
+      6. Default              → WAIT
+
+    Personal reminder rules run AFTER the gate. They append to explanation
+    dict only — DECISION / STATE / CONFIDENCE are never modified by them.
+
+    Never raises. Any exception → returns IGNORE dict with error logged.
+    """
+    try:
+        stock_id    = trajectory.get("stock_id", "UNKNOWN")
+        name        = trajectory.get("name", "")
+        date_str    = trajectory.get("date") or current_date or ""
+        c_days      = trajectory.get("C_days")
+        b_days      = trajectory.get("B_days")
+        a_days      = trajectory.get("A_days")
+        integrity   = trajectory.get("integrity_ok", False)
+        good_co     = trajectory.get("is_good_company", False)
+
+        flow_status = flow.get("flow_status")
+        vol_ratio   = flow.get("volume_ratio")
+        fgn_streak  = flow.get("foreign_consecutive_buy")
+        mgn_chg     = flow.get("margin_change_5d")
+        ret_10d     = flow.get("return_10d")
+        bias_ma20   = flow.get("bias_ma20")
+
+        cost_level  = cost.get("cost_level")
+        dev_pct     = cost.get("deviation_percent")
+
+        min_c = int(params.get("min_c_days", 5))
+        min_b = int(params.get("min_b_days", 3))
+
+        # Shared partial dict for building the result
+        base = {
+            "stock_id":          stock_id,
+            "name":              name,
+            "date":              date_str,
+            "C_days":            c_days,
+            "B_days":            b_days,
+            "A_days":            a_days,
+            "flow_status":       flow_status,
+            "foreign_streak":    fgn_streak,
+            "margin_change_5d":  mgn_chg,
+            "volume_ratio":      vol_ratio,
+            "return_10d":        ret_10d,
+            "bias_ma20":         bias_ma20,
+            "cost_level":        cost_level,
+            "deviation_percent": dev_pct,
+            "current_price":     current_price,
+            "pnl_percent":       pnl_percent,
+        }
+
+        def _ignore(reason_msg: str) -> dict:
+            return {
+                **base,
+                "decision":      "IGNORE",
+                "state":         "INACTIVE",
+                "confidence":    0,
+                "risk":          "N/A",
+                "risk_flag":     None,
+                "false_breakout": False,
+                "reason":        [reason_msg],
+                "explanation":   {},
+            }
+
+        # ── Step 1: Data Integrity ───────────────────────────────────────
+        if not integrity:
+            return _ignore("Insufficient data")
+
+        # ── Step 2: Fundamental Quality ──────────────────────────────────
+        if not good_co:
+            return _ignore("Not a quality company")
+
+        # ── Step 3: Trajectory Maturity ──────────────────────────────────
+        c_ok = (c_days is not None and int(c_days) >= min_c)
+        b_ok = (b_days is not None and int(b_days) >= min_b)
+        if not c_ok or not b_ok:
+            c_disp = c_days if c_days is not None else "None"
+            b_disp = b_days if b_days is not None else "None"
+            return _ignore(f"Trajectory not mature (C_days={c_disp} < {min_c} or B_days={b_disp} < {min_b})")
+
+        # ── Step 4: Distribution Filter ──────────────────────────────────
+        if flow_status == "DISTRIBUTION":
+            return _ignore("Distribution phase detected")
+
+        # ── Evaluate false-breakout guard ────────────────────────────────
+        false_brk = is_false_breakout(a_days, vol_ratio)
+
+        # ── Build preliminary dict for confidence scoring ─────────────────
+        prelim = {
+            **base,
+            "false_breakout": false_brk,
+        }
+
+        # ── Step 5a: Standard BUY ────────────────────────────────────────
+        a_in_range = (
+            a_days is not None
+            and int(a_days) in (1, 2, 3)
+        )
+        buy_cond = (
+            flow_status == "ACCUMULATING"
+            and a_in_range
+            and cost_level == "SAFE"
+            and not false_brk
+        )
+
+        if buy_cond:
+            reason = _build_buy_reasons(prelim, params)
+            decision_dict = {
+                **prelim,
+                "decision":    "BUY",
+                "signal_type": "STANDARD",
+                "state":       "ACTION",
+                "risk":        "LOW",
+                "risk_flag":   None,
+                "reason":      reason,
+                "explanation": {},
+            }
+            decision_dict["confidence"] = compute_confidence(decision_dict, params)
+            _apply_reminders(decision_dict, pnl_percent, dev_pct, params)
+            return decision_dict
+
+        # ── Step 5b: FAST_BREAKOUT BUY ───────────────────────────────────
+        vol_prev = flow.get("volatility_5d_prev")
+        fb_a_ok  = a_days is not None and int(a_days) in (1, 2)
+        fb_b_ok  = b_days is None or int(b_days) < 3
+        fb_c_ok  = c_days is not None and int(c_days) >= params["fast_breakout_c_days_min"]
+        fb_vol_ok = (
+            vol_ratio is not None
+            and float(vol_ratio) >= params["fast_breakout_volume_ratio_min"]
+        )
+        fb_vprev_ok = (
+            vol_prev is not None
+            and float(vol_prev) < params["fast_breakout_volatility_prev_max"]
+        )
+        fb_ret_ok   = (
+            flow.get("return_10d") is not None
+            and float(flow["return_10d"]) < params["fast_breakout_return_10d_max"]
+        )
+        fb_cond = (
+            fb_a_ok
+            and fb_b_ok
+            and fb_c_ok
+            and flow_status == "ACCUMULATING"
+            and cost_level == "SAFE"
+            and fb_vol_ok
+            and fb_vprev_ok
+            and fb_ret_ok
+            and not false_brk
+        )
+
+        if fb_cond:
+            reason = _build_buy_reasons(prelim, params)
+            decision_dict = {
+                **prelim,
+                "decision":    "BUY",
+                "signal_type": "FAST_BREAKOUT",
+                "state":       "ACTION",
+                "risk":        "LOW",
+                "risk_flag":   None,
+                "reason":      reason,
+                "explanation": {},
+            }
+            base_conf = compute_confidence(decision_dict, params)
+            decision_dict["confidence"] = max(0, min(100, base_conf - params["fast_breakout_confidence_penalty"]))
+            _apply_reminders(decision_dict, pnl_percent, dev_pct, params)
+            return decision_dict
+
+        # ── Step 6: Default — WAIT ───────────────────────────────────────
+        reason = _build_wait_reasons(prelim, params)
+        decision_dict = {
+            **prelim,
+            "decision":    "WAIT",
+            "signal_type": None,
+            "state":       "WATCHING",
+            "risk":        "MEDIUM",
+            "risk_flag":   None,
+            "reason":      reason,
+            "explanation": {},
+        }
+        decision_dict["confidence"] = compute_confidence(decision_dict, params)
+        _apply_reminders(decision_dict, pnl_percent, dev_pct, params)
+        return decision_dict
+
+    except Exception as exc:
+        logger.error("format_panstone_signal failed: %s", exc)
+        return {
+            "stock_id":    trajectory.get("stock_id", "UNKNOWN"),
+            "name":        trajectory.get("name", ""),
+            "date":        trajectory.get("date") or current_date or "",
+            "decision":    "IGNORE",
+            "state":       "INACTIVE",
+            "confidence":  0,
+            "risk":        "N/A",
+            "risk_flag":   None,
+            "false_breakout": False,
+            "reason":      ["Internal error — see logs"],
+            "explanation": {},
+            "C_days": None, "B_days": None, "A_days": None,
+            "flow_status": None, "foreign_streak": None,
+            "margin_change_5d": None, "volume_ratio": None,
+            "return_10d": None, "bias_ma20": None,
+            "cost_level": None, "deviation_percent": None,
+            "current_price": current_price, "pnl_percent": pnl_percent,
+        }
+
+
+# ── Internal reason builders ──────────────────────────────────────────────────
+
+def _build_buy_reasons(d: dict, params: dict) -> list:
+    """Build human-readable reason list for a BUY decision."""
+    reasons = []
+    thr_fgn = int(params.get("conf_foreign_streak_threshold", 3))
+    thr_vol = float(params.get("conf_vol_ratio_threshold", 1.5))
+    thr_c   = int(params.get("conf_c_days_threshold", 8))
+    thr_b   = int(params.get("conf_b_days_threshold", 7))
+
+    reasons.append("Accumulating confirmed (all 4 conditions met)")
+
+    vol = d.get("volume_ratio")
+    if vol is not None and float(vol) >= 1.2:
+        reasons.append(f"Breakout with volume (volume_ratio {vol} >= 1.2)")
+
+    fgn = d.get("foreign_streak")
+    if fgn is not None and int(fgn) >= thr_fgn:
+        reasons.append(f"Foreign buy streak >= {thr_fgn} (streak = {fgn})")
+
+    c = d.get("C_days")
+    if c is not None and int(c) >= thr_c:
+        reasons.append(f"C segment mature (C_days {c} >= {thr_c})")
+
+    b = d.get("B_days")
+    if b is not None and int(b) >= thr_b:
+        reasons.append(f"B segment stable (B_days {b} >= {thr_b})")
+
+    if vol is not None and float(vol) >= thr_vol:
+        reasons.append(f"Volume ratio strong (>= {thr_vol})")
+
+    return reasons
+
+
+def _build_wait_reasons(d: dict, params: dict) -> list:
+    """Build human-readable reason list for a WAIT decision."""
+    reasons = []
+    if d.get("false_breakout"):
+        vr = d.get("volume_ratio")
+        ad = d.get("A_days")
+        reasons.append(
+            f"False breakout detected (A_days={ad} <= 2 AND volume_ratio={vr} < 1.2)"
+        )
+        reasons.append("Forced WAIT — volume confirmation insufficient")
+    elif d.get("flow_status") != "ACCUMULATING":
+        reasons.append(f"Flow not accumulating (status={d.get('flow_status')})")
+    elif d.get("A_days") is None or d.get("A_days") == 0:
+        reasons.append("A segment not triggered yet")
+    elif d.get("A_days") is not None and int(d.get("A_days")) > 3:
+        reasons.append(f"A segment mature (A_days={d.get('A_days')} > 3) — hold or monitor")
+    elif d.get("cost_level") != "SAFE":
+        reasons.append(f"Cost level not safe (cost={d.get('cost_level')})")
+    else:
+        reasons.append("No actionable signal")
+    return reasons
+
+
+def _apply_reminders(
+    d: dict,
+    pnl_percent: Optional[float],
+    deviation_percent: Optional[float],
+    params: dict,
+) -> None:
+    """Apply personal reminder rules in-place. Modifies explanation and risk_flag only.
+
+    Rule A: profit hold nudge (pnl_percent >= nudge_pnl_threshold).
+    Rule B: cost deviation warning (deviation_percent > nudge_cost_threshold).
+
+    decision / state / confidence are NEVER modified.
+    """
+    nudge_pnl  = float(params.get("nudge_pnl_threshold", 10.0))
+    nudge_cost = float(params.get("nudge_cost_threshold", 5.0))
+
+    if pnl_percent is not None:
+        try:
+            if float(pnl_percent) >= nudge_pnl:
+                d["explanation"]["action"] = (
+                    "已有不錯獲利，A段可能還未結束，建議分批出場，保留主力部位"
+                )
+        except (TypeError, ValueError):
+            pass
+
+    if deviation_percent is not None:
+        try:
+            if float(deviation_percent) > nudge_cost:
+                d["risk_flag"] = "HIGH_RISK"
+                d["explanation"]["risk"] = (
+                    "現價已明顯偏離成本，建議等待回檔，避免追高"
+                )
+        except (TypeError, ValueError):
+            pass
+
+================================================
+FILE: ./exporter.py
+================================================
+"""
+exporter.py — 磐石決策系統 Phase 2
+SOLE output formatter for all snapshots and CSV exports.
+
+Rules:
+- No other module may produce formatted output.
+- All snapshots use KEY: VALUE plain-text format (machine-parseable).
+- All values are formatted for human readability (%, +/- signs, etc.).
+- Never raises; logs errors and returns empty string / skips row on failure.
+"""
+
+import csv
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+# ── Formatting helpers ────────────────────────────────────────────────────────
+
+def _fmt_float(val, decimals: int = 1) -> str:
+    """Format a float with fixed decimals. Returns 'N/A' for None."""
+    if val is None:
+        return "N/A"
+    try:
+        return f"{float(val):.{decimals}f}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _fmt_pct(val, decimals: int = 1) -> str:
+    """Format a ratio (0.025) as a signed percentage string ('+2.5').
+
+    Used for bias_ma20 which is stored as a decimal ratio.
+    """
+    if val is None:
+        return "N/A"
+    try:
+        p = float(val) * 100.0
+        sign = "+" if p >= 0 else ""
+        return f"{sign}{p:.{decimals}f}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _fmt_signed(val, decimals: int = 1) -> str:
+    """Format a value (already in percent or plain units) with explicit sign."""
+    if val is None:
+        return "N/A"
+    try:
+        v = float(val)
+        sign = "+" if v >= 0 else ""
+        return f"{sign}{v:.{decimals}f}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _fmt_int(val) -> str:
+    """Format an integer value. Returns 'N/A' for None."""
+    if val is None:
+        return "N/A"
+    try:
+        return str(int(val))
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _fmt_date(df) -> str:
+    """Extract the date string from the last row of a DataFrame."""
+    try:
+        last = df.iloc[-1]
+        d = last.get("date") if hasattr(last, "get") else last["date"]
+        if hasattr(d, "strftime"):
+            return d.strftime("%Y-%m-%d")
+        return str(d)
+    except Exception:
+        return "UNKNOWN"
+
+
+# ── Snapshot formatters ───────────────────────────────────────────────────────
+
+def format_data_snapshot(stock_id: str, name: str, df) -> str:
+    """Format a plain-text data snapshot for a single stock.
+
+    Output format (KEY: VALUE, one per line):
+        [Data Snapshot - YYYY-MM-DD]
+        STOCK_ID: ...
+        NAME: ...
+        RECORDS: ...
+        INTEGRITY: OK | FAIL
+        CLOSE: ...
+        MA20: ...
+        BIAS_MA20: +/-x.x   (percent)
+        VOLUME_RATIO: ...
+        FOREIGN_STREAK: ...
+        MARGIN_CHANGE_5D: ...
+
+    SOLE formatter for data layer output. Never raises.
+    """
+    try:
+        date_str   = _fmt_date(df)
+        records    = len(df)
+        last       = df.iloc[-1]
+
+        def _get(col):
+            try:
+                v = last.get(col) if hasattr(last, "get") else last[col]
+                return None if v != v else v   # NaN guard
+            except Exception:
+                return None
+
+        close      = _get("close")
+        ma20       = _get("ma20")
+        bias_ma20  = _get("bias_ma20")
+        vol_ratio  = _get("volume_ratio")
+        fgn_streak = _get("foreign_consecutive_buy")
+        mgn_chg    = _get("margin_change_5d")
+
+        required = [close, ma20, bias_ma20, vol_ratio, fgn_streak, mgn_chg]
+        integrity = "OK" if all(v is not None for v in required) else "FAIL"
+
+        lines = [
+            f"[Data Snapshot - {date_str}]",
+            f"STOCK_ID: {stock_id}",
+            f"NAME: {name}",
+            f"RECORDS: {records}",
+            f"INTEGRITY: {integrity}",
+            f"CLOSE: {_fmt_float(close, 0)}",
+            f"MA20: {_fmt_float(ma20, 0)}",
+            f"BIAS_MA20: {_fmt_pct(bias_ma20)}",
+            f"VOLUME_RATIO: {_fmt_float(vol_ratio)}",
+            f"FOREIGN_STREAK: {_fmt_int(fgn_streak)}",
+            f"MARGIN_CHANGE_5D: {_fmt_int(mgn_chg)}",
+        ]
+        return "\n".join(lines)
+
+    except Exception as exc:
+        logger.error("format_data_snapshot(%s) failed: %s", stock_id, exc)
+        return f"[Data Snapshot - ERROR]\nSTOCK_ID: {stock_id}\nERROR: {exc}"
+
+
+def format_decision_snapshot(decision_dict: dict) -> str:
+    """Format a plain-text decision snapshot from a decision dict.
+
+    Output format (KEY: VALUE):
+        [Decision Snapshot - YYYY-MM-DD]
+        STOCK_ID: ...
+        NAME: ...
+        C_DAYS / B_DAYS / A_DAYS
+        FLOW_STATUS / FOREIGN_STREAK / MARGIN_CHANGE_5D / VOLUME_RATIO
+        BIAS_MA20 / COST_LEVEL
+        DECISION / STATE / CONFIDENCE / REASON / RISK
+        ACTION  (only if personal reminder triggered)
+        RISK_FLAG (only if risk_flag is set)
+
+    SOLE formatter for decision layer output. Never raises.
+    """
+    try:
+        d = decision_dict
+        date_str    = d.get("date", "UNKNOWN")
+        stock_id    = d.get("stock_id", "UNKNOWN")
+        name        = d.get("name", "")
+        c_days      = d.get("C_days")
+        b_days      = d.get("B_days")
+        a_days      = d.get("A_days")
+        flow_status = d.get("flow_status", "N/A") or "N/A"
+        fgn_streak  = d.get("foreign_streak")
+        mgn_chg     = d.get("margin_change_5d")
+        vol_ratio   = d.get("volume_ratio")
+        bias_ma20   = d.get("bias_ma20")
+        cost_level  = d.get("cost_level", "N/A") or "N/A"
+        decision    = d.get("decision", "UNKNOWN")
+        state       = d.get("state", "UNKNOWN")
+        confidence  = d.get("confidence", 0)
+        risk        = d.get("risk", "N/A") or "N/A"
+        risk_flag   = d.get("risk_flag")
+        reason_list = d.get("reason", [])
+        explanation = d.get("explanation", {})
+
+        lines = [
+            f"[Decision Snapshot - {date_str}]",
+            f"STOCK_ID: {stock_id}",
+            f"NAME: {name}",
+            f"C_DAYS: {_fmt_int(c_days)}",
+            f"B_DAYS: {_fmt_int(b_days)}",
+            f"A_DAYS: {_fmt_int(a_days)}",
+            f"FLOW_STATUS: {flow_status}",
+            f"FOREIGN_STREAK: {_fmt_int(fgn_streak)}",
+            f"MARGIN_CHANGE_5D: {_fmt_int(mgn_chg)}",
+            f"VOLUME_RATIO: {_fmt_float(vol_ratio)}",
+            f"BIAS_MA20: {_fmt_pct(bias_ma20)}",
+            f"COST_LEVEL: {cost_level}",
+            f"DECISION: {decision}",
+            f"STATE: {state}",
+            f"CONFIDENCE: {confidence}",
+            "REASON:",
+        ]
+        for r in reason_list:
+            lines.append(f"- {r}")
+
+        lines.append(f"RISK: {risk}")
+
+        if risk_flag:
+            lines.append(f"RISK_FLAG: {risk_flag}")
+
+        action_msg = explanation.get("action")
+        if action_msg:
+            lines.append(f"ACTION: {action_msg}")
+
+        risk_msg = explanation.get("risk")
+        if risk_msg:
+            lines.append(f"COST_WARNING: {risk_msg}")
+
+        return "\n".join(lines)
+
+    except Exception as exc:
+        logger.error("format_decision_snapshot failed: %s", exc)
+        sid = decision_dict.get("stock_id", "UNKNOWN") if isinstance(decision_dict, dict) else "UNKNOWN"
+        return f"[Decision Snapshot - ERROR]\nSTOCK_ID: {sid}\nERROR: {exc}"
+
+
+# ── CSV exporters ─────────────────────────────────────────────────────────────
+
+_LATEST_COLS = [
+    "date", "stock_id", "name", "decision", "confidence",
+    "C_days", "B_days", "A_days", "flow_status", "cost_level", "signal_type",
+    "adx", "atr", "vwap", "kd_k", "kd_d", "bb_upper", "bb_middle", "bb_lower",
+    "B_quality", "B_window_20", "B_validity", "B_phase",
+    "foreign_position", "foreign_level",
+    "volume_ratio", "foreign_cost", "foreign_profit_pct",
+    "foreign_consecutive_buy", "margin_change_5d", "return_10d", "bias_ma20",
+    "margin_consecutive_increase", "margin_change_pct",
+]
+
+
+def export_latest_decisions(
+    decisions: list,
+    path: str = None,
+) -> None:
+    if path is None:
+        path = os.path.join(_DIR, "latest_decisions.csv")
+    """Write the latest decision for each stock to a CSV (one row per stock).
+
+    Columns: date, stock_id, name, decision, confidence,
+             C_days, B_days, A_days, flow_status, cost_level.
+
+    Overwrites the file on each call (represents current run).
+    Never raises.
+    """
+    try:
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=_LATEST_COLS, extrasaction="ignore")
+            writer.writeheader()
+            for d in decisions:
+                try:
+                    row = {col: d.get(col, "") for col in _LATEST_COLS}
+                    writer.writerow(row)
+                except Exception as exc:
+                    logger.error("export_latest_decisions: skipping row: %s", exc)
+    except Exception as exc:
+        logger.error("export_latest_decisions failed (%s): %s", path, exc)
+
+
+_STATE_LOG_COLS = ["date", "stock_id", "name", "prev_state", "new_state", "score", "decision",
+                   "B_phase", "B_validity"]
+
+
+def append_state_log(
+    decision_dict: dict,
+    prev_state: Optional[str],
+    path: str = None,
+) -> None:
+    if path is None:
+        path = os.path.join(_DIR, "state_log.csv")
+    """Append one row to the state log CSV.
+
+    Columns: date, stock_id, prev_state, new_state, score, decision, B_phase, B_validity.
+    Creates the file with header if it doesn't exist. Never raises.
+    """
+    try:
+        file_exists = Path(path).exists()
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=_STATE_LOG_COLS)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({
+                "date":       decision_dict.get("date", ""),
+                "stock_id":   decision_dict.get("stock_id", ""),
+                "name":       decision_dict.get("name", ""),
+                "prev_state": prev_state or "",
+                "new_state":  decision_dict.get("state", ""),
+                "score":      decision_dict.get("confidence", 0),
+                "decision":   decision_dict.get("decision", ""),
+                "B_phase":    decision_dict.get("B_phase", ""),
+                "B_validity": decision_dict.get("B_validity", ""),
+            })
+    except Exception as exc:
+        logger.error("append_state_log failed (%s): %s", path, exc)
+
+================================================
+FILE: ./good_company.py
+================================================
+"""
+good_company.py — 磐石決策系統 Phase 2
+Fundamental quality whitelist.
+
+Rules:
+- companies.csv is manually maintained. No auto-filtering.
+- is_good_company() is a pure function: deterministic for same input.
+- Missing file → returns False (logs warning). Never raises.
+"""
+
+import csv
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "companies.csv")
+
+
+def load_company_list(path: str = _DEFAULT_PATH) -> dict:
+    """Load the whitelist CSV into a dict keyed by stock_id.
+
+    CSV must have at minimum a 'stock_id' column.
+    Optional 'name' column is captured when present.
+    Returns empty dict if file is missing or unreadable (logs warning).
+    Never raises.
+    """
+    result: dict = {}
+    try:
+        p = Path(path)
+        if not p.exists():
+            logger.warning("companies.csv not found at %s", path)
+            return result
+        with p.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                sid = (row.get("stock_id") or "").strip()
+                if sid:
+                    result[sid] = {
+                        "name": (row.get("name") or "").strip(),
+                    }
+    except Exception as exc:
+        logger.error("load_company_list failed (%s): %s", path, exc)
+    return result
+
+
+def is_good_company(stock_id: str, path: str = _DEFAULT_PATH) -> bool:
+    """Return True if stock_id is present in the whitelist CSV.
+
+    Pure function. Deterministic for the same stock_id and file state.
+    Returns False if stock_id is absent or file is missing. Never raises.
+    """
+    try:
+        companies = load_company_list(path)
+        return stock_id in companies
+    except Exception as exc:
+        logger.error("is_good_company(%s) failed: %s", stock_id, exc)
+        return False
+
+
+def get_company_name(stock_id: str, path: str = _DEFAULT_PATH) -> Optional[str]:
+    """Return the display name for a stock_id, or None if not found.
+
+    Pure function. Never raises.
+    """
+    try:
+        companies = load_company_list(path)
+        entry = companies.get(stock_id)
+        if entry:
+            name = entry.get("name", "")
+            return name if name else None
+        return None
+    except Exception as exc:
+        logger.error("get_company_name(%s) failed: %s", stock_id, exc)
+        return None
+
+================================================
+FILE: ./institutional_engine.py
+================================================
+import pandas as pd
+
+def calc_foreign_cost_pro(df, window=60):
+    df = df.copy().tail(window).reset_index(drop=True)
+    if "foreign_buy" not in df.columns or "foreign_sell" not in df.columns:
+        return None, None, None
+    df["foreign_net"] = pd.to_numeric(df["foreign_buy"], errors="coerce").fillna(0) -                         pd.to_numeric(df["foreign_sell"], errors="coerce").fillna(0)
+    position = 0.0
+    total_cost = 0.0
+    for _, row in df.iterrows():
+        net = row["foreign_net"]
+        price = row["close"]
+        if net > 0:
+            total_cost += price * net
+            position += net
+        elif net < 0 and position > 0:
+            sell = min(abs(net), position)
+            avg_cost = total_cost / position
+            total_cost -= avg_cost * sell
+            position -= sell
+    if position <= 0:
+        return None, None, None
+    avg_cost = total_cost / position
+    current_price = df.iloc[-1]["close"]
+    profit_pct = (current_price - avg_cost) / avg_cost * 100
+    return round(avg_cost, 2), int(position), round(profit_pct, 2)
+
+def classify_institutional_state(decision, cost, profit_pct):
+    if cost is None or profit_pct is None:
+        return "UNKNOWN"
+    B    = decision.get("B_days") or 0
+    A    = decision.get("A_days") or 0
+    flow = decision.get("flow_status")
+    if profit_pct > 10 and B == 0:
+        return "DISTRIBUTION"
+    if B >= 2 and flow == "ACCUMULATING" and profit_pct < 5:
+        return "ACCUMULATION"
+    if B >= 1 and A == 0 and profit_pct > 3:
+        return "SHAKEOUT"
+    if A >= 3 and profit_pct > 8:
+        return "EXTENDED"
+    return "NEUTRAL"
+
+def interpret_institutional_state(state, profit_pct):
+    if state == "ACCUMULATION":
+        return "主力建倉中（低風險區）"
+    elif state == "SHAKEOUT":
+        return "洗盤中（震盪吸籌）"
+    elif state == "DISTRIBUTION":
+        return "主力出貨（高風險）"
+    elif state == "EXTENDED":
+        return f"主力已獲利 {profit_pct:.1f}%（延伸段，注意回檔）"
+    elif profit_pct is not None:
+        if profit_pct > 12:
+            return f"主力高度獲利 +{profit_pct:.1f}% → 出貨風險高"
+        elif profit_pct > 5:
+            return f"主力獲利中 +{profit_pct:.1f}% → 健康區"
+        elif abs(profit_pct) <= 3:
+            return f"主力成本區（±{profit_pct:.1f}%）→ 關鍵支撐"
+        else:
+            return f"主力被套 {profit_pct:.1f}% → 潛在支撐但弱"
+    return "主力行為不明確"
+
+
+def calc_b_validity(df, b_quality, window=20):
+    """判斷 B 段是真建倉還是假整理"""
+    if df is None or len(df) < 5:
+        return "UNCERTAIN"
+
+    recent = df.tail(window).copy()
+
+    # 外資連續賣出天數
+    foreign_sell_consecutive = 0
+    if "foreign_net" in recent.columns:
+        for net in reversed(pd.to_numeric(recent["foreign_net"], errors="coerce").fillna(0).tolist()):
+            if net < 0:
+                foreign_sell_consecutive += 1
+            else:
+                break
+
+    # 價格相對 MA60 位置
+    price_bias = "OK"
+    if "close" in df.columns and "ma60" in df.columns:
+        last = df.iloc[-1]
+        try:
+            close = float(last["close"])
+            ma60  = float(last["ma60"])
+            if close < ma60 * 0.97:
+                price_bias = "WEAK"
+        except (TypeError, ValueError):
+            pass
+
+    # 真假判斷
+    if b_quality >= 60 and foreign_sell_consecutive < 3 and price_bias != "WEAK":
+        return "TRUE_B"
+    elif b_quality < 50 and foreign_sell_consecutive >= 5:
+        return "FAKE_B"
+    else:
+        return "UNCERTAIN"
+================================================
+FILE: ./b_ranker.py
+================================================
+import pandas as pd
+
+def score_strong_B(row):
+    score = 0
+    try:
+        B = int(float(row.get("B_days") or 0))
+    except:
+        B = 0
+    flow = row.get("flow_status")
+    cost = row.get("cost_level")
+    try:
+        A = int(float(row.get("A_days") or 0))
+    except Exception:
+        A = 0
+    try:
+        conf = int(float(row.get("confidence") or 0))
+    except Exception:
+        conf = 0
+    if B >= 8:   score += 30
+    elif B >= 5: score += 20
+    elif B >= 3: score += 10
+    if flow == "ACCUMULATING":       score += 30
+    elif flow in ["NEUTRAL", None]:  score += 5
+    if cost == "SAFE":       score += 15
+    elif cost == "HIGH_RISK": score -= 10
+    if A == 0:   score += 15
+    elif A <= 2: score += 5
+    score += min(conf, 10)
+    return score
+
+def get_top_strong_B(df, top_n=5):
+    df = df.copy()
+    df["B_days"] = pd.to_numeric(df["B_days"], errors="coerce").fillna(0)
+    df["B_score"] = df.apply(score_strong_B, axis=1)
+    df = df[df["B_days"] >= 3]
+    return df.sort_values("B_score", ascending=False).head(top_n)
+================================================
+FILE: ./backtester.py
+================================================
+"""
+backtester.py — 磐石決策系統 Phase 2
+Zero-lookahead multi-stock backtester.
+
+Zero-lookahead guarantee:
+    replay_decision() slices df to df[df.date <= date] BEFORE any calculation.
+    No future data can leak into any indicator or decision.
+
+Exit conditions (evaluated in strict order, stop at first match):
+    1. bias_ma20 <= exit_stop_loss        (default -6%)   → "STOP_LOSS"
+    2. bias_ma20 >= exit_profit_bias      (default +8%)
+       AND A_days >= exit_profit_a_min    (default 3)     → "PROFIT_TARGET"
+    3. hold_days >= exit_time_stop        (default 20)    → "TIME_STOP"
+    4. A_days >= exit_trend_exhaustion    (default 10)    → "TREND_EXHAUSTION"
+    No match                                              → hold (False, "")
+"""
+
+import csv
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+import pandas as pd
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
+
+from data_fetcher import merge_all
+from feature_engine import build_features
+from trajectory_engine import compute_trajectory, get_latest_trajectory
+from flow_engine import classify_flow, classify_cost
+from decision_inspector import (
+    check_data_integrity,
+    format_panstone_signal,
+    is_false_breakout,
+)
+from good_company import is_good_company, get_company_name
+
+logger = logging.getLogger(__name__)
+
+# Days of history to load before the target date (MA120 needs 120 + buffer)
+_LOOKBACK_DAYS = 400
+
+_TRADE_COLS = [
+    "stock_id", "entry_date", "exit_date",
+    "entry_price", "exit_price", "exit_reason",
+    "hold_days", "pnl_pct",
+]
+
+
+def replay_decision(date: str, stock_id: str, params: dict) -> dict:
+    """Reconstruct the decision for a given stock on a given date.
+
+    Uses ONLY data available on or before `date` — zero-lookahead guaranteed.
+
+    Steps:
+        1. Load raw data (date - 400d → date)
+        2. Slice to df[df.date <= date]          ← LOOKAHEAD GUARD
+        3. build_features()
+        4. compute_trajectory()
+        5. Assemble trajectory / flow / cost dicts
+        6. format_panstone_signal()
+
+    Returns a complete decision dict. Never raises.
+    """
+    try:
+        db_path   = params.get("db_path", os.path.join(_DIR, "banshi.db"))
+        co_path   = params.get("companies_path", os.path.join(_DIR, "companies.csv"))
+
+        target    = pd.to_datetime(date)
+        start     = (target - pd.Timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+
+        # ── Load and slice (zero-lookahead) ──────────────────────────────
+        df_raw = merge_all(stock_id, start, date, db_path)
+        if df_raw.empty:
+            logger.warning("replay_decision: no data for %s on %s", stock_id, date)
+            return _empty_ignore(stock_id, "", date)
+
+        df_safe = df_raw[df_raw["date"] <= target].copy()
+        if df_safe.empty:
+            return _empty_ignore(stock_id, "", date)
+
+        # ── Feature + trajectory ──────────────────────────────────────────
+        df_feat = build_features(df_safe)
+        df_traj = compute_trajectory(df_feat, params)
+
+        traj_info = get_latest_trajectory(df_traj)
+        last      = df_traj.iloc[-1]
+
+        def _g(col):
+            v = last.get(col) if hasattr(last, "get") else (
+                last[col] if col in df_traj.columns else None
+            )
+            return None if (v is not None and v != v) else v  # NaN guard
+
+        # ── Assemble input dicts ──────────────────────────────────────────
+        name         = get_company_name(stock_id, co_path) or stock_id
+        integrity_ok = check_data_integrity(df_feat)
+        good_co      = is_good_company(stock_id, co_path)
+
+        trajectory = {
+            "stock_id":        stock_id,
+            "name":            name,
+            "date":            traj_info["date"] or date,
+            "C_days":          traj_info["C_days"],
+            "B_days":          traj_info["B_days"],
+            "A_days":          traj_info["A_days"],
+            "integrity_ok":    integrity_ok,
+            "is_good_company": good_co,
+        }
+
+        flow_dict = {
+            "flow_status":           classify_flow(
+                _g("foreign_consecutive_buy"),
+                _g("margin_change_5d"),
+                _g("return_10d"),
+                _g("volume_ratio"),
+                params,
+            ),
+            "volume_ratio":          _g("volume_ratio"),
+            "foreign_consecutive_buy": _g("foreign_consecutive_buy"),
+            "margin_change_5d":      _g("margin_change_5d"),
+            "return_10d":            _g("return_10d"),
+            "bias_ma20":             _g("bias_ma20"),
+        }
+
+        cost_result = classify_cost(_g("bias_ma20"), params)
+
+        return format_panstone_signal(
+            trajectory=trajectory,
+            flow=flow_dict,
+            cost=cost_result,
+            params=params,
+            current_date=date,
+            current_price=_g("close"),
+        )
+
+    except Exception as exc:
+        logger.error("replay_decision(%s, %s) failed: %s", date, stock_id, exc)
+        return _empty_ignore(stock_id, "", date)
+
+
+def check_exit(position: dict, row: dict, params: dict) -> tuple:
+    """Evaluate exit conditions for an open position.
+
+    Conditions checked in strict order (stop at first match):
+        1. bias_ma20 <= exit_stop_loss              → "STOP_LOSS"
+        2. bias_ma20 >= exit_profit_bias AND
+           A_days >= exit_profit_a_min              → "PROFIT_TARGET"
+        3. hold_days >= exit_time_stop              → "TIME_STOP"
+        4. A_days >= exit_trend_exhaustion          → "TREND_EXHAUSTION"
+
+    Parameters:
+        position: {"entry_date": str, "entry_price": float, ...}
+        row:      {"bias_ma20": float|None, "A_days": int|None,
+                   "hold_days": int}
+        params:   threshold dict
+
+    Returns:
+        (True, reason_str)  — should exit
+        (False, "")         — hold
+    Pure function.
+    """
+    try:
+        bias   = row.get("bias_ma20")
+        a_days = row.get("A_days")
+        hdays  = row.get("hold_days", 0)
+
+        sl    = float(params.get("exit_stop_loss",         -0.06))
+        pb    = float(params.get("exit_profit_bias",        0.08))
+        pamin = int(params.get("exit_profit_a_min",         3))
+        ts    = int(params.get("exit_time_stop",            20))
+        te    = int(params.get("exit_trend_exhaustion",     10))
+
+        # 1. Stop loss
+        if bias is not None and float(bias) <= sl:
+            return True, "STOP_LOSS"
+
+        # 2. Profit target
+        if (
+            bias is not None and a_days is not None
+            and float(bias) >= pb
+            and int(a_days) >= pamin
+        ):
+            return True, "PROFIT_TARGET"
+
+        # 3. Time stop
+        if int(hdays) >= ts:
+            return True, "TIME_STOP"
+
+        # 4. Trend exhaustion
+        if a_days is not None and int(a_days) >= te:
+            return True, "TREND_EXHAUSTION"
+
+        return False, ""
+
+    except Exception as exc:
+        logger.error("check_exit failed: %s", exc)
+        return False, ""
+
+
+def log_trade(trade: dict, path: str = "backtest_trades.csv") -> None:
+    """Append a completed trade record to the backtest trades CSV.
+
+    Columns: stock_id, entry_date, exit_date, entry_price, exit_price,
+             exit_reason, hold_days, pnl_pct.
+    Creates the file with header if absent. Never raises.
+    """
+    try:
+        file_exists = Path(path).exists()
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=_TRADE_COLS, extrasaction="ignore")
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({k: trade.get(k, "") for k in _TRADE_COLS})
+    except Exception as exc:
+        logger.error("log_trade failed (%s): %s", path, exc)
+
+
+def run_backtest(
+    stock_ids: list,
+    start: str,
+    end: str,
+    params: dict,
+    trades_path: str = "backtest_trades.csv",
+) -> pd.DataFrame:
+    """Run a zero-lookahead backtest across multiple stocks over a date range.
+
+    For each trading day:
+        1. replay_decision() for each stock (uses only data up to that date).
+        2. If open position: evaluate check_exit().
+           If exit triggered: close position, log trade.
+        3. If BUY signal and no open position: open position.
+
+    Returns a DataFrame of all completed trades.
+    Never raises; individual stock/day errors are logged and skipped.
+    """
+    try:
+        db_path = params.get("db_path", os.path.join(_DIR, "banshi.db"))
+
+        # Collect all trading dates from the data
+        from data_fetcher import merge_all as _ma
+        date_set: set = set()
+        for sid in stock_ids:
+            try:
+                df_tmp = _ma(sid, start, end, db_path)
+                if not df_tmp.empty:
+                    date_set.update(df_tmp["date"].dt.strftime("%Y-%m-%d").tolist())
+            except Exception as exc:
+                logger.error("run_backtest: date collection failed for %s: %s", sid, exc)
+
+        trading_days = sorted(date_set)
+        if not trading_days:
+            logger.warning("run_backtest: no trading days found in [%s, %s]", start, end)
+            return pd.DataFrame(columns=_TRADE_COLS)
+
+        # State: open positions keyed by stock_id
+        open_positions: dict = {}
+        all_trades: list = []
+
+        for day in trading_days:
+            for sid in stock_ids:
+                try:
+                    decision = replay_decision(day, sid, params)
+
+                    # ── Manage open position ───────────────────────────────
+                    if sid in open_positions:
+                        pos   = open_positions[sid]
+                        entry = pd.to_datetime(pos["entry_date"])
+                        curr  = pd.to_datetime(day)
+                        hdays = (curr - entry).days
+
+                        row_exit = {
+                            "bias_ma20": decision.get("bias_ma20"),
+                            "A_days":    decision.get("A_days"),
+                            "hold_days": hdays,
+                        }
+                        should_exit, reason = check_exit(pos, row_exit, params)
+
+                        if should_exit:
+                            exit_price = decision.get("current_price")
+                            entry_price = pos["entry_price"]
+                            pnl = (
+                                round((exit_price / entry_price - 1.0) * 100.0, 2)
+                                if exit_price and entry_price
+                                else None
+                            )
+                            trade = {
+                                "stock_id":    sid,
+                                "entry_date":  pos["entry_date"],
+                                "exit_date":   day,
+                                "entry_price": entry_price,
+                                "exit_price":  exit_price,
+                                "exit_reason": reason,
+                                "hold_days":   hdays,
+                                "pnl_pct":     pnl,
+                            }
+                            log_trade(trade, trades_path)
+                            all_trades.append(trade)
+                            del open_positions[sid]
+
+                    # ── Open new position on BUY signal ────────────────────
+                    if sid not in open_positions and decision.get("decision") == "BUY":
+                        entry_price = decision.get("current_price")
+                        if entry_price is not None:
+                            open_positions[sid] = {
+                                "stock_id":    sid,
+                                "entry_date":  day,
+                                "entry_price": entry_price,
+                            }
+
+                except Exception as exc:
+                    logger.error("run_backtest: %s on %s failed: %s", sid, day, exc)
+
+        return pd.DataFrame(all_trades, columns=_TRADE_COLS) if all_trades else pd.DataFrame(columns=_TRADE_COLS)
+
+    except Exception as exc:
+        logger.error("run_backtest failed: %s", exc)
+        return pd.DataFrame(columns=_TRADE_COLS)
+
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+def _empty_ignore(stock_id: str, name: str, date: str) -> dict:
+    """Return a minimal IGNORE decision dict for error cases."""
+    return {
+        "stock_id": stock_id, "name": name, "date": date,
+        "decision": "IGNORE", "state": "INACTIVE", "confidence": 0,
+        "risk": "N/A", "risk_flag": None, "false_breakout": False,
+        "reason": ["No data available"], "explanation": {},
+        "C_days": None, "B_days": None, "A_days": None,
+        "flow_status": None, "foreign_streak": None,
+        "margin_change_5d": None, "volume_ratio": None,
+        "return_10d": None, "bias_ma20": None,
+        "cost_level": None, "deviation_percent": None,
+        "current_price": None, "pnl_percent": None,
+    }
+
+================================================
+FILE: ./utils/rotation_detector.py
+================================================
+"""
+utils/rotation_detector.py — AI 族群輪動偵測模組 v3.1
+
+核心：雙分數系統 + 退潮偵測 + 生命週期 + 五大防呆
+
+防呆機制：
+1. 族群權重（解決成員重疊）
+2. 成交值加權（解決小型股拉爆）
+3. 確認突破（防主力釣魚）
+4. 大盤風險濾網（Phase 1 為 neutral 空殼）
+5. 資料一致性檢查（三表日期不同步拒絕發訊號）
+
+設計原則：重視「相對變化」，不追求絕對值精準。
+所有 score 在 return 前必須過 clamp()。
+
+Version: v3.1
+"""
+from __future__ import annotations
+
+import json
+import math
+import os
+import sqlite3
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+# ── 模組常數 ───────────────────────────────────────────────────────────────
+VERSION = "v3.1"
+
+ALGORITHM_CONFIG: Dict[str, Any] = {
+    "heat_score_weights": {
+        "weighted_5d_return":         0.30,
+        "turnover_share":             0.25,
+        "leader_confirmed_breakout":  0.20,
+        "weighted_volume_expansion":  0.15,
+        "foreign_buy_concentration":  0.10,
+    },
+    "early_score_weights": {
+        "foreign_continuous_buy":          0.25,
+        "volume_up_price_flat":            0.30,
+        "cba_b_ratio":                     0.25,
+        "leader_first_confirmed_breakout": 0.20,
+    },
+    "stage_thresholds": {"cold": 30, "warming": 55, "hot": 80},
+    "lifecycle_thresholds": {
+        "early":     {"lag_diff_min": 5.0},
+        "mid_early": {"lag_diff_min": 2.0, "lag_diff_max": 5.0},
+        "mid_late":  {"lag_diff_min": 0.0, "lag_diff_max": 2.0},
+        "late":      {"lag_diff_max": 0.0},
+    },
+    "confirmed_breakout": {
+        "lookback_days": 20,
+        "hold_days": 3,
+        "hold_floor_ratio": 0.95,
+        "volume_multiplier": 4.0,
+    },
+}
+
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DB  = os.path.join(BASE_DIR, "banshi.db")
+GROUPS_JSON = os.path.join(BASE_DIR, "config", "rotation_groups.json")
+DECISIONS_CSV = os.path.join(BASE_DIR, "latest_decisions.csv")
+
+
+# ── 工具函式 ───────────────────────────────────────────────────────────────
+def clamp(value: Optional[float], lo: float = 0.0, hi: float = 100.0) -> float:
+    """限制分數在合理範圍。處理 None / NaN / inf。"""
+    if value is None:
+        return lo
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return lo
+    if math.isnan(v) or math.isinf(v):
+        return lo
+    return max(lo, min(hi, v))
+
+
+def clamp_ratio(value: Optional[float]) -> float:
+    """0~1 比例限制。"""
+    return clamp(value, 0.0, 1.0)
+
+
+def estimate_turnover(close: Optional[float], volume: Optional[float]) -> float:
+    """估算成交值（元）= close × volume × 1000（張轉股）。"""
+    try:
+        c = float(close or 0)
+        v = float(volume or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return c * v * 1000.0
+
+
+# ── 設定載入 ───────────────────────────────────────────────────────────────
+def load_groups() -> List[Dict[str, Any]]:
+    with open(GROUPS_JSON, "r", encoding="utf-8") as f:
+        return json.load(f)["groups"]
+
+
+# ── 資料一致性檢查 ─────────────────────────────────────────────────────────
+def check_data_integrity(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
+    """檢查 price_history / institutional_history / margin_history 最新日期是否同步。"""
+    tables = ["price_history", "institutional_history", "margin_history"]
+    out: Dict[str, Optional[str]] = {}
+    try:
+        conn = sqlite3.connect(db_path)
+        cur  = conn.cursor()
+        for t in tables:
+            try:
+                cur.execute(f"SELECT MAX(date) FROM {t}")
+                out[t] = cur.fetchone()[0]
+            except Exception:
+                out[t] = None
+        conn.close()
+    except Exception as e:
+        return {
+            "all_synced": False,
+            "latest_date": None,
+            "tables": {t: None for t in tables},
+            "warning": f"DB 連線失敗：{e}",
+        }
+
+    dates = [d for d in out.values() if d]
+    all_synced = len(dates) == len(tables) and len(set(dates)) == 1
+    warning = ""
+    if not all_synced:
+        warning = f"三表日期不同步：{out}。系統將不發出輪動訊號。"
+
+    return {
+        "all_synced": all_synced,
+        "latest_date": max(dates) if dates else None,
+        "tables": out,
+        "warning": warning,
+    }
+
+
+# ── 大盤風險濾網（Phase 1 空殼） ────────────────────────────────────────────
+def calc_market_regime(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
+    """
+    Phase 1：強制 neutral，signal_multiplier=0.7（保守 fail-safe）。
+    Phase 2：接 TAIEX 資料後升級為完整版（月線/季線/ATR/外資累計/5日報酬）。
+    """
+    return {
+        "market_score": None,
+        "regime": "neutral",
+        "components": {
+            "note": "Phase 1: 空殼版，等待 TAIEX 資料補齊後升級為完整 regime",
+        },
+        "signal_multiplier": 0.7,
+        "phase": "placeholder",
+    }
+
+
+# ── 個股價量資料載入 ───────────────────────────────────────────────────────
+def _fetch_price_window(conn: sqlite3.Connection, stock_id: str, days: int = 30) -> List[Dict[str, Any]]:
+    """取最近 days 個交易日的價量。回傳由舊到新。"""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT date, open, high, low, close, volume
+          FROM price_history
+         WHERE stock_id = ?
+         ORDER BY date DESC LIMIT ?
+        """,
+        (str(stock_id), days),
+    )
+    rows = cur.fetchall()
+    rows.reverse()
+    return [
+        {
+            "date":   r[0],
+            "open":   r[1],
+            "high":   r[2],
+            "low":    r[3],
+            "close":  r[4],
+            "volume": r[5],
+            "turnover": estimate_turnover(r[4], r[5]),
+        }
+        for r in rows
+    ]
+
+
+def _fetch_institutional_window(conn: sqlite3.Connection, stock_id: str, days: int = 10) -> List[Dict[str, Any]]:
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT date, foreign_net, investment_net, dealer_net
+          FROM institutional_history
+         WHERE stock_id = ?
+         ORDER BY date DESC LIMIT ?
+        """,
+        (str(stock_id), days),
+    )
+    rows = cur.fetchall()
+    rows.reverse()
+    return [
+        {"date": r[0], "foreign_net": r[1] or 0, "investment_net": r[2] or 0, "dealer_net": r[3] or 0}
+        for r in rows
+    ]
+
+
+# ── 確認突破 ──────────────────────────────────────────────────────────────
+def is_confirmed_breakout(stock_id: str, db_path: str = DEFAULT_DB) -> Optional[bool]:
+    """
+    True  = 已確認突破
+    False = 還沒突破
+    None  = 剛突破但還沒站穩 3 日（待確認）
+    """
+    cfg = ALGORITHM_CONFIG["confirmed_breakout"]
+    lookback = cfg["lookback_days"]
+    hold_n   = cfg["hold_days"]
+    floor    = cfg["hold_floor_ratio"]
+    vol_mul  = cfg["volume_multiplier"]
+
+    needed = lookback + hold_n + 5  # 突破日 + 站穩日 + 突破前均量基期
+    try:
+        conn = sqlite3.connect(db_path)
+        bars = _fetch_price_window(conn, stock_id, days=needed + 5)
+        conn.close()
+    except Exception:
+        return False
+
+    if len(bars) < lookback + hold_n + 1:
+        return False
+
+    # 找最近 hold_n+1 日內是否有突破日
+    # 由新到舊掃，找第一個突破日
+    for offset in range(hold_n, -1, -1):
+        # offset = 距今幾日（0=今日，hold_n=hold_n日前）
+        # breakout_idx 為突破日在 bars 中的位置
+        idx = len(bars) - 1 - offset
+        if idx - lookback < 0:
+            continue
+        prior_max = max(b["close"] for b in bars[idx - lookback:idx])
+        if bars[idx]["close"] > prior_max:
+            # 找到突破日，檢查後續站穩條件
+            after = bars[idx + 1: idx + 1 + hold_n]
+            if len(after) < hold_n:
+                return None  # 還沒走完站穩期
+            breakout_close = bars[idx]["close"]
+            if not all(b["close"] > breakout_close * floor for b in after):
+                return False
+            # 量能條件
+            prior5_vol = [b["volume"] or 0 for b in bars[max(0, idx - 5):idx]]
+            avg5_vol   = sum(prior5_vol) / max(1, len(prior5_vol))
+            after_vol  = sum(b["volume"] or 0 for b in after)
+            if avg5_vol > 0 and after_vol > avg5_vol * vol_mul:
+                return True
+            return False
+    return False
+
+
+def _is_first_confirmed_breakout(stock_id: str, db_path: str = DEFAULT_DB) -> bool:
+    """
+    最近 10 日內發生確認突破，視為「首次確認」（用於 early_rotation_score）。
+    """
+    return is_confirmed_breakout(stock_id, db_path) is True
+
+
+# ── CBA 讀取（single source of truth：latest_decisions.csv） ──────────────
+_CBA_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _load_cba_lookup() -> Dict[str, Dict[str, Any]]:
+    """讀 latest_decisions.csv，依 stock_id 索引。"""
+    global _CBA_CACHE
+    if _CBA_CACHE is not None:
+        return _CBA_CACHE
+
+    lookup: Dict[str, Dict[str, Any]] = {}
+    if not os.path.exists(DECISIONS_CSV):
+        _CBA_CACHE = lookup
+        return lookup
+    try:
+        import csv
+        with open(DECISIONS_CSV, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                sid = str(row.get("stock_id", "")).strip()
+                if not sid:
+                    continue
+                lookup[sid] = row
+    except Exception:
+        pass
+    _CBA_CACHE = lookup
+    return lookup
+
+
+def _row_b_quality(row: Dict[str, Any]) -> float:
+    try:
+        return float(row.get("B_quality") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _row_foreign_consec(row: Dict[str, Any]) -> float:
+    try:
+        return float(row.get("foreign_consecutive_buy") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _row_volume_ratio(row: Dict[str, Any]) -> float:
+    try:
+        return float(row.get("volume_ratio") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _row_return_10d(row: Dict[str, Any]) -> float:
+    try:
+        return float(row.get("return_10d") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _row_flow_status(row: Dict[str, Any]) -> str:
+    return str(row.get("flow_status") or "")
+
+
+# ── 族群指標（成交值加權） ─────────────────────────────────────────────────
+def _stock_5d_return(bars: List[Dict[str, Any]]) -> Optional[float]:
+    if len(bars) < 6:
+        return None
+    try:
+        return (bars[-1]["close"] - bars[-6]["close"]) / bars[-6]["close"] * 100.0
+    except Exception:
+        return None
+
+
+def _stock_volume_expansion(bars: List[Dict[str, Any]]) -> Optional[float]:
+    """近 5 日均量 / 前 20 日均量 - 1（百分比）"""
+    if len(bars) < 25:
+        return None
+    recent = [b["volume"] or 0 for b in bars[-5:]]
+    base   = [b["volume"] or 0 for b in bars[-25:-5]]
+    avg_r  = sum(recent) / max(1, len(recent))
+    avg_b  = sum(base)   / max(1, len(base))
+    if avg_b <= 0:
+        return None
+    return (avg_r / avg_b - 1.0) * 100.0
+
+
+def calc_group_metrics(group: Dict[str, Any], db_path: str = DEFAULT_DB) -> Dict[str, Any]:
+    """成交值加權後的族群指標。"""
+    cba = _load_cba_lookup()
+    try:
+        conn = sqlite3.connect(db_path)
+    except Exception as e:
+        return {"error": str(e)}
+
+    members_data: List[Dict[str, Any]] = []
+    missing: List[str] = []
+
+    for m in group["members"]:
+        sid    = str(m["code"])
+        weight = float(m.get("weight") or 1.0)
+        tier   = m.get("tier", "second")
+        bars   = _fetch_price_window(conn, sid, days=30)
+        inst   = _fetch_institutional_window(conn, sid, days=10)
+        row    = cba.get(sid, {})
+
+        if not bars:
+            missing.append(sid)
+            continue
+
+        latest_turnover = bars[-1]["turnover"]
+        members_data.append({
+            "code":       sid,
+            "tier":       tier,
+            "weight":     weight,
+            "bars":       bars,
+            "inst":       inst,
+            "row":        row,
+            "turnover":   latest_turnover,
+            "ret_5d":     _stock_5d_return(bars),
+            "vol_expand": _stock_volume_expansion(bars),
+            "is_brk":     is_confirmed_breakout(sid, db_path),
+        })
+
+    conn.close()
+
+    if not members_data:
+        return {
+            "n_members":               0,
+            "weighted_5d_return":      0.0,
+            "weighted_volume_expansion": 0.0,
+            "total_turnover":          0.0,
+            "leaders":                 [],
+            "second":                  [],
+            "elastic":                 [],
+            "missing":                 missing,
+            "leader_confirmed_breakout_ratio": 0.0,
+            "foreign_continuous_buy_score":    0.0,
+            "volume_up_price_flat_score":      0.0,
+            "cba_b_ratio":                     0.0,
+        }
+
+    # 成交值加權報酬 / 量能擴張
+    def wavg(field: str) -> float:
+        num = 0.0
+        den = 0.0
+        for d in members_data:
+            v = d.get(field)
+            if v is None:
+                continue
+            w = d["turnover"] * d["weight"]
+            num += v * w
+            den += w
+        return (num / den) if den > 0 else 0.0
+
+    total_turnover = sum(d["turnover"] * d["weight"] for d in members_data)
+    w_5d_return    = wavg("ret_5d")
+    w_vol_expand   = wavg("vol_expand")
+
+    leaders = [d for d in members_data if d["tier"] == "leader"]
+    second  = [d for d in members_data if d["tier"] == "second"]
+    elastic = [d for d in members_data if d["tier"] == "elastic"]
+
+    # leader 確認突破比例
+    brk_leaders = [d for d in leaders if d["is_brk"] is True]
+    leader_brk_ratio = (len(brk_leaders) / len(leaders)) if leaders else 0.0
+
+    # 外資連買（取近 5 日 foreign_net 為正的成員比例，CBA 也有 foreign_consecutive_buy）
+    foreign_buyers = 0
+    for d in members_data:
+        consec = _row_foreign_consec(d["row"])
+        if consec >= 3:
+            foreign_buyers += 1
+    foreign_continuous_ratio = foreign_buyers / max(1, len(members_data))
+
+    # 量增價未漲（volume_ratio >= 1.3 且 return_10d 在 ±3% 內）
+    vup_flat = 0
+    for d in members_data:
+        vr = _row_volume_ratio(d["row"])
+        r10 = _row_return_10d(d["row"])
+        if vr >= 1.3 and abs(r10) <= 3.0:
+            vup_flat += 1
+    vup_flat_ratio = vup_flat / max(1, len(members_data))
+
+    # CBA B 階段比例（B_quality >= 50 且 flow_status != DISTRIBUTION）
+    b_count = 0
+    for d in members_data:
+        bq = _row_b_quality(d["row"])
+        fs = _row_flow_status(d["row"])
+        if bq >= 50 and fs != "DISTRIBUTION":
+            b_count += 1
+    cba_b_ratio = b_count / max(1, len(members_data))
+
+    # 外資集中度（族群內外資淨買成交值佔比，近 5 日累計）
+    f_net_sum = 0.0
+    for d in members_data:
+        for ri in d["inst"][-5:]:
+            f_net_sum += float(ri.get("foreign_net") or 0)
+    # 用張數 → 約略佔成交值（這裡只看正負與相對強度，clamp 後使用）
+    foreign_buy_conc = 0.5 + min(0.5, max(-0.5, (f_net_sum / 1e6) / 50.0))
+
+    return {
+        "n_members":              len(members_data),
+        "weighted_5d_return":     w_5d_return,
+        "weighted_volume_expansion": w_vol_expand,
+        "total_turnover":         total_turnover,
+        "leaders":                leaders,
+        "second":                 second,
+        "elastic":                elastic,
+        "members":                members_data,
+        "missing":                missing,
+        "leader_confirmed_breakout_ratio": clamp_ratio(leader_brk_ratio),
+        "foreign_continuous_buy_score":    clamp_ratio(foreign_continuous_ratio),
+        "volume_up_price_flat_score":      clamp_ratio(vup_flat_ratio),
+        "cba_b_ratio":                     clamp_ratio(cba_b_ratio),
+        "foreign_buy_concentration":       clamp_ratio(foreign_buy_conc),
+    }
+
+
+# ── heat_score（偵測主流） ────────────────────────────────────────────────
+def calc_heat_score(group_metrics: Dict[str, Any], turnover_share: float) -> Dict[str, Any]:
+    w = ALGORITHM_CONFIG["heat_score_weights"]
+
+    # 將原始指標轉成 0~100
+    ret  = group_metrics.get("weighted_5d_return", 0.0)
+    ret_norm = clamp(50 + ret * 5)              # 0% → 50, +10% → 100, -10% → 0
+    share_norm = clamp(turnover_share * 100 * 5)  # 5% share → 25 分，20%+ → 100
+    brk_norm   = clamp(group_metrics.get("leader_confirmed_breakout_ratio", 0.0) * 100)
+    vol_norm   = clamp(50 + group_metrics.get("weighted_volume_expansion", 0.0))
+    fbc_norm   = clamp(group_metrics.get("foreign_buy_concentration", 0.5) * 100)
+
+    score = (
+        ret_norm   * w["weighted_5d_return"]      +
+        share_norm * w["turnover_share"]          +
+        brk_norm   * w["leader_confirmed_breakout"] +
+        vol_norm   * w["weighted_volume_expansion"] +
+        fbc_norm   * w["foreign_buy_concentration"]
+    )
+    score = clamp(score)
+
+    th = ALGORITHM_CONFIG["stage_thresholds"]
+    if score < th["cold"]:
+        stage = "cold"
+    elif score < th["warming"]:
+        stage = "warming"
+    elif score < th["hot"]:
+        stage = "hot"
+    else:
+        stage = "peaking"
+
+    return {
+        "score": score,
+        "stage": stage,
+        "components": {
+            "weighted_5d_return":         ret_norm,
+            "turnover_share":             share_norm,
+            "leader_confirmed_breakout":  brk_norm,
+            "weighted_volume_expansion":  vol_norm,
+            "foreign_buy_concentration":  fbc_norm,
+        },
+    }
+
+
+# ── early_rotation_score（偵測潛伏） ──────────────────────────────────────
+def calc_early_rotation_score(group_metrics: Dict[str, Any]) -> Dict[str, Any]:
+    w = ALGORITHM_CONFIG["early_score_weights"]
+
+    fc = clamp(group_metrics.get("foreign_continuous_buy_score", 0.0) * 100)
+    vp = clamp(group_metrics.get("volume_up_price_flat_score", 0.0) * 100)
+    cb = clamp(group_metrics.get("cba_b_ratio", 0.0) * 100)
+    lb = clamp(group_metrics.get("leader_confirmed_breakout_ratio", 0.0) * 100)
+
+    score = (
+        fc * w["foreign_continuous_buy"] +
+        vp * w["volume_up_price_flat"]   +
+        cb * w["cba_b_ratio"]            +
+        lb * w["leader_first_confirmed_breakout"]
+    )
+    score = clamp(score)
+
+    return {
+        "score": score,
+        "components": {
+            "foreign_continuous_buy":          fc,
+            "volume_up_price_flat":            vp,
+            "cba_b_ratio":                     cb,
+            "leader_first_confirmed_breakout": lb,
+        },
+    }
+
+
+# ── leader_exhaustion（退潮） ─────────────────────────────────────────────
+def calc_leader_exhaustion(group_metrics: Dict[str, Any], heat_score: float) -> Dict[str, Any]:
+    triggers: List[str] = []
+    leaders = group_metrics.get("leaders") or []
+
+    # 1. heat_score > 75 且 5 日報酬遞減（用 leaders 平均 5 日 vs 10 日近似）
+    if heat_score > 75:
+        triggers.append("heat_overheat_75+")
+
+    # 2. 爆量不漲：volume_ratio>=1.5 且 |10日報酬|<1% 的 leader 數
+    vup_count = 0
+    for d in leaders:
+        if _row_volume_ratio(d["row"]) >= 1.5 and abs(_row_return_10d(d["row"])) < 1.0:
+            vup_count += 1
+    if vup_count >= 1:
+        triggers.append("leader_volume_no_price")
+
+    # 3. 外資由買轉賣（leader foreign_net 5 日累計轉負）
+    for d in leaders:
+        nets = [r.get("foreign_net", 0) for r in (d["inst"][-5:] or [])]
+        if nets and sum(nets) < 0 and any(n > 0 for n in nets[:2]):
+            triggers.append("foreign_flip_to_sell")
+            break
+
+    # 4. 高檔長黑：leader 最近一日實體 >3% 且收最低 1/4
+    for d in leaders:
+        if not d["bars"]:
+            continue
+        b = d["bars"][-1]
+        try:
+            o, h, l, c = float(b["open"]), float(b["high"]), float(b["low"]), float(b["close"])
+        except (TypeError, ValueError):
+            continue
+        body_pct = abs(c - o) / o * 100 if o else 0
+        rng      = h - l
+        if rng <= 0:
+            continue
+        if c < o and body_pct > 3.0 and (c - l) / rng < 0.25:
+            triggers.append("leader_high_bearish")
+            break
+
+    n_triggers = len(triggers)
+    if n_triggers >= 2:
+        risk_level = "high"
+        recommended = "減碼觀望"
+    elif n_triggers == 1:
+        risk_level = "medium"
+        recommended = "提高警覺"
+    else:
+        risk_level = "low"
+        recommended = "持有"
+
+    # exhaustion_score: heat_score 加上 triggers 加分
+    score = clamp(heat_score * 0.5 + n_triggers * 20)
+
+    return {
+        "score":         score,
+        "triggers":      triggers,
+        "triggers_fired": n_triggers,
+        "risk_level":    risk_level,
+        "recommended_action": recommended,
+    }
+
+
+# ── leader_lag_diff（生命週期） ───────────────────────────────────────────
+def calc_leader_lag_diff(group_metrics: Dict[str, Any]) -> Dict[str, Any]:
+    leaders = group_metrics.get("leaders") or []
+    second  = group_metrics.get("second") or []
+    elastic = group_metrics.get("elastic") or []
+
+    def wret(members: List[Dict[str, Any]]) -> float:
+        num, den = 0.0, 0.0
+        for d in members:
+            r = d.get("ret_5d")
+            if r is None:
+                continue
+            w = d["turnover"] * d["weight"]
+            num += r * w
+            den += w
+        return (num / den) if den > 0 else 0.0
+
+    lead_ret    = wret(leaders)
+    second_ret  = wret(second)
+    elastic_ret = wret(elastic)
+
+    lag_diff = lead_ret - second_ret
+
+    # 判定生命週期階段
+    if lag_diff > 5.0:
+        stage = "early"
+    elif lag_diff > 2.0:
+        stage = "mid_early"
+    elif lag_diff > 0.0:
+        stage = "mid_late"
+    else:
+        if elastic_ret > 5.0:
+            stage = "late"  # 末升段：龍頭沒動，小型在飆
+        else:
+            stage = "mid_late"
+
+    return {
+        "lag_diff":            lag_diff,
+        "leaders_return_5d":   lead_ret,
+        "second_return_5d":    second_ret,
+        "elastic_return_5d":   elastic_ret,
+        "lifecycle_stage":     stage,
+    }
+
+
+# ── 整合偵測 ───────────────────────────────────────────────────────────────
+def detect_rotation(db_path: str = DEFAULT_DB) -> Dict[str, Any]:
+    """主入口。回傳完整 rotation_status JSON。"""
+    integrity = check_data_integrity(db_path)
+    base = {
+        "version":          VERSION,
+        "algorithm_config": ALGORITHM_CONFIG,
+        "generated_at":     datetime.now().isoformat(timespec="seconds"),
+        "data_integrity":   integrity,
+        "news_sentiment":   None,
+        "as_of_date":       integrity.get("latest_date"),
+    }
+
+    if not integrity["all_synced"]:
+        return {
+            **base,
+            "market_regime":  {"regime": "unknown", "signal_multiplier": 0.0},
+            "current_leader": None,
+            "next_candidates": [],
+            "rotation_signal": {
+                "probability": "n/a",
+                "signals_count": 0,
+                "signal_multiplier_applied": 0.0,
+                "note": integrity["warning"],
+            },
+            "all_groups": [],
+        }
+
+    regime = calc_market_regime(db_path)
+    mult   = regime.get("signal_multiplier", 0.7)
+
+    groups_cfg = load_groups()
+
+    # Step 1: 先算所有族群指標，匯總 total_turnover 算 share
+    raw_list = []
+    for g in groups_cfg:
+        gm = calc_group_metrics(g, db_path)
+        raw_list.append((g, gm))
+
+    grand_turnover = sum((r[1].get("total_turnover") or 0.0) for r in raw_list) or 1.0
+
+    # Step 2: 計算雙分數 + 退潮 + 生命週期
+    all_groups: List[Dict[str, Any]] = []
+    for g, gm in raw_list:
+        share = (gm.get("total_turnover") or 0.0) / grand_turnover
+        heat  = calc_heat_score(gm, share)
+        early = calc_early_rotation_score(gm)
+        exh   = calc_leader_exhaustion(gm, heat["score"])
+        lifec = calc_leader_lag_diff(gm)
+
+        # 套用 signal_multiplier
+        heat_adj  = clamp(heat["score"]  * mult)
+        early_adj = clamp(early["score"] * mult)
+
+        all_groups.append({
+            "group_id":             g["group_id"],
+            "group_name":           g["group_name"],
+            "upstream_level":       g["upstream_level"],
+            "cycle_bias":           g["cycle_bias"],
+            "theme_tags":           g["theme_tags"],
+            "n_members":            gm.get("n_members", 0),
+            "missing_members":      gm.get("missing", []),
+            "turnover_share":       share,
+            "weighted_5d_return":   gm.get("weighted_5d_return", 0.0),
+            "heat_score":           heat_adj,
+            "heat_score_raw":       heat["score"],
+            "heat_stage":           heat["stage"],
+            "heat_components":      heat["components"],
+            "early_rotation_score": early_adj,
+            "early_rotation_score_raw": early["score"],
+            "early_components":     early["components"],
+            "exhaustion":           exh,
+            "lifecycle":            lifec,
+        })
+
+    # Step 3: 識別 current_leader / next_candidates
+    by_heat  = sorted(all_groups, key=lambda x: x["heat_score"], reverse=True)
+    by_early = sorted(all_groups, key=lambda x: x["early_rotation_score"], reverse=True)
+
+    current_leader = by_heat[0] if by_heat else None
+
+    # next_candidates: early_score 高，但不是 current_leader
+    next_cands = []
+    if current_leader:
+        for grp in by_early:
+            if grp["group_id"] == current_leader["group_id"]:
+                continue
+            next_cands.append(grp)
+            if len(next_cands) >= 3:
+                break
+
+    # Step 4: 計算 rotation_signal probability
+    signals_count = 0
+    if current_leader and current_leader["exhaustion"]["risk_level"] in ("high", "medium"):
+        signals_count += 1
+    if next_cands and next_cands[0]["early_rotation_score"] > 40:
+        signals_count += 1
+    if next_cands and next_cands[0]["lifecycle"]["lifecycle_stage"] in ("early", "mid_early"):
+        signals_count += 1
+
+    if signals_count >= 3:
+        probability = "high"
+    elif signals_count == 2:
+        probability = "medium"
+    elif signals_count == 1:
+        probability = "low"
+    else:
+        probability = "none"
+
+    return {
+        **base,
+        "market_regime":   regime,
+        "current_leader":  current_leader,
+        "next_candidates": next_cands,
+        "rotation_signal": {
+            "probability":              probability,
+            "signals_count":            signals_count,
+            "signal_multiplier_applied": mult,
+        },
+        "all_groups": all_groups,
+    }
+
+
+if __name__ == "__main__":
+    result = detect_rotation()
+    # 移除無法序列化的 bars/inst/row 細節
+    def _strip(grp):
+        for k in ("members", "leaders", "second", "elastic"):
+            grp.pop(k, None) if isinstance(grp, dict) else None
+        return grp
+    if isinstance(result.get("all_groups"), list):
+        for g in result["all_groups"]:
+            for k in ("members",):
+                g.pop(k, None)
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+
+================================================
+FILE: ./engine/signals/row_classifier.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# 行動清單分類 — Phase 2 Step B
+# 來源：app.py classify_rows（第 247 行）
+#
+# 分類邏輯：
+# action    → decision == "BUY"
+# watchlist → decision == "WAIT" 或在 overrides 中，且非 action
+# candidate → decision == "IGNORE" 且 C_days >= 5，且非 action/watchlist
+
+import pandas as pd
+
+def classify_rows(
+    df: pd.DataFrame, overrides: dict
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if df.empty:
+        empty = pd.DataFrame()
+        return empty, empty, empty
+
+    def _int_or_none(val):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return None
+
+    action_mask = df["decision"] == "BUY"
+
+    override_ids = {k for k, v in overrides.items() if v}
+    in_overrides = df["stock_id"].isin(override_ids)
+    watchlist_mask = ((df["decision"] == "WAIT") | in_overrides) & ~action_mask
+
+    c_days_numeric = df["C_days"].apply(_int_or_none)
+    candidate_mask = (
+        (df["decision"] == "IGNORE")
+        & (c_days_numeric >= 5).fillna(False)
+        & ~action_mask
+        & ~watchlist_mask
+    )
+
+    return df[action_mask].copy(), df[watchlist_mask].copy(), df[candidate_mask].copy()
+
+================================================
+FILE: ./engine/signals/b_phase.py
+================================================
+"""
+engine/signals/b_phase.py — B 波段階段分類
+
+Signal constants:
+    B_PHASE_LATE    : A_days >= 5，趨勢末段，Override rule（最高優先）
+    B_PHASE_LAUNCH  : 高品質 B 波剛起漲（A_days 1–2）
+    B_PHASE_MATURE  : 高品質 B 波整理中（A_days 0）
+    B_PHASE_BUILD   : 中品質 B 波蓄積
+    B_PHASE_PREPARE : 品質不足，尚在準備
+
+State Gap（設計意圖）：A_days 3–4 不屬於 LAUNCH，
+    落入 BUILD（若 B_quality >= 40）或 PREPARE。
+"""
+
+# ── Signal constants ──────────────────────────────────────────────────────────
+B_PHASE_LATE    = "LATE"
+B_PHASE_LAUNCH  = "LAUNCH"
+B_PHASE_MATURE  = "MATURE"
+B_PHASE_BUILD   = "BUILD"
+B_PHASE_PREPARE = "PREPARE"
+
+ALL_B_PHASES = (
+    B_PHASE_LATE,
+    B_PHASE_LAUNCH,
+    B_PHASE_MATURE,
+    B_PHASE_BUILD,
+    B_PHASE_PREPARE,
+)
+
+
+def classify_b_phase(row) -> str:
+    """Classify the B-wave phase from a row dict.
+
+    Pure function — no I/O, no side effects, no mutation of row.
+
+    Parameters
+    ----------
+    row : dict-like with keys "B_quality" (int/float) and "A_days" (int/float).
+
+    Returns
+    -------
+    One of B_PHASE_LATE / B_PHASE_LAUNCH / B_PHASE_MATURE / B_PHASE_BUILD / B_PHASE_PREPARE.
+    Never returns None.
+    """
+    try:
+        b_quality = int(float(row.get("B_quality") or 0))
+    except Exception:
+        b_quality = 0
+    try:
+        a_days = int(float(row.get("A_days") or 0))
+    except Exception:
+        a_days = 0
+
+    # Override rule: late-stage regardless of B_quality
+    if a_days >= 5:
+        return B_PHASE_LATE
+
+    if b_quality >= 70 and 1 <= a_days <= 2:
+        return B_PHASE_LAUNCH
+
+    if b_quality >= 70 and a_days == 0:
+        return B_PHASE_MATURE
+
+    if b_quality >= 40:
+        return B_PHASE_BUILD
+
+    return B_PHASE_PREPARE
+
+================================================
+FILE: ./engine/signals/battle_room.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# 戰情室訊號判定 — Phase 1
+# 來源：app.py _classify_war（1428 行）
+# ⚠️ b_phase（main.py/live_analyzer.py）不動
+#
+# Precedence: DISTRIBUTION > ATTACK > LAUNCH > PREPARE
+
+
+def get_battle_room(row):
+    """
+    判定戰情室訊號等級。
+    回傳 "ATTACK" / "LAUNCH" / "PREPARE" / None
+
+    優先順序（第一個符合即回傳）：
+      1. flow == DISTRIBUTION → None（直接封鎖）
+      2. B >= 8, 2 <= A <= 6, C >= 3 → ATTACK
+      3. bq >= 45, B >= 8, 1 <= A <= 2 → LAUNCH
+      4. bq >= 45, B >= 8, vr >= 0.7 → PREPARE
+    """
+    try:
+        B    = int(row.get("B_days") or 0)
+        A    = int(row.get("A_days") or 0)
+        C    = int(row.get("C_days") or 0)
+        bq   = float(row.get("B_quality") or 0)
+        vr   = float(row.get("volume_ratio") or 0)
+        flow = str(row.get("flow_status") or "")
+    except (ValueError, TypeError):
+        return None
+
+    if flow == "DISTRIBUTION":
+        return None
+    if B >= 8 and 2 <= A <= 6 and C >= 3:
+        return "ATTACK"
+    if bq >= 45 and B >= 8 and 1 <= A <= 2:
+        return "LAUNCH"
+    if bq >= 45 and B >= 8 and vr >= 0.7:
+        return "PREPARE"
+    return None
+
+================================================
+FILE: ./engine/signals/volume_spike.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# 爆量訊號判定 — Phase 1
+# 來源：app.py _volume_spike_tag（第 401 行）
+# ⚠️ ui/sidebar.py 簡化版廢棄，以本版為準
+#
+# Rule precedence:
+# 1. 未達爆量門檻（vr <= 1.5 或 abs(dr) <= 3）→ None
+# 2. 達門檻 + DISTRIBUTION 或 HIGH_RISK → VOLUME_DISTRIBUTION
+# 3. 達門檻 + 其他 → VOLUME_ATTACK
+
+# Signal constants（避免 typo）
+VOLUME_ATTACK       = "VOLUME_ATTACK"
+VOLUME_DISTRIBUTION = "VOLUME_DISTRIBUTION"
+
+# Presentation mapping（Phase 2 後移至 ui/labels.py）
+VOLUME_SIGNAL_LABELS = {
+    VOLUME_ATTACK:       "🟢 放量攻擊",
+    VOLUME_DISTRIBUTION: "🔴 放量出貨",
+}
+
+
+def get_volume_spike_tag(row):
+    """
+    判定爆量訊號。
+    回傳 VOLUME_ATTACK / VOLUME_DISTRIBUTION / None
+
+    門檻：vr > 1.5 AND abs(daily_return_pct) > 3
+    """
+    try:
+        vr   = float(row.get("volume_ratio", 0) or 0)
+        dr   = float(row.get("daily_return_pct", 0) or 0)
+        flow = str(row.get("flow_status", "") or "")
+        cost = str(row.get("cost_level", "") or "")
+    except (ValueError, TypeError):
+        return None
+    if vr <= 1.5 or abs(dr) <= 3:
+        return None
+    if flow == "DISTRIBUTION" or cost == "HIGH_RISK":
+        return VOLUME_DISTRIBUTION
+    return VOLUME_ATTACK
+
+================================================
+FILE: ./engine/position/exit_signals.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# 離場警報系統 — Exit Alert
+#
+# 核心哲學：
+# - 過熱（Overextended）本身不是離場訊號
+# - 過熱 + DISTRIBUTION 才是真正高風險
+# - AI 主升股長期超買仍可持有，等主力出場訊號
+# - 損益只輔助，不主導離場決策
+#
+# Rule precedence:
+# 1. DISTRIBUTION + HIGH_RISK → CRITICAL
+# 2. DISTRIBUTION + A_days >= 5 → CRITICAL
+# 3. DISTRIBUTION + volume spike → CRITICAL
+# 4. DISTRIBUTION 單獨 → WARNING
+# 5. A_days >= 5 + HIGH_RISK → WARNING
+# 6. HIGH_RISK 單獨 → WATCH
+# 7. A_days >= 5 單獨 → WATCH
+# 8. pnl <= -6 → WATCH（補充）
+# 9. 其他 → HOLD
+
+EXIT_CRITICAL = "CRITICAL"
+EXIT_WARNING  = "WARNING"
+EXIT_WATCH    = "WATCH"
+EXIT_HOLD     = "HOLD"
+
+def get_exit_alert(row: dict) -> dict:
+    """
+    回傳離場警報。
+    輸入 row 需包含：
+        flow_status, cost_level, A_days, volume_ratio
+    pnl_pct 可選，只作補充。
+    輸出：{
+        "level": str,
+        "reasons": list,
+        "action": str,
+    }
+    """
+    flow = str(row.get("flow_status", "") or "")
+    cost = str(row.get("cost_level", "") or "")
+
+    try:
+        a_days = int(float(row.get("A_days", 0) or 0))
+    except (ValueError, TypeError):
+        a_days = 0
+
+    try:
+        vr = float(row.get("volume_ratio", 0) or 0)
+    except (ValueError, TypeError):
+        vr = 0
+
+    try:
+        pnl = float(row.get("pnl_pct", 0) or 0)
+    except (ValueError, TypeError):
+        pnl = 0
+
+    reasons = []
+    level   = EXIT_HOLD
+
+    is_dist          = flow == "DISTRIBUTION"
+    is_high_risk     = cost == "HIGH_RISK"
+    is_late          = a_days >= 5
+    is_volume_spike  = vr > 1.5
+
+    # CRITICAL
+    if is_dist and is_high_risk:
+        reasons.append("主力出貨 + 成本偏高")
+        level = EXIT_CRITICAL
+    elif is_dist and is_late:
+        reasons.append("主力出貨 + A段過長（末升）")
+        level = EXIT_CRITICAL
+    elif is_dist and is_volume_spike:
+        reasons.append("主力出貨 + 爆量（疑似派發）")
+        level = EXIT_CRITICAL
+
+    # WARNING
+    elif is_dist:
+        reasons.append("主力開始出貨")
+        level = EXIT_WARNING
+    elif is_late and is_high_risk:
+        reasons.append("A段過長 + 成本偏高")
+        level = EXIT_WARNING
+
+    # WATCH
+    elif is_high_risk:
+        reasons.append("成本位置偏高")
+        level = EXIT_WATCH
+    elif is_late:
+        reasons.append(f"A段已走 {a_days} 天，結構偏晚")
+        level = EXIT_WATCH
+
+    # pnl 補充（不影響主要 level）
+    if pnl <= -6 and level == EXIT_HOLD:
+        reasons.append(f"虧損 {pnl:.1f}%，接近停損線")
+        level = EXIT_WATCH
+
+    action_map = {
+        EXIT_CRITICAL: "🔴 立刻減碼或出場",
+        EXIT_WARNING:  "🟠 開始減碼，密切監控",
+        EXIT_WATCH:    "🟡 持續觀察，準備應變",
+        EXIT_HOLD:     "🟢 繼續持有",
+    }
+
+    return {
+        "level":   level,
+        "reasons": reasons,
+        "action":  action_map[level],
+    }
+
+================================================
+FILE: ./engine/position/health_score.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# 持倉健康度評分 — Position Health Score
+#
+# 核心哲學：
+# - 結構優先、主力優先、量價優先
+# - 均線看節奏，不看過熱
+# - 損益不主導決策
+# - 過熱（Overextended）+ DISTRIBUTION 才是真正高風險
+# - AI 主升股可能長期超買仍持續噴發，不因漲多就減分
+#
+# Rule precedence：
+# 1. flow_status（主力方向，最高權重）
+# 2. cost_level（成本位置）
+# 3. B_phase（生命週期）
+# 4. A_days（加速段位置）
+# 5. volume_ratio / B_quality（量能與建倉強度）
+# pnl_pct：只作提醒，完全不影響核心分數
+
+HEALTH_HEALTHY                = "HEALTHY"
+HEALTH_SHAKEOUT               = "SHAKEOUT"
+HEALTH_WEAKENING              = "WEAKENING"
+HEALTH_TREND_RISK             = "TREND_RISK"
+HEALTH_DISTRIBUTION_BREAKDOWN = "DISTRIBUTION_BREAKDOWN"
+
+ALL_HEALTH_STATES = [
+    HEALTH_HEALTHY,
+    HEALTH_SHAKEOUT,
+    HEALTH_WEAKENING,
+    HEALTH_TREND_RISK,
+    HEALTH_DISTRIBUTION_BREAKDOWN,
+]
+
+def calc_health_score(row: dict) -> int:
+    """
+    計算持倉健康分數（0-100）。
+    輸入 row 需包含：
+        flow_status, cost_level, B_phase, A_days,
+        volume_ratio, B_quality
+    pnl_pct 可選，不影響分數。
+    """
+    score = 55
+
+    flow  = str(row.get("flow_status", "") or "")
+    cost  = str(row.get("cost_level", "") or "")
+    phase = str(row.get("B_phase", "") or "")
+    vr    = float(row.get("volume_ratio", 0) or 0)
+
+    try:
+        a_days = int(float(row.get("A_days", 0) or 0))
+    except (ValueError, TypeError):
+        a_days = 0
+
+    try:
+        b_quality = int(float(row.get("B_quality", 0) or 0))
+    except (ValueError, TypeError):
+        b_quality = 0
+
+    # === flow_status（最高權重）===
+    # 注意：過熱不扣分，只有 DISTRIBUTION 才扣
+    if flow == "ACCUMULATING":
+        score += 25
+    elif flow == "DISTRIBUTION":
+        score -= 30  # 主力在出貨，最危險
+                     # 單獨 DISTRIBUTION：50-30=20 → TREND_RISK
+
+    # === cost_level ===
+    if cost == "SAFE":
+        score += 15
+    elif cost == "HIGH_RISK":
+        score -= 20
+
+    # === B_phase 生命週期 ===
+    if phase == "MATURE":
+        score += 15
+    elif phase == "LAUNCH":
+        score += 10
+    elif phase == "BUILD":
+        score += 5
+    elif phase == "LATE":
+        score -= 15  # 末升段
+
+    # === A_days 加速段位置 ===
+    if 1 <= a_days <= 2:
+        score += 20
+    elif 3 <= a_days <= 4:
+        score += 5
+    elif a_days >= 5:
+        score -= 20
+
+    # === volume_ratio ===
+    if vr >= 1.5:
+        score += 10
+    elif vr < 0.5:
+        score -= 5
+
+    # === B_quality ===
+    if b_quality >= 70:
+        score += 10
+    elif b_quality >= 40:
+        score += 5
+
+    return max(0, min(100, score))
+
+
+def classify_health_state(score: int) -> str:
+    """
+    Rule precedence: 分數由高到低判斷。
+    70+ → HEALTHY
+    50-69 → SHAKEOUT
+    30-49 → WEAKENING
+    10-29 → TREND_RISK
+    <10   → DISTRIBUTION_BREAKDOWN
+    """
+    if score >= 70:
+        return HEALTH_HEALTHY
+    if score >= 50:
+        return HEALTH_SHAKEOUT
+    if score >= 30:
+        return HEALTH_WEAKENING
+    if score >= 10:
+        return HEALTH_TREND_RISK
+    return HEALTH_DISTRIBUTION_BREAKDOWN
+
+
+def get_position_health(row: dict) -> dict:
+    """
+    主入口：回傳完整持倉健康分析。
+    輸出：{
+        "score": int,
+        "state": str,
+        "pnl_note": str,
+    }
+    """
+    score = calc_health_score(row)
+    state = classify_health_state(score)
+
+    pnl_note = ""
+    try:
+        pnl = float(row.get("pnl_pct", 0) or 0)
+        if pnl <= -6:
+            pnl_note = f"⚠️ 虧損 {pnl:.1f}%，注意停損"
+        elif pnl >= 20:
+            pnl_note = f"💰 獲利 {pnl:.1f}%，可考慮部分減碼"
+        elif pnl >= 10:
+            pnl_note = f"📈 獲利 {pnl:.1f}%，持續觀察"
+    except (ValueError, TypeError):
+        pass
+
+    return {
+        "score": score,
+        "state": state,
+        "pnl_note": pnl_note,
+    }
+
+================================================
+FILE: ./engine/ui/ui_b_validity.py
+================================================
+# Engine Layer Rules
+# - 不可 import Streamlit
+# - 不可 import app.py / pages
+# - 僅負責規則與分析
+# - 盡量保持 pure function
+# - 不直接讀 CSV / DB
+#
+# UI 層 B_validity 重建 — Phase 1
+# 來源：app.py calc_b_validity_from_row（1178 行）
+# ⚠️ 這是 UI 層重建版，不是底層 feature engine
+# ⚠️ institutional_engine.py 的版本完全不動
+
+
+def rebuild_b_validity(row):
+    """
+    根據已計算好的 row 欄位重建 B_validity。
+    UI 層使用，輸入為 decision row dict。
+    """
+    try:
+        b_quality = int(float(row.get("B_quality") or 0))
+    except (ValueError, TypeError):
+        b_quality = 0
+    flow = str(row.get("flow_status") or "")
+    if b_quality >= 75 and flow != "DISTRIBUTION":
+        return "TRUE_B"
+    elif b_quality < 60 and flow == "DISTRIBUTION":
+        return "FAKE_B"
+    else:
+        return "UNCERTAIN"
+
