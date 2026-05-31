@@ -318,13 +318,59 @@ def _fetch_tpex_margin(date_iso: str, universe_set: set) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _ai_fetch_one_day(d_iso: str, target_set: set, cursor) -> int:
+    """補抓單日股價到 price_history（INSERT OR IGNORE），回傳寫入筆數。"""
+    written = 0
+    d_nodash = d_iso.replace("-", "")
+
+    frames: list = []
+    try:
+        text = _twse_fetch(d_nodash, "price")
+        if text:
+            df = _parse_price(text, target_set)
+            if not df.empty:
+                frames.append(df)
+    except Exception:
+        pass
+    try:
+        df_t = _fetch_tpex_price(d_iso, target_set)
+        if not df_t.empty:
+            frames.append(df_t)
+    except Exception:
+        pass
+
+    if not frames:
+        return 0
+
+    df_all = (pd.concat(frames, ignore_index=True)
+              .drop_duplicates(subset=["stock_id"]))
+    df_all = df_all[df_all["stock_id"].isin(target_set)]
+
+    for _, row in df_all.iterrows():
+        try:
+            cursor.execute(
+                """INSERT OR IGNORE INTO price_history
+                   (stock_id, date, open, high, low, close, volume)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (row["stock_id"], d_iso,
+                 row.get("open"), row.get("high"), row.get("low"),
+                 row.get("close"), row.get("volume")),
+            )
+            written += 1
+        except Exception:
+            pass
+    return written
+
+
 def update_ai_supplement(date_str: str) -> None:
     """補抓 ai_supply_chain.csv 裡不在 universe 的股票股價。
 
     - date_str：YYYY-MM-DD
     - 先試 TWSE，再試 TPEx，合併後 INSERT OR IGNORE 寫入 price_history
     - 自己開新連線，不依賴 main() 的 conn（main 結束時已 close）
+    - 筆數 < 40 的股票自動補回 80 自然日歷史
     """
+    from datetime import datetime, timedelta
     import pandas as pd
 
     ai_csv  = os.path.join(BASE_PATH, "ai_supply_chain.csv")
@@ -340,57 +386,91 @@ def update_ai_supplement(date_str: str) -> None:
     if not ai_only:
         return
 
-    date_nodash = date_str.replace("-", "")   # TWSE 用 YYYYMMDD
-    frames: list[pd.DataFrame] = []
-
-    # ── TWSE ──────────────────────────────────────────────────────────────────
-    try:
-        text_twse = _twse_fetch(date_nodash, "price")
-        if text_twse:
-            df_twse = _parse_price(text_twse, ai_only)
-            if not df_twse.empty:
-                frames.append(df_twse)
-    except Exception as e:
-        print(f"  AI補抓 TWSE 失敗：{e}")
-
-    # ── TPEx ──────────────────────────────────────────────────────────────────
-    try:
-        df_tpex = _fetch_tpex_price(date_str, ai_only)
-        if not df_tpex.empty:
-            frames.append(df_tpex)
-    except Exception as e:
-        print(f"  AI補抓 TPEx 失敗：{e}")
-
-    if not frames:
-        print(f"  AI補抓股價：0 筆（TWSE + TPEx 均無回傳）")
-        return
-
-    df_all = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["stock_id"])
-    df_all = df_all[df_all["stock_id"].isin(ai_only)]
-
-    twse_n = len(frames[0]) if frames else 0
-    tpex_n = len(frames[1]) if len(frames) > 1 else 0
-
     conn2   = sqlite3.connect(DB_PATH)
     cursor2 = conn2.cursor()
-    written = 0
-    for _, row in df_all.iterrows():
+
+    # ── 查各股現有筆數，分兩組 ────────────────────────────────────────────────
+    placeholders = ",".join("?" * len(ai_only))
+    rows = cursor2.execute(
+        f"SELECT stock_id, COUNT(*) FROM price_history "
+        f"WHERE stock_id IN ({placeholders}) GROUP BY stock_id",
+        list(ai_only),
+    ).fetchall()
+    count_map = {r[0]: r[1] for r in rows}
+
+    needs_backfill = {sid for sid in ai_only if count_map.get(sid, 0) < 40}
+    normal_update  = ai_only - needs_backfill
+
+    # ── 一般補抓（只補 date_str 當天）────────────────────────────────────────
+    twse_n = tpex_n = normal_written = 0
+    if normal_update:
+        frames: list = []
+        d_nodash = date_str.replace("-", "")
         try:
-            cursor2.execute(
-                """INSERT OR IGNORE INTO price_history
-                   (stock_id, date, open, high, low, close, volume)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (row["stock_id"], date_str,
-                 row.get("open"), row.get("high"), row.get("low"),
-                 row.get("close"), row.get("volume")),
-            )
-            written += 1
-        except Exception:
-            pass
+            text = _twse_fetch(d_nodash, "price")
+            if text:
+                df = _parse_price(text, normal_update)
+                if not df.empty:
+                    twse_n = len(df)
+                    frames.append(df)
+        except Exception as e:
+            print(f"  AI補抓 TWSE 失敗：{e}")
+        try:
+            df_t = _fetch_tpex_price(date_str, normal_update)
+            if not df_t.empty:
+                tpex_n = len(df_t)
+                frames.append(df_t)
+        except Exception as e:
+            print(f"  AI補抓 TPEx 失敗：{e}")
+
+        if frames:
+            df_all = (pd.concat(frames, ignore_index=True)
+                      .drop_duplicates(subset=["stock_id"]))
+            df_all = df_all[df_all["stock_id"].isin(normal_update)]
+            for _, row in df_all.iterrows():
+                try:
+                    cursor2.execute(
+                        """INSERT OR IGNORE INTO price_history
+                           (stock_id, date, open, high, low, close, volume)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (row["stock_id"], date_str,
+                         row.get("open"), row.get("high"), row.get("low"),
+                         row.get("close"), row.get("volume")),
+                    )
+                    normal_written += 1
+                except Exception:
+                    pass
+
+    # ── 歷史回補（筆數 < 40 的股票補 80 自然日）──────────────────────────────
+    bf_written = 0
+    if needs_backfill:
+        end_dt   = datetime.strptime(date_str, "%Y-%m-%d")
+        start_dt = end_dt - timedelta(days=80)
+        day_list = []
+        cur_dt = start_dt
+        while cur_dt <= end_dt:
+            if cur_dt.weekday() < 5:          # 跳過週末
+                day_list.append(cur_dt.strftime("%Y-%m-%d"))
+            cur_dt += timedelta(days=1)
+
+        print(f"  AI歷史回補：{len(needs_backfill)} 檔，共 {len(day_list)} 個交易日...")
+        for i, d_iso in enumerate(day_list, 1):
+            bf_written += _ai_fetch_one_day(d_iso, needs_backfill, cursor2)
+            if i % 10 == 0 or i == len(day_list):
+                print(f"  AI歷史回補：{d_iso} 完成（{i}/{len(day_list)} 天）")
+        conn2.commit()
+
     conn2.commit()
     conn2.close()
 
-    print(f"  AI補抓股價：TWSE {twse_n} 筆 + TPEx {tpex_n} 筆，共 {written} 檔寫入")
+    # ── 統一印出結果 ──────────────────────────────────────────────────────────
+    if needs_backfill:
+        print(
+            f"  AI補抓股價：TWSE {twse_n} 筆 + TPEx {tpex_n} 筆，共 {normal_written} 檔寫入"
+            f"（含歷史回補 {len(needs_backfill)} 檔 × 約60天）"
+        )
+    else:
+        print(f"  AI補抓股價：TWSE {twse_n} 筆 + TPEx {tpex_n} 筆，共 {normal_written} 檔寫入")
 
 
 def main():
