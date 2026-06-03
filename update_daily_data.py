@@ -473,9 +473,20 @@ def update_ai_supplement(date_str: str) -> None:
         print(f"  AI補抓股價：TWSE {twse_n} 筆 + TPEx {tpex_n} 筆，共 {normal_written} 檔寫入")
 
 
+def get_latest_trading_date() -> str:
+    import pandas as pd
+    now   = pd.Timestamp.now(tz="Asia/Taipei")
+    today = now.normalize().tz_localize(None)
+    if now.weekday() >= 5:
+        return (today - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
+    if now.hour >= 18:
+        return today.strftime("%Y-%m-%d")
+    return (today - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
+
+
 def main():
     import pandas as pd
-    end_date = (pd.Timestamp.today() - pd.tseries.offsets.BDay(1)).strftime("%Y-%m-%d")
+    end_date = get_latest_trading_date()
 
     # 增量更新：查三張表最舊的最新日期，作為同步基準
     db_last_date = get_db_last_date(DB_PATH)
