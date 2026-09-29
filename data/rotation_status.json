@@ -42,30 +42,567 @@
       "volume_multiplier": 4.0
     }
   },
-  "generated_at": "2026-09-25T15:42:52",
+  "generated_at": "2026-09-29T16:52:38",
   "data_integrity": {
-    "all_synced": false,
-    "latest_date": "2026-09-25",
+    "all_synced": true,
+    "latest_date": "2026-09-29",
     "tables": {
-      "price_history": "2026-09-25",
-      "institutional_history": "2026-09-24",
-      "margin_history": "2026-09-24"
+      "price_history": "2026-09-29",
+      "institutional_history": "2026-09-29",
+      "margin_history": "2026-09-29"
     },
-    "warning": "三表日期不同步：{'price_history': '2026-09-25', 'institutional_history': '2026-09-24', 'margin_history': '2026-09-24'}。系統將不發出輪動訊號。"
+    "warning": ""
   },
   "news_sentiment": null,
-  "as_of_date": "2026-09-25",
+  "as_of_date": "2026-09-29",
   "market_regime": {
-    "regime": "unknown",
-    "signal_multiplier": 0.0
+    "market_score": null,
+    "regime": "neutral",
+    "components": {
+      "note": "Phase 1: 空殼版，等待 TAIEX 資料補齊後升級為完整 regime"
+    },
+    "signal_multiplier": 0.7,
+    "phase": "placeholder"
   },
-  "current_leader": null,
-  "next_candidates": [],
+  "current_leader": {
+    "group_id": "abf_substrate",
+    "group_name": "ABF載板",
+    "upstream_level": 1,
+    "cycle_bias": "early",
+    "theme_tags": [
+      "GPU",
+      "ASIC",
+      "AI_infra"
+    ],
+    "n_members": 5,
+    "missing_members": [],
+    "turnover_share": 0.24470350953807407,
+    "weighted_5d_return": 12.000956043492724,
+    "heat_score": 53.21619996524347,
+    "heat_score_raw": 76.02314280749067,
+    "heat_stage": "hot",
+    "heat_components": {
+      "weighted_5d_return": 100.0,
+      "turnover_share": 100.0,
+      "leader_confirmed_breakout": 0.0,
+      "weighted_volume_expansion": 73.48761871660444,
+      "foreign_buy_concentration": 100.0
+    },
+    "early_rotation_score": 0.0,
+    "early_rotation_score_raw": 0.0,
+    "early_components": {
+      "foreign_continuous_buy": 0.0,
+      "volume_up_price_flat": 0.0,
+      "cba_b_ratio": 0.0,
+      "leader_first_confirmed_breakout": 0.0
+    },
+    "exhaustion": {
+      "score": 58.011571403745336,
+      "triggers": [
+        "heat_overheat_75+"
+      ],
+      "triggers_fired": 1,
+      "risk_level": "medium",
+      "recommended_action": "提高警覺"
+    },
+    "lifecycle": {
+      "lag_diff": 7.7477613930995535,
+      "leaders_return_5d": 17.167177852398023,
+      "second_return_5d": 9.41941645929847,
+      "elastic_return_5d": 4.946996466431095,
+      "lifecycle_stage": "early"
+    }
+  },
+  "next_candidates": [
+    {
+      "group_id": "thermal",
+      "group_name": "散熱",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": [
+        "GB300",
+        "liquid_cooling"
+      ],
+      "n_members": 6,
+      "missing_members": [
+        "6124"
+      ],
+      "turnover_share": 0.10581416370563786,
+      "weighted_5d_return": 7.196039152600957,
+      "heat_score": 42.15997959372254,
+      "heat_score_raw": 60.22854227674649,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 85.98019576300479,
+        "turnover_share": 52.907081852818926,
+        "leader_confirmed_breakout": 50.0,
+        "weighted_volume_expansion": 42.180855230935464,
+        "foreign_buy_concentration": 48.805848000000005
+      },
+      "early_rotation_score": 7.0,
+      "early_rotation_score_raw": 10.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 50.0
+      },
+      "exhaustion": {
+        "score": 50.11427113837324,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": 7.591057672280803,
+        "leaders_return_5d": 5.861137468516731,
+        "second_return_5d": -1.7299202037640722,
+        "elastic_return_5d": 10.749617866681477,
+        "lifecycle_stage": "early"
+      }
+    },
+    {
+      "group_id": "silicon_wafer",
+      "group_name": "矽晶圓",
+      "upstream_level": 1,
+      "cycle_bias": "early",
+      "theme_tags": [
+        "upstream",
+        "wafer"
+      ],
+      "n_members": 5,
+      "missing_members": [],
+      "turnover_share": 0.13271198668802395,
+      "weighted_5d_return": 20.014784131468506,
+      "heat_score": 50.11229883520209,
+      "heat_score_raw": 71.58899833600299,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 100.0,
+        "turnover_share": 66.35599334401198,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 100.0,
+        "foreign_buy_concentration": 100.0
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 55.794499168001494,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": -34.500230832768544,
+        "leaders_return_5d": 4.321112150607194,
+        "second_return_5d": 38.821342983375736,
+        "elastic_return_5d": 2.997275204359673,
+        "lifecycle_stage": "mid_late"
+      }
+    },
+    {
+      "group_id": "power",
+      "group_name": "電源",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": [
+        "HVDC",
+        "power_rack"
+      ],
+      "n_members": 5,
+      "missing_members": [],
+      "turnover_share": 0.13515421176759548,
+      "weighted_5d_return": 8.111349921529165,
+      "heat_score": 40.241782665168294,
+      "heat_score_raw": 57.488260950240424,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 90.55674960764583,
+        "turnover_share": 67.57710588379774,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 67.9265306466483,
+        "foreign_buy_concentration": 32.3798
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 48.744130475120215,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": 6.114167324055415,
+        "leaders_return_5d": 5.763688760806916,
+        "second_return_5d": -0.3504785632484985,
+        "elastic_return_5d": 24.328060875550914,
+        "lifecycle_stage": "early"
+      }
+    }
+  ],
   "rotation_signal": {
-    "probability": "n/a",
-    "signals_count": 0,
-    "signal_multiplier_applied": 0.0,
-    "note": "三表日期不同步：{'price_history': '2026-09-25', 'institutional_history': '2026-09-24', 'margin_history': '2026-09-24'}。系統將不發出輪動訊號。"
+    "probability": "medium",
+    "signals_count": 2,
+    "signal_multiplier_applied": 0.7
   },
-  "all_groups": []
+  "all_groups": [
+    {
+      "group_id": "abf_substrate",
+      "group_name": "ABF載板",
+      "upstream_level": 1,
+      "cycle_bias": "early",
+      "theme_tags": [
+        "GPU",
+        "ASIC",
+        "AI_infra"
+      ],
+      "n_members": 5,
+      "missing_members": [],
+      "turnover_share": 0.24470350953807407,
+      "weighted_5d_return": 12.000956043492724,
+      "heat_score": 53.21619996524347,
+      "heat_score_raw": 76.02314280749067,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 100.0,
+        "turnover_share": 100.0,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 73.48761871660444,
+        "foreign_buy_concentration": 100.0
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 58.011571403745336,
+        "triggers": [
+          "heat_overheat_75+"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": 7.7477613930995535,
+        "leaders_return_5d": 17.167177852398023,
+        "second_return_5d": 9.41941645929847,
+        "elastic_return_5d": 4.946996466431095,
+        "lifecycle_stage": "early"
+      }
+    },
+    {
+      "group_id": "silicon_wafer",
+      "group_name": "矽晶圓",
+      "upstream_level": 1,
+      "cycle_bias": "early",
+      "theme_tags": [
+        "upstream",
+        "wafer"
+      ],
+      "n_members": 5,
+      "missing_members": [],
+      "turnover_share": 0.13271198668802395,
+      "weighted_5d_return": 20.014784131468506,
+      "heat_score": 50.11229883520209,
+      "heat_score_raw": 71.58899833600299,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 100.0,
+        "turnover_share": 66.35599334401198,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 100.0,
+        "foreign_buy_concentration": 100.0
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 55.794499168001494,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": -34.500230832768544,
+        "leaders_return_5d": 4.321112150607194,
+        "second_return_5d": 38.821342983375736,
+        "elastic_return_5d": 2.997275204359673,
+        "lifecycle_stage": "mid_late"
+      }
+    },
+    {
+      "group_id": "thermal",
+      "group_name": "散熱",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": [
+        "GB300",
+        "liquid_cooling"
+      ],
+      "n_members": 6,
+      "missing_members": [
+        "6124"
+      ],
+      "turnover_share": 0.10581416370563786,
+      "weighted_5d_return": 7.196039152600957,
+      "heat_score": 42.15997959372254,
+      "heat_score_raw": 60.22854227674649,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 85.98019576300479,
+        "turnover_share": 52.907081852818926,
+        "leader_confirmed_breakout": 50.0,
+        "weighted_volume_expansion": 42.180855230935464,
+        "foreign_buy_concentration": 48.805848000000005
+      },
+      "early_rotation_score": 7.0,
+      "early_rotation_score_raw": 10.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 50.0
+      },
+      "exhaustion": {
+        "score": 50.11427113837324,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": 7.591057672280803,
+        "leaders_return_5d": 5.861137468516731,
+        "second_return_5d": -1.7299202037640722,
+        "elastic_return_5d": 10.749617866681477,
+        "lifecycle_stage": "early"
+      }
+    },
+    {
+      "group_id": "power",
+      "group_name": "電源",
+      "upstream_level": 3,
+      "cycle_bias": "mid",
+      "theme_tags": [
+        "HVDC",
+        "power_rack"
+      ],
+      "n_members": 5,
+      "missing_members": [],
+      "turnover_share": 0.13515421176759548,
+      "weighted_5d_return": 8.111349921529165,
+      "heat_score": 40.241782665168294,
+      "heat_score_raw": 57.488260950240424,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 90.55674960764583,
+        "turnover_share": 67.57710588379774,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 67.9265306466483,
+        "foreign_buy_concentration": 32.3798
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 48.744130475120215,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": 6.114167324055415,
+        "leaders_return_5d": 5.763688760806916,
+        "second_return_5d": -0.3504785632484985,
+        "elastic_return_5d": 24.328060875550914,
+        "lifecycle_stage": "early"
+      }
+    },
+    {
+      "group_id": "ccl_pcb",
+      "group_name": "CCL/PCB材料",
+      "upstream_level": 2,
+      "cycle_bias": "mid",
+      "theme_tags": [
+        "CCL",
+        "PCB_upstream"
+      ],
+      "n_members": 9,
+      "missing_members": [],
+      "turnover_share": 0.18297301602262248,
+      "weighted_5d_return": 9.187475515389028,
+      "heat_score": 47.04869208441888,
+      "heat_score_raw": 67.21241726345555,
+      "heat_stage": "hot",
+      "heat_components": {
+        "weighted_5d_return": 95.93737757694514,
+        "turnover_share": 91.48650801131124,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 52.1946359169613,
+        "foreign_buy_concentration": 77.303816
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 33.606208631727775,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
+      },
+      "lifecycle": {
+        "lag_diff": -18.56930184585096,
+        "leaders_return_5d": 2.583427812005101,
+        "second_return_5d": 21.15272965785606,
+        "elastic_return_5d": -1.9800179026366331,
+        "lifecycle_stage": "mid_late"
+      }
+    },
+    {
+      "group_id": "optical_cpo",
+      "group_name": "光通訊/CPO/AEC",
+      "upstream_level": 4,
+      "cycle_bias": "late",
+      "theme_tags": [
+        "CPO",
+        "AEC",
+        "800G"
+      ],
+      "n_members": 10,
+      "missing_members": [],
+      "turnover_share": 0.10663734091380432,
+      "weighted_5d_return": 3.68031340735209,
+      "heat_score": 33.432156783826066,
+      "heat_score_raw": 47.76022397689438,
+      "heat_stage": "warming",
+      "heat_components": {
+        "weighted_5d_return": 68.40156703676044,
+        "turnover_share": 53.31867045690216,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 65.73563501093804,
+        "foreign_buy_concentration": 40.49741
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 23.88011198844719,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
+      },
+      "lifecycle": {
+        "lag_diff": -11.822631627502545,
+        "leaders_return_5d": -5.323302253163562,
+        "second_return_5d": 6.499329374338982,
+        "elastic_return_5d": 5.006415268382413,
+        "lifecycle_stage": "late"
+      }
+    },
+    {
+      "group_id": "ai_server",
+      "group_name": "AI伺服器/ODM",
+      "upstream_level": 5,
+      "cycle_bias": "late",
+      "theme_tags": [
+        "server",
+        "ODM",
+        "Rubin"
+      ],
+      "n_members": 7,
+      "missing_members": [],
+      "turnover_share": 0.09200577136424185,
+      "weighted_5d_return": -0.5749434262631807,
+      "heat_score": 22.109910884622998,
+      "heat_score_raw": 31.585586978032858,
+      "heat_stage": "warming",
+      "heat_components": {
+        "weighted_5d_return": 47.125282868684096,
+        "turnover_share": 46.002885682120926,
+        "leader_confirmed_breakout": 0.0,
+        "weighted_volume_expansion": 39.64853797931598,
+        "foreign_buy_concentration": 0.0
+      },
+      "early_rotation_score": 0.0,
+      "early_rotation_score_raw": 0.0,
+      "early_components": {
+        "foreign_continuous_buy": 0.0,
+        "volume_up_price_flat": 0.0,
+        "cba_b_ratio": 0.0,
+        "leader_first_confirmed_breakout": 0.0
+      },
+      "exhaustion": {
+        "score": 35.79279348901643,
+        "triggers": [
+          "foreign_flip_to_sell"
+        ],
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
+      },
+      "lifecycle": {
+        "lag_diff": -0.22315979375573153,
+        "leaders_return_5d": -0.5955150514384332,
+        "second_return_5d": -0.37235525768270167,
+        "elastic_return_5d": -3.4479318388014186,
+        "lifecycle_stage": "mid_late"
+      }
+    }
+  ]
 }
