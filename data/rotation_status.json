@@ -42,19 +42,19 @@
       "volume_multiplier": 4.0
     }
   },
-  "generated_at": "2026-11-16T20:51:43",
+  "generated_at": "2026-11-17T19:37:58",
   "data_integrity": {
     "all_synced": true,
-    "latest_date": "2026-11-16",
+    "latest_date": "2026-11-17",
     "tables": {
-      "price_history": "2026-11-16",
-      "institutional_history": "2026-11-16",
-      "margin_history": "2026-11-16"
+      "price_history": "2026-11-17",
+      "institutional_history": "2026-11-17",
+      "margin_history": "2026-11-17"
     },
     "warning": ""
   },
   "news_sentiment": null,
-  "as_of_date": "2026-11-16",
+  "as_of_date": "2026-11-17",
   "market_regime": {
     "market_score": null,
     "regime": "neutral",
@@ -65,29 +65,27 @@
     "phase": "placeholder"
   },
   "current_leader": {
-    "group_id": "thermal",
-    "group_name": "散熱",
-    "upstream_level": 3,
+    "group_id": "ccl_pcb",
+    "group_name": "CCL/PCB材料",
+    "upstream_level": 2,
     "cycle_bias": "mid",
     "theme_tags": [
-      "GB300",
-      "liquid_cooling"
+      "CCL",
+      "PCB_upstream"
     ],
-    "n_members": 6,
-    "missing_members": [
-      "6124"
-    ],
-    "turnover_share": 0.0783957887871977,
-    "weighted_5d_return": 10.017004579727146,
-    "heat_score": 39.0827908196609,
-    "heat_score_raw": 55.832558313801286,
-    "heat_stage": "hot",
+    "n_members": 9,
+    "missing_members": [],
+    "turnover_share": 0.24326655350730003,
+    "weighted_5d_return": -15.857878218398184,
+    "heat_score": 27.67254108577394,
+    "heat_score_raw": 39.53220155110563,
+    "heat_stage": "warming",
     "heat_components": {
-      "weighted_5d_return": 100.0,
-      "turnover_share": 39.19789439359885,
+      "weighted_5d_return": 0.0,
+      "turnover_share": 100.0,
       "leader_confirmed_breakout": 0.0,
-      "weighted_volume_expansion": 79.17834476934381,
-      "foreign_buy_concentration": 41.56333
+      "weighted_volume_expansion": 74.98505567403753,
+      "foreign_buy_concentration": 32.844432
     },
     "early_rotation_score": 0.0,
     "early_rotation_score_raw": 0.0,
@@ -98,21 +96,20 @@
       "leader_first_confirmed_breakout": 0.0
     },
     "exhaustion": {
-      "score": 67.91627915690064,
+      "score": 39.766100775552815,
       "triggers": [
-        "foreign_flip_to_sell",
-        "leader_high_bearish"
+        "foreign_flip_to_sell"
       ],
-      "triggers_fired": 2,
-      "risk_level": "high",
-      "recommended_action": "減碼觀望"
+      "triggers_fired": 1,
+      "risk_level": "medium",
+      "recommended_action": "提高警覺"
     },
     "lifecycle": {
-      "lag_diff": 11.659243272004709,
-      "leaders_return_5d": 10.253356849415981,
-      "second_return_5d": -1.4058864225887282,
-      "elastic_return_5d": 9.891483803495897,
-      "lifecycle_stage": "early"
+      "lag_diff": -0.9452514676385704,
+      "leaders_return_5d": -19.06835694959137,
+      "second_return_5d": -18.1231054819528,
+      "elastic_return_5d": -9.87657465587156,
+      "lifecycle_stage": "mid_late"
     }
   },
   "next_candidates": [
@@ -128,17 +125,17 @@
       ],
       "n_members": 5,
       "missing_members": [],
-      "turnover_share": 0.16355545512178057,
-      "weighted_5d_return": -0.9189114495760008,
-      "heat_score": 32.231420922306796,
-      "heat_score_raw": 46.04488703186685,
+      "turnover_share": 0.2198248064936737,
+      "weighted_5d_return": -21.521382986640056,
+      "heat_score": 25.787378976908922,
+      "heat_score_raw": 36.839112824155606,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 45.405442752119995,
-        "turnover_share": 81.77772756089028,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 100.0,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 64.33987944005516,
-        "foreign_buy_concentration": 23.278404
+        "weighted_volume_expansion": 63.50969482770405,
+        "foreign_buy_concentration": 23.126586
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -149,20 +146,17 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 63.022443515933425,
-        "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
-        ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "score": 18.419556412077803,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -4.585310833751085,
-        "leaders_return_5d": -1.8068053972673421,
-        "second_return_5d": 2.7785054364837425,
-        "elastic_return_5d": -8.835758835758837,
+        "lag_diff": -2.8431103115012313,
+        "leaders_return_5d": -22.68574490696327,
+        "second_return_5d": -19.842634595462037,
+        "elastic_return_5d": -19.551934826883908,
         "lifecycle_stage": "mid_late"
       }
     },
@@ -177,17 +171,17 @@
       ],
       "n_members": 5,
       "missing_members": [],
-      "turnover_share": 0.04203772810484213,
-      "weighted_5d_return": 2.0741117073686577,
-      "heat_score": 22.39368994515464,
-      "heat_score_raw": 31.990985635935203,
-      "heat_stage": "warming",
+      "turnover_share": 0.043794247973513924,
+      "weighted_5d_return": -12.052335991530045,
+      "heat_score": 9.188742728468725,
+      "heat_score_raw": 13.126775326383893,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 60.37055853684329,
-        "turnover_share": 21.018864052421065,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 21.89712398675696,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 26.090928411846335,
-        "foreign_buy_concentration": 47.114628
+        "weighted_volume_expansion": 18.07754486463101,
+        "foreign_buy_concentration": 49.408626
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -198,45 +192,44 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 55.9954928179676,
-        "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
-        ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "score": 6.563387663191946,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -6.741678858264875,
-        "leaders_return_5d": 1.6025408495766518,
-        "second_return_5d": 8.344219707841527,
-        "elastic_return_5d": -1.639344262295082,
-        "lifecycle_stage": "mid_late"
+        "lag_diff": 5.838718992017689,
+        "leaders_return_5d": -11.25795696492262,
+        "second_return_5d": -17.09667595694031,
+        "elastic_return_5d": -10.2803738317757,
+        "lifecycle_stage": "early"
       }
     },
     {
-      "group_id": "power",
-      "group_name": "電源",
+      "group_id": "thermal",
+      "group_name": "散熱",
       "upstream_level": 3,
       "cycle_bias": "mid",
       "theme_tags": [
-        "HVDC",
-        "power_rack"
+        "GB300",
+        "liquid_cooling"
       ],
-      "n_members": 5,
-      "missing_members": [],
-      "turnover_share": 0.15789011127737387,
-      "weighted_5d_return": 5.210586525805027,
-      "heat_score": 38.29990051964173,
-      "heat_score_raw": 54.71414359948819,
-      "heat_stage": "warming",
+      "n_members": 6,
+      "missing_members": [
+        "6124"
+      ],
+      "turnover_share": 0.08716117050638855,
+      "weighted_5d_return": -15.095180811896448,
+      "heat_score": 18.599846257361136,
+      "heat_score_raw": 26.57120893908734,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 76.05293262902514,
-        "turnover_share": 78.94505563868694,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 43.58058525319428,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 71.78978734072612,
-        "foreign_buy_concentration": 13.935318000000002
+        "weighted_volume_expansion": 78.4882868385918,
+        "foreign_buy_concentration": 39.028196
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -247,19 +240,19 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 47.35707179974409,
+        "score": 33.28560446954367,
         "triggers": [
-          "leader_high_bearish"
+          "foreign_flip_to_sell"
         ],
         "triggers_fired": 1,
         "risk_level": "medium",
         "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -1.2896783326173225,
-        "leaders_return_5d": 6.161137440758294,
-        "second_return_5d": 7.450815773375616,
-        "elastic_return_5d": -7.35024601843609,
+        "lag_diff": -6.603520898139534,
+        "leaders_return_5d": -14.83048637576757,
+        "second_return_5d": -8.226965477628037,
+        "elastic_return_5d": -16.579791270583165,
         "lifecycle_stage": "mid_late"
       }
     }
@@ -282,17 +275,17 @@
       ],
       "n_members": 5,
       "missing_members": [],
-      "turnover_share": 0.16355545512178057,
-      "weighted_5d_return": -0.9189114495760008,
-      "heat_score": 32.231420922306796,
-      "heat_score_raw": 46.04488703186685,
+      "turnover_share": 0.2198248064936737,
+      "weighted_5d_return": -21.521382986640056,
+      "heat_score": 25.787378976908922,
+      "heat_score_raw": 36.839112824155606,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 45.405442752119995,
-        "turnover_share": 81.77772756089028,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 100.0,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 64.33987944005516,
-        "foreign_buy_concentration": 23.278404
+        "weighted_volume_expansion": 63.50969482770405,
+        "foreign_buy_concentration": 23.126586
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -303,20 +296,17 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 63.022443515933425,
-        "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
-        ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "score": 18.419556412077803,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -4.585310833751085,
-        "leaders_return_5d": -1.8068053972673421,
-        "second_return_5d": 2.7785054364837425,
-        "elastic_return_5d": -8.835758835758837,
+        "lag_diff": -2.8431103115012313,
+        "leaders_return_5d": -22.68574490696327,
+        "second_return_5d": -19.842634595462037,
+        "elastic_return_5d": -19.551934826883908,
         "lifecycle_stage": "mid_late"
       }
     },
@@ -331,17 +321,17 @@
       ],
       "n_members": 5,
       "missing_members": [],
-      "turnover_share": 0.04203772810484213,
-      "weighted_5d_return": 2.0741117073686577,
-      "heat_score": 22.39368994515464,
-      "heat_score_raw": 31.990985635935203,
-      "heat_stage": "warming",
+      "turnover_share": 0.043794247973513924,
+      "weighted_5d_return": -12.052335991530045,
+      "heat_score": 9.188742728468725,
+      "heat_score_raw": 13.126775326383893,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 60.37055853684329,
-        "turnover_share": 21.018864052421065,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 21.89712398675696,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 26.090928411846335,
-        "foreign_buy_concentration": 47.114628
+        "weighted_volume_expansion": 18.07754486463101,
+        "foreign_buy_concentration": 49.408626
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -352,21 +342,18 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 55.9954928179676,
-        "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
-        ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "score": 6.563387663191946,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -6.741678858264875,
-        "leaders_return_5d": 1.6025408495766518,
-        "second_return_5d": 8.344219707841527,
-        "elastic_return_5d": -1.639344262295082,
-        "lifecycle_stage": "mid_late"
+        "lag_diff": 5.838718992017689,
+        "leaders_return_5d": -11.25795696492262,
+        "second_return_5d": -17.09667595694031,
+        "elastic_return_5d": -10.2803738317757,
+        "lifecycle_stage": "early"
       }
     },
     {
@@ -382,17 +369,17 @@
       "missing_members": [
         "6124"
       ],
-      "turnover_share": 0.0783957887871977,
-      "weighted_5d_return": 10.017004579727146,
-      "heat_score": 39.0827908196609,
-      "heat_score_raw": 55.832558313801286,
-      "heat_stage": "hot",
+      "turnover_share": 0.08716117050638855,
+      "weighted_5d_return": -15.095180811896448,
+      "heat_score": 18.599846257361136,
+      "heat_score_raw": 26.57120893908734,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 100.0,
-        "turnover_share": 39.19789439359885,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 43.58058525319428,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 79.17834476934381,
-        "foreign_buy_concentration": 41.56333
+        "weighted_volume_expansion": 78.4882868385918,
+        "foreign_buy_concentration": 39.028196
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -403,21 +390,20 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 67.91627915690064,
+        "score": 33.28560446954367,
         "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
+          "foreign_flip_to_sell"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": 11.659243272004709,
-        "leaders_return_5d": 10.253356849415981,
-        "second_return_5d": -1.4058864225887282,
-        "elastic_return_5d": 9.891483803495897,
-        "lifecycle_stage": "early"
+        "lag_diff": -6.603520898139534,
+        "leaders_return_5d": -14.83048637576757,
+        "second_return_5d": -8.226965477628037,
+        "elastic_return_5d": -16.579791270583165,
+        "lifecycle_stage": "mid_late"
       }
     },
     {
@@ -431,17 +417,17 @@
       ],
       "n_members": 5,
       "missing_members": [],
-      "turnover_share": 0.15789011127737387,
-      "weighted_5d_return": 5.210586525805027,
-      "heat_score": 38.29990051964173,
-      "heat_score_raw": 54.71414359948819,
+      "turnover_share": 0.15014115677540496,
+      "weighted_5d_return": -17.53800674556861,
+      "heat_score": 22.777652058006314,
+      "heat_score_raw": 32.53950294000902,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 76.05293262902514,
-        "turnover_share": 78.94505563868694,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 75.07057838770248,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 71.78978734072612,
-        "foreign_buy_concentration": 13.935318000000002
+        "weighted_volume_expansion": 78.28920628722267,
+        "foreign_buy_concentration": 20.284774
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -452,19 +438,17 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 47.35707179974409,
-        "triggers": [
-          "leader_high_bearish"
-        ],
-        "triggers_fired": 1,
-        "risk_level": "medium",
-        "recommended_action": "提高警覺"
+        "score": 16.26975147000451,
+        "triggers": [],
+        "triggers_fired": 0,
+        "risk_level": "low",
+        "recommended_action": "持有"
       },
       "lifecycle": {
-        "lag_diff": -1.2896783326173225,
-        "leaders_return_5d": 6.161137440758294,
-        "second_return_5d": 7.450815773375616,
-        "elastic_return_5d": -7.35024601843609,
+        "lag_diff": -5.961603087301096,
+        "leaders_return_5d": -17.254901960784313,
+        "second_return_5d": -11.293298873483216,
+        "elastic_return_5d": -24.667805074475016,
         "lifecycle_stage": "mid_late"
       }
     },
@@ -479,17 +463,17 @@
       ],
       "n_members": 9,
       "missing_members": [],
-      "turnover_share": 0.23222026168033888,
-      "weighted_5d_return": -0.6811449689337752,
-      "heat_score": 37.899155835402034,
-      "heat_score_raw": 54.141651193431485,
+      "turnover_share": 0.24326655350730003,
+      "weighted_5d_return": -15.857878218398184,
+      "heat_score": 27.67254108577394,
+      "heat_score_raw": 39.53220155110563,
       "heat_stage": "warming",
       "heat_components": {
-        "weighted_5d_return": 46.594275155331125,
+        "weighted_5d_return": 0.0,
         "turnover_share": 100.0,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 87.78038964554767,
-        "foreign_buy_concentration": 19.963102
+        "weighted_volume_expansion": 74.98505567403753,
+        "foreign_buy_concentration": 32.844432
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -500,20 +484,19 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 67.07082559671574,
+        "score": 39.766100775552815,
         "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
+          "foreign_flip_to_sell"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -0.7692161714667813,
-        "leaders_return_5d": -3.2956382820109984,
-        "second_return_5d": -2.526422110544217,
-        "elastic_return_5d": 2.0662182967355527,
+        "lag_diff": -0.9452514676385704,
+        "leaders_return_5d": -19.06835694959137,
+        "second_return_5d": -18.1231054819528,
+        "elastic_return_5d": -9.87657465587156,
         "lifecycle_stage": "mid_late"
       }
     },
@@ -529,17 +512,17 @@
       ],
       "n_members": 10,
       "missing_members": [],
-      "turnover_share": 0.11777894853517802,
-      "weighted_5d_return": 6.080622345048639,
-      "heat_score": 35.46630193493041,
-      "heat_score_raw": 50.66614562132916,
-      "heat_stage": "warming",
+      "turnover_share": 0.1114848905770566,
+      "weighted_5d_return": -13.666843118039527,
+      "heat_score": 18.395687036581602,
+      "heat_score_raw": 26.27955290940229,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 80.40311172524319,
-        "turnover_share": 58.88947426758901,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 55.7424452885283,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 53.516332912393004,
-        "foreign_buy_concentration": 37.953936
+        "weighted_volume_expansion": 54.50493191513479,
+        "foreign_buy_concentration": 41.682018
       },
       "early_rotation_score": 0.0,
       "early_rotation_score_raw": 0.0,
@@ -550,21 +533,20 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 65.33307281066458,
+        "score": 33.13977645470115,
         "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
+          "foreign_flip_to_sell"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -9.553665752073364,
-        "leaders_return_5d": -3.5699971529705223,
-        "second_return_5d": 5.983668599102841,
-        "elastic_return_5d": 9.377261460389454,
-        "lifecycle_stage": "late"
+        "lag_diff": -9.068407543603872,
+        "leaders_return_5d": -19.83655301727482,
+        "second_return_5d": -10.768145473670948,
+        "elastic_return_5d": -11.159416718150778,
+        "lifecycle_stage": "mid_late"
       }
     },
     {
@@ -579,16 +561,16 @@
       ],
       "n_members": 7,
       "missing_members": [],
-      "turnover_share": 0.2081217064932888,
-      "weighted_5d_return": -4.096595515914745,
-      "heat_score": 29.99830918929808,
-      "heat_score_raw": 42.85472741328297,
-      "heat_stage": "warming",
+      "turnover_share": 0.14432717416666224,
+      "weighted_5d_return": -10.820779398742564,
+      "heat_score": 19.023366615875236,
+      "heat_score_raw": 27.176238022678913,
+      "heat_stage": "cold",
       "heat_components": {
-        "weighted_5d_return": 29.517022420426272,
-        "turnover_share": 100.0,
+        "weighted_5d_return": 0.0,
+        "turnover_share": 72.16358708333112,
         "leader_confirmed_breakout": 0.0,
-        "weighted_volume_expansion": 59.99747124770063,
+        "weighted_volume_expansion": 60.90227501230755,
         "foreign_buy_concentration": 0.0
       },
       "early_rotation_score": 0.0,
@@ -600,20 +582,19 @@
         "leader_first_confirmed_breakout": 0.0
       },
       "exhaustion": {
-        "score": 61.427363706641486,
+        "score": 33.58811901133946,
         "triggers": [
-          "foreign_flip_to_sell",
-          "leader_high_bearish"
+          "foreign_flip_to_sell"
         ],
-        "triggers_fired": 2,
-        "risk_level": "high",
-        "recommended_action": "減碼觀望"
+        "triggers_fired": 1,
+        "risk_level": "medium",
+        "recommended_action": "提高警覺"
       },
       "lifecycle": {
-        "lag_diff": -1.2924610114148218,
-        "leaders_return_5d": -4.212359722923098,
-        "second_return_5d": -2.9198987115082757,
-        "elastic_return_5d": -13.364662471013341,
+        "lag_diff": 0.7663119185664229,
+        "leaders_return_5d": -9.976372007337877,
+        "second_return_5d": -10.7426839259043,
+        "elastic_return_5d": -18.874908297287668,
         "lifecycle_stage": "mid_late"
       }
     }
